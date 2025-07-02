@@ -45,10 +45,9 @@ class EmailManager {
 
   /**
    * Sends an email containing a list of contacts without labels
-   * @param {string} toEmail - Recipient email address
    * @param {Array<Contact>} unlabeledContacts - List of contacts without labels
    */
-  sendUnlabeledContactsEmail(toEmail, unlabeledContacts) {
+  sendUnlabeledContactsEmail(unlabeledContacts) {
     const subject = "🏷️ Contacts Without Labels 🏷️";
     const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
     const toEmail = Session.getActiveUser().getEmail();
