@@ -225,7 +225,21 @@ class ContactManager {
       Logger.log(contact.name);
     });
   }
+
+
+  /**
+   * Finds all contacts that don't have any labels assigned.
+   * @returns {Array<Contact>} Array of contacts without any labels
+   */
+  findContactsWithoutLabels() {
+    return this.contacts.filter(contact => {
+      const labels = contact.getLabels();
+      return !labels || labels.length === 0;
+    });
+  }
 }
+
+
 
 /**
  * Represents a contact.

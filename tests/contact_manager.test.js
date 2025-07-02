@@ -97,12 +97,33 @@ function testContactValidation() {
   assertArrayEquals(contact.getLabels(), [], "Invalid labels should be converted to empty array");
 }
 
+function testFindContactsWithoutLabels() {
+  // Create a ContactManager instance
+  const manager = new ContactManager();
+  
+  // Create test contacts with and without labels
+  const contact1 = new Contact("No Labels", new Date());
+  const contact2 = new Contact("Has Labels", new Date(), ["Friends"]);
+  const contact3 = new Contact("Also No Labels", new Date(), []);
+  
+  // Mock the contacts array
+  manager.contacts = [contact1, contact2, contact3];
+  
+  // Test finding contacts without labels
+  const contactsWithoutLabels = manager.findContactsWithoutLabels();
+  
+  assertEquals(contactsWithoutLabels.length, 2, "Should find 2 contacts without labels");
+  assertEquals(contactsWithoutLabels[0].getName(), "No Labels", "First contact without labels should match");
+  assertEquals(contactsWithoutLabels[1].getName(), "Also No Labels", "Second contact without labels should match");
+}
+
 function runContactManagerTests() {
   const tests = [
     testContactCreation,
     testContactAgeCalculation,
     testContactSocialLinks,
-    testContactValidation
+    testContactValidation,
+    testFindContactsWithoutLabels
   ];
 
   let passed = 0;
