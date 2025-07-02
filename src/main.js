@@ -30,4 +30,22 @@ function runAllTests() {
   Logger.log("\nRunning Label Manager Tests...");
   Logger.log("================================");
   runLabelManagerTests();
+  
+  Logger.log("\nRunning Email Manager Tests...");
+  Logger.log("================================");
+  runEmailManagerTests();
+}
+
+
+/**
+ * Sends an email report of all contacts that don't have any labels assigned
+ */
+function sendUnlabeledContactsReport() {
+  const contactManager = new ContactManager();
+  const emailManager = new EmailManager();
+
+  const unlabeledContacts = contactManager.findContactsWithoutLabels();
+  emailManager.sendUnlabeledContactsEmail(toEmail, unlabeledContacts);
+
+  Logger.log(`Sent unlabeled contacts report to ${toEmail} (${unlabeledContacts.length} contacts found)`);
 }
