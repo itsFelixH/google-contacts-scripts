@@ -263,6 +263,95 @@ class ContactManager {
       return labels && labels.includes(label);
     });
   }
+
+  /**
+   * Finds all contacts with upcoming birthdays within the specified number of days
+   * @param {number} days Number of days to look ahead (default: 7)
+   * @returns {Array<Contact>} Array of contacts with upcoming birthdays, sorted by date
+   */
+  findContactsWithUpcomingBirthdays(days = 7) {
+    const today = new Date();
+    const futureDate = new Date();
+    futureDate.setDate(today.getDate() + days);
+    
+    // Filter contacts with birthdays and calculate their next birthday
+    const contactsWithBirthdays = this.contacts.filter(contact => contact.getBirthday()).map(contact => {
+      const birthday = new Date(contact.getBirthday());
+      const nextBirthday = new Date(today.getFullYear(), birthday.getMonth(), birthday.getDate());
+      
+      // If the birthday has already passed this year, use next year's date
+      if (nextBirthday < today) {
+        nextBirthday.setFullYear(today.getFullYear() + 1);
+      }
+      
+      return {
+        contact: contact,
+        nextBirthday: nextBirthday
+      };
+    });
+
+    // Filter contacts whose birthdays fall within the specified range
+    const upcomingBirthdays = contactsWithBirthdays.filter(item => 
+      item.nextBirthday >= today && item.nextBirthday <= futureDate
+    );
+
+    // Sort by date
+    upcomingBirthdays.sort((a, b) => a.nextBirthday - b.nextBirthday);
+
+    return upcomingBirthdays.map(item => item.contact);
+  }
+
+  /**
+   * Finds contacts with potentially invalid or malformed phone numbers
+   * @returns {Array<Contact>} Array of contacts with suspicious phone numbers
+   */
+  findContactsWithInvalidPhones() {
+    const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
+    
+    return this.contacts.filter(contact => {
+      const phone = contact.phoneNumber;
+      return phone && !phoneRegex.test(phone);
+    });
+  }
+
+  /**
+   * Generates statistics about the contacts collection
+   * @returns {Object} Object containing various statistics
+   */
+  generateContactStats() {
+    const totalContacts = this.contacts.length;
+    const withBirthday = this.contacts.filter(c => c.getBirthday()).length;
+    const withEmail = this.contacts.filter(c => c.email).length;
+    const withPhone = this.contacts.filter(c => c.phoneNumber).length;
+    const withCity = this.contacts.filter(c => c.city).length;
+    const withLabels = this.contacts.filter(c => c.getLabels().length > 0).length;
+    const withInstagram = this.contacts.filter(c => c.instagramNames.length > 0).length;
+
+    // Get label distribution
+    const labelCounts = {};
+    this.contacts.forEach(contact => {
+      contact.getLabels().forEach(label => {
+        labelCounts[label] = (labelCounts[label] || 0) + 1;
+      });
+    });
+
+    return {
+      totalContacts,
+      withBirthday,
+      withEmail,
+      withPhone,
+      withCity,
+      withLabels,
+      withInstagram,
+      birthdayPercentage: (withBirthday / totalContacts * 100).toFixed(1),
+      emailPercentage: (withEmail / totalContacts * 100).toFixed(1),
+      phonePercentage: (withPhone / totalContacts * 100).toFixed(1),
+      cityPercentage: (withCity / totalContacts * 100).toFixed(1),
+      labelPercentage: (withLabels / totalContacts * 100).toFixed(1),
+      instagramPercentage: (withInstagram / totalContacts * 100).toFixed(1),
+      labelDistribution: labelCounts
+    };
+  }
 }
 
 

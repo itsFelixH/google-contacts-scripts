@@ -43,6 +43,7 @@ class EmailManager {
     Gmail.Users.Messages.send({ raw: rawMessage }, "me");
   }
 
+
   /**
    * Sends an email containing a list of contacts without labels
    * @param {Array<Contact>} unlabeledContacts - List of contacts without labels
@@ -74,6 +75,7 @@ class EmailManager {
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   }
+
 
   /**
    * Sends an email containing a list of contacts without birthdays
@@ -107,6 +109,7 @@ class EmailManager {
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   }
 
+
   /**
    * Sends an email containing a list of contacts with a specific label
    * @param {string} label - The label to filter contacts by
@@ -136,6 +139,110 @@ class EmailManager {
         if (contact.city) details.push(`City: ${contact.city}`);
         return `${contact.getName()}\n${details.join('\n')}`;
       }).join('\n\n');
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+
+  /**
+   * Sends an email containing a list of contacts with upcoming birthdays
+   * @param {Array<Contact>} upcomingBirthdays - List of contacts with upcoming birthdays
+   * @param {number} days - Number of days ahead being reported
+   */
+  sendUpcomingBirthdaysEmail(upcomingBirthdays, days) {
+    const subject = `🎂 Upcoming Birthdays (Next ${days} Days) 🎂`;
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    // Create HTML content
+    const content = `
+      ${this.templates.header("Upcoming Birthdays Report", `Birthdays in the next ${days} days`)}
+      ${this.templates.birthdayList(upcomingBirthdays)}
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content);
+    
+    // Create plain text content
+    const textBody = `Upcoming Birthdays Report (Next ${days} Days)\n\n` +
+      upcomingBirthdays.map(contact => {
+        const details = [];
+        details.push(`Birthday: ${contact.getBirthdayShortFormat()}`);
+        if (contact.hasKnownBirthYear()) details.push(`Age: ${contact.calculateAge()}`);
+        if (contact.email) details.push(`Email: ${contact.email}`);
+        if (contact.phoneNumber) details.push(`Phone: ${contact.phoneNumber}`);
+        return `${contact.getName()}\n${details.join('\n')}`;
+      }).join('\n\n');
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+
+  /**
+   * Sends an email containing contacts with potentially invalid phone numbers
+   * @param {Array<Contact>} contactsWithInvalidPhones - List of contacts with suspicious phone numbers
+   */
+  sendInvalidPhonesEmail(contactsWithInvalidPhones) {
+    const subject = `📱 Invalid Phone Numbers Report 📱`;
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    // Create HTML content
+    const content = `
+      ${this.templates.header("Invalid Phone Numbers Report", "These contacts have potentially invalid or malformed phone numbers")}
+      ${this.templates.contactList(contactsWithInvalidPhones)}
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content);
+    
+    // Create plain text content
+    const textBody = `Invalid Phone Numbers Report\n\n` +
+      contactsWithInvalidPhones.map(contact => {
+        const details = [];
+        if (contact.phoneNumber) details.push(`Phone: ${contact.phoneNumber}`);
+        if (contact.email) details.push(`Email: ${contact.email}`);
+        return `${contact.getName()}\n${details.join('\n')}`;
+      }).join('\n\n');
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+
+  /**
+   * Sends an email containing contact statistics
+   * @param {Object} stats - Statistics object from ContactManager.generateContactStats()
+   */
+  sendContactStatsEmail(stats) {
+    const subject = `📊 Contact Statistics Report 📊`;
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    // Create HTML content
+    const content = `
+      ${this.templates.header("Contact Statistics Report", "Overview of your contacts database")}
+      ${this.templates.statsReport(stats)}
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content);
+    
+    // Create plain text content
+    const textBody = `Contact Statistics Report\n\n` +
+      `Total Contacts: ${stats.totalContacts}\n` +
+      `With Birthday: ${stats.withBirthday} (${stats.birthdayPercentage}%)\n` +
+      `With Email: ${stats.withEmail} (${stats.emailPercentage}%)\n` +
+      `With Phone: ${stats.withPhone} (${stats.phonePercentage}%)\n` +
+      `With City: ${stats.withCity} (${stats.cityPercentage}%)\n` +
+      `With Labels: ${stats.withLabels} (${stats.labelPercentage}%)\n` +
+      `With Instagram: ${stats.withInstagram} (${stats.instagramPercentage}%)\n\n` +
+      `Label Distribution:\n` +
+      Object.entries(stats.labelDistribution)
+        .map(([label, count]) => `${label}: ${count} contacts`)
+        .join('\n');
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   }
