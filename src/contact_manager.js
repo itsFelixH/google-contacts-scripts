@@ -9,7 +9,7 @@ class ContactManager {
 
   fetchContacts(labelFilter = [], maxRetries = 3) {
     try {
-      validateLabelFilter(labelFilter);
+      this.validateLabelFilter(labelFilter);
       const peopleService = People.People;
       var labelManager = new LabelManager();
       let contacts = [];
@@ -33,11 +33,11 @@ class ContactManager {
 
           const connections = response.connections || [];
           connections.forEach(person => {
-            const contactLabels = getContactLabels(person, labelManager)
-            const labelMatch = contactMatchesLabelFilter(labelFilter, contactLabels)
+            const contactLabels = this.getContactLabels(person, labelManager)
+            const labelMatch = this.contactMatchesLabelFilter(labelFilter, contactLabels)
 
             if (labelMatch) {
-              const contact = createContact(person, contactLabels);
+              const contact = this.createContact(person, contactLabels);
               contacts.push(contact);
             }
           });
@@ -45,7 +45,7 @@ class ContactManager {
           pageToken = response.nextPageToken;
           attempt = 0; // Reset retry counter on success
         } catch (error) {
-          handleApiError(error, attempt, maxRetries);
+          this.handleApiError(error, attempt, maxRetries);
         }
       } while (pageToken && attempt <= maxRetries);
 
@@ -113,7 +113,7 @@ class ContactManager {
         person.emailAddresses?.[0]?.value,
         (person.addresses || []).map(address => address.city).filter(Boolean).join(', '),
         person.phoneNumbers?.[0]?.value || '',
-        extractInstagramNamesFromNotes((person.biographies || []).map(bio => bio.value).join('. '))
+        this.extractInstagramNamesFromNotes((person.biographies || []).map(bio => bio.value).join('. '))
       );
     } catch (error) {
       Logger.log(`⚠️ Error creating contact: ${error.message}`);
