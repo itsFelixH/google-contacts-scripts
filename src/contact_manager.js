@@ -237,6 +237,32 @@ class ContactManager {
       return !labels || labels.length === 0;
     });
   }
+
+  /**
+   * Finds all contacts that don't have a birthday set.
+   * @returns {Array<Contact>} Array of contacts without birthdays
+   */
+  findContactsWithoutBirthday() {
+    return this.contacts.filter(contact => {
+      const birthday = contact.getBirthday();
+      return !birthday || birthday === '';
+    });
+  }
+
+  /**
+   * Finds all contacts that have a specific label.
+   * @param {string} label The label to search for
+   * @returns {Array<Contact>} Array of contacts with the specified label
+   */
+  findContactsWithLabel(label) {
+    if (!label) {
+      throw new Error('Label parameter is required');
+    }
+    return this.contacts.filter(contact => {
+      const labels = contact.getLabels();
+      return labels && labels.includes(label);
+    });
+  }
 }
 
 
