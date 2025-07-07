@@ -1,5 +1,3 @@
-// TODO
-
 /*
 - Log contacts (sorted??, filtered??)
 - Fix Phone Numbers
@@ -9,6 +7,7 @@
 - ...
 */
 
+// Contact Report Functions
 
 /**
  * Sends an email report of all contacts that don't have any labels assigned
@@ -54,20 +53,58 @@ function sendContactsWithLabelReport(label) {
   Logger.log(`Sent contacts with label "${label}" report (${labeledContacts.length} contacts found)`);
 }
 
+/**
+ * Sends an email report of contacts with upcoming birthdays
+ * @param {number} days Number of days to look ahead (default: 7)
+ */
+function sendUpcomingBirthdaysReport(days = 7) {
+  const contactManager = new ContactManager();
+  const emailManager = new EmailManager();
 
-// TESTING
+  const upcomingBirthdays = contactManager.findContactsWithUpcomingBirthdays(days);
+  emailManager.sendUpcomingBirthdaysEmail(upcomingBirthdays, days);
+
+  Logger.log(`Sent upcoming birthdays report (${upcomingBirthdays.length} contacts found)`);
+}
+
+/**
+ * Sends an email report of contacts with potentially invalid phone numbers
+ */
+function sendInvalidPhonesReport() {
+  const contactManager = new ContactManager();
+  const emailManager = new EmailManager();
+
+  const contactsWithInvalidPhones = contactManager.findContactsWithInvalidPhones();
+  emailManager.sendInvalidPhonesEmail(contactsWithInvalidPhones);
+
+  Logger.log(`Sent invalid phone numbers report (${contactsWithInvalidPhones.length} contacts found)`);
+}
+
+/**
+ * Sends an email report with contact statistics
+ */
+function sendContactStatsReport() {
+  const contactManager = new ContactManager();
+  const emailManager = new EmailManager();
+
+  const stats = contactManager.generateContactStats();
+  emailManager.sendContactStatsEmail(stats);
+
+  Logger.log('Sent contact statistics report');
+}
+
+
+// Testing Functions
 
 function testContacts() {
   var contactManager = new ContactManager();
   contactManager.logAllContacts();
 }
 
-
 function testLabels() {
   var labelManager = new LabelManager();
   labelManager.logAllLabels();
 }
-
 
 function runAllTests() {
   Logger.log("Running Contact Manager Tests...");

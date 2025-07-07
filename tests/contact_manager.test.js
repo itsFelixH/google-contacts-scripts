@@ -151,6 +151,111 @@ function testFindContactsWithLabel() {
   }
 }
 
+function testFindContactsWithUpcomingBirthdays() {
+  // Create a ContactManager instance
+  const manager = new ContactManager();
+  
+  // Get current date for testing
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const nextWeek = new Date(today);
+  nextWeek.setDate(today.getDate() + 7);
+  const twoWeeksFromNow = new Date(today);
+  twoWeeksFromNow.setDate(today.getDate() + 14);
+  
+  // Create test contacts with different birthdays
+  const contact1 = new Contact("Tomorrow Birthday", tomorrow);
+  const contact2 = new Contact("Next Week Birthday", nextWeek);
+  const contact3 = new Contact("Two Weeks Birthday", twoWeeksFromNow);
+  
+  // Mock the contacts array
+  manager.contacts = [contact1, contact2, contact3];
+  
+  // Test finding contacts with birthdays in next 7 days
+  const upcomingBirthdays = manager.findContactsWithUpcomingBirthdays(7);
+  assertEquals(upcomingBirthdays.length, 2, "Should find 2 contacts with birthdays in next 7 days");
+  assertEquals(upcomingBirthdays[0].getName(), "Tomorrow Birthday", "First upcoming birthday should be tomorrow");
+  assertEquals(upcomingBirthdays[1].getName(), "Next Week Birthday", "Second upcoming birthday should be next week");
+  
+  // Test finding contacts with birthdays in next 14 days
+  const twoWeekBirthdays = manager.findContactsWithUpcomingBirthdays(14);
+  assertEquals(twoWeekBirthdays.length, 3, "Should find 3 contacts with birthdays in next 14 days");
+}
+
+function testFindContactsWithInvalidPhones() {
+  // Create a ContactManager instance
+  const manager = new ContactManager();
+  
+  // Create test contacts with different phone numbers
+  const contact1 = new Contact("Valid Phone", new Date(), [], "", "", "+1234567890");
+  const contact2 = new Contact("Invalid Phone", new Date(), [], "", "", "abc123");
+  const contact3 = new Contact("No Phone", new Date());
+  const contact4 = new Contact("Another Invalid", new Date(), [], "", "", "12.34.56");
+  
+  // Mock the contacts array
+  manager.contacts = [contact1, contact2, contact3, contact4];
+  
+  // Test finding contacts with invalid phone numbers
+  const invalidPhones = manager.findContactsWithInvalidPhones();
+  assertEquals(invalidPhones.length, 2, "Should find 2 contacts with invalid phones");
+  assertEquals(invalidPhones[0].getName(), "Invalid Phone", "First invalid phone contact should match");
+  assertEquals(invalidPhones[1].getName(), "Another Invalid", "Second invalid phone contact should match");
+}
+
+function testGenerateContactStats() {
+  // Create a ContactManager instance
+  const manager = new ContactManager();
+  
+  // Create test contacts with various properties
+  const contact1 = new Contact(
+    "Complete Contact",
+    new Date(),
+    ["Friends", "Work"],
+    "test@example.com",
+    "Berlin",
+    "+1234567890",
+    ["@social"]
+  );
+  
+  const contact2 = new Contact(
+    "Minimal Contact",
+    "",
+    []
+  );
+  
+  const contact3 = new Contact(
+    "Partial Contact",
+    new Date(),
+    ["Friends"],
+    "test2@example.com"
+  );
+  
+  // Mock the contacts array
+  manager.contacts = [contact1, contact2, contact3];
+  
+  // Test generating statistics
+  const stats = manager.generateContactStats();
+  
+  // Test counts
+  assertEquals(stats.totalContacts, 3, "Total contacts should be 3");
+  assertEquals(stats.withBirthday, 2, "Contacts with birthday should be 2");
+  assertEquals(stats.withEmail, 2, "Contacts with email should be 2");
+  assertEquals(stats.withPhone, 1, "Contacts with phone should be 1");
+  assertEquals(stats.withCity, 1, "Contacts with city should be 1");
+  assertEquals(stats.withLabels, 2, "Contacts with labels should be 2");
+  assertEquals(stats.withInstagram, 1, "Contacts with Instagram should be 1");
+  
+  // Test percentages
+  assertEquals(stats.birthdayPercentage, "66.7", "Birthday percentage should be 66.7%");
+  assertEquals(stats.emailPercentage, "66.7", "Email percentage should be 66.7%");
+  assertEquals(stats.phonePercentage, "33.3", "Phone percentage should be 33.3%");
+  
+  // Test label distribution
+  assertEquals(stats.labelDistribution["Friends"], 2, "Should have 2 contacts with Friends label");
+  assertEquals(stats.labelDistribution["Work"], 1, "Should have 1 contact with Work label");
+}
+
 function runContactManagerTests() {
   const tests = [
     testContactCreation,
@@ -159,7 +264,10 @@ function runContactManagerTests() {
     testContactValidation,
     testFindContactsWithoutLabels,
     testFindContactsWithoutBirthday,
-    testFindContactsWithLabel
+    testFindContactsWithLabel,
+    testFindContactsWithUpcomingBirthdays,
+    testFindContactsWithInvalidPhones,
+    testGenerateContactStats
   ];
 
   let passed = 0;
