@@ -74,6 +74,71 @@ class EmailManager {
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   }
+
+  /**
+   * Sends an email containing a list of contacts without birthdays
+   * @param {Array<Contact>} contactsWithoutBirthday - List of contacts without birthdays
+   */
+  sendContactsWithoutBirthdayEmail(contactsWithoutBirthday) {
+    const subject = "🎂 Contacts Without Birthday 🎂";
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    // Create HTML content
+    const content = `
+      ${this.templates.header("Contacts Without Birthday Report", "These contacts don't have a birthday set")}
+      ${this.templates.contactList(contactsWithoutBirthday)}
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content);
+    
+    // Create plain text content
+    const textBody = `Contacts Without Birthday Report\n\n` +
+      contactsWithoutBirthday.map(contact => {
+        const details = [];
+        if (contact.email) details.push(`Email: ${contact.email}`);
+        if (contact.phoneNumber) details.push(`Phone: ${contact.phoneNumber}`);
+        if (contact.city) details.push(`City: ${contact.city}`);
+        return `${contact.getName()}\n${details.join('\n')}`;
+      }).join('\n\n');
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+  /**
+   * Sends an email containing a list of contacts with a specific label
+   * @param {string} label - The label to filter contacts by
+   * @param {Array<Contact>} labeledContacts - List of contacts with the specified label
+   */
+  sendContactsWithLabelEmail(label, labeledContacts) {
+    const subject = `👥 Contacts With Label "${label}" 👥`;
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    // Create HTML content
+    const content = `
+      ${this.templates.header(`Contacts With Label "${label}"`, `These contacts have the label "${label}" assigned`)}
+      ${this.templates.contactList(labeledContacts)}
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content);
+    
+    // Create plain text content
+    const textBody = `Contacts With Label "${label}" Report\n\n` +
+      labeledContacts.map(contact => {
+        const details = [];
+        if (contact.email) details.push(`Email: ${contact.email}`);
+        if (contact.phoneNumber) details.push(`Phone: ${contact.phoneNumber}`);
+        if (contact.city) details.push(`City: ${contact.city}`);
+        return `${contact.getName()}\n${details.join('\n')}`;
+      }).join('\n\n');
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
 }
 
 

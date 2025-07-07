@@ -94,13 +94,72 @@ function testFindContactsWithoutLabels() {
   assertEquals(contactsWithoutLabels[1].getName(), "Also No Labels", "Second contact without labels should match");
 }
 
+function testFindContactsWithoutBirthday() {
+  // Create a ContactManager instance
+  const manager = new ContactManager();
+  
+  // Create test contacts with and without birthdays
+  const contact1 = new Contact("No Birthday", null);
+  const contact2 = new Contact("Has Birthday", new Date("1990-01-01"));
+  const contact3 = new Contact("Also No Birthday", '');
+  
+  // Mock the contacts array
+  manager.contacts = [contact1, contact2, contact3];
+  
+  // Test finding contacts without birthdays
+  const contactsWithoutBirthday = manager.findContactsWithoutBirthday();
+  
+  assertEquals(contactsWithoutBirthday.length, 2, "Should find 2 contacts without birthdays");
+  assertEquals(contactsWithoutBirthday[0].getName(), "No Birthday", "First contact without birthday should match");
+  assertEquals(contactsWithoutBirthday[1].getName(), "Also No Birthday", "Second contact without birthday should match");
+}
+
+function testFindContactsWithLabel() {
+  // Create a ContactManager instance
+  const manager = new ContactManager();
+  
+  // Create test contacts with different labels
+  const contact1 = new Contact("Friend 1", new Date(), ["Friends"]);
+  const contact2 = new Contact("Work Contact", new Date(), ["Work"]);
+  const contact3 = new Contact("Friend 2", new Date(), ["Friends", "Work"]);
+  
+  // Mock the contacts array
+  manager.contacts = [contact1, contact2, contact3];
+  
+  // Test finding contacts with "Friends" label
+  const friendContacts = manager.findContactsWithLabel("Friends");
+  assertEquals(friendContacts.length, 2, "Should find 2 contacts with Friends label");
+  assertEquals(friendContacts[0].getName(), "Friend 1", "First friend contact should match");
+  assertEquals(friendContacts[1].getName(), "Friend 2", "Second friend contact should match");
+  
+  // Test finding contacts with "Work" label
+  const workContacts = manager.findContactsWithLabel("Work");
+  assertEquals(workContacts.length, 2, "Should find 2 contacts with Work label");
+  assertEquals(workContacts[0].getName(), "Work Contact", "First work contact should match");
+  assertEquals(workContacts[1].getName(), "Friend 2", "Second work contact should match");
+  
+  // Test finding contacts with non-existent label
+  const noContacts = manager.findContactsWithLabel("NonExistent");
+  assertEquals(noContacts.length, 0, "Should find 0 contacts with non-existent label");
+  
+  // Test with invalid label parameter
+  try {
+    manager.findContactsWithLabel("");
+    throw new Error("Should have thrown error for empty label");
+  } catch (e) {
+    assert(e.message === "Label parameter is required", "Should throw correct error message");
+  }
+}
+
 function runContactManagerTests() {
   const tests = [
     testContactCreation,
     testContactAgeCalculation,
     testContactSocialLinks,
     testContactValidation,
-    testFindContactsWithoutLabels
+    testFindContactsWithoutLabels,
+    testFindContactsWithoutBirthday,
+    testFindContactsWithLabel
   ];
 
   let passed = 0;
