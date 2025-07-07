@@ -6,9 +6,20 @@
         "userSymbol": "People",
         "version": "v1",
         "serviceId": "peopleapi"
+      },
+      {
+        "userSymbol": "Gmail",
+        "version": "v1",
+        "serviceId": "gmail"
       }
     ]
   },
   "exceptionLogging": "STACKDRIVER",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/contacts",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://mail.google.com/"
+  ],
   "runtimeVersion": "V8"
 }
