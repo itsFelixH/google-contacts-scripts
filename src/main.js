@@ -93,6 +93,21 @@ function sendContactStatsReport() {
   Logger.log('Sent contact statistics report');
 }
 
+/**
+ * Sends an email report with label statistics and distribution
+ */
+function sendLabelStatsReport() {
+  const contactManager = new ContactManager();
+  const labelManager = new LabelManager();
+  const emailManager = new EmailManager();
+
+  const stats = contactManager.generateContactStats();
+  const allLabels = labelManager.fetchLabels();
+  emailManager.sendLabelStatsEmail(stats, allLabels);
+
+  Logger.log('Sent label statistics report');
+}
+
 
 // Testing Functions
 
