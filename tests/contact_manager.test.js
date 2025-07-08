@@ -1,3 +1,45 @@
+function testContactBirthdayHandling() {
+  // Test contact with valid birthday
+  const contact1 = new Contact(
+    "Valid Birthday",
+    new Date("1990-01-01"),
+    []
+  );
+  assert(contact1.getBirthday() instanceof Date, "Birthday should be a Date object");
+  assertEquals(contact1.getBirthdayShortFormat(), "01.01.", "Birthday short format should match");
+  assertEquals(contact1.getBirthdayLongFormat(), "01.01.1990", "Birthday long format should match");
+
+  // Test contact with null birthday
+  const contact2 = new Contact(
+    "No Birthday",
+    null,
+    []
+  );
+  assertEquals(contact2.getBirthday(), null, "Birthday should be null");
+  assertEquals(contact2.getBirthdayShortFormat(), "", "Birthday short format should be empty");
+  assertEquals(contact2.getBirthdayLongFormat(), "", "Birthday long format should be empty");
+
+  // Test contact with empty string birthday
+  const contact3 = new Contact(
+    "Empty Birthday",
+    "",
+    []
+  );
+  assertEquals(contact3.getBirthday(), null, "Birthday should be null");
+  assertEquals(contact3.getBirthdayShortFormat(), "", "Birthday short format should be empty");
+  assertEquals(contact3.getBirthdayLongFormat(), "", "Birthday long format should be empty");
+
+  // Test contact with invalid birthday
+  const contact4 = new Contact(
+    "Invalid Birthday",
+    "not-a-date",
+    []
+  );
+  assertEquals(contact4.getBirthday(), null, "Invalid birthday should be null");
+  assertEquals(contact4.getBirthdayShortFormat(), "", "Birthday short format should be empty");
+  assertEquals(contact4.getBirthdayLongFormat(), "", "Birthday long format should be empty");
+}
+
 function testContactCreation() {
   // Test basic contact creation
   const contact = new Contact(
@@ -258,6 +300,7 @@ function testGenerateContactStats() {
 
 function runContactManagerTests() {
   const tests = [
+    testContactBirthdayHandling,
     testContactCreation,
     testContactAgeCalculation,
     testContactSocialLinks,

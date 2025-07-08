@@ -223,7 +223,7 @@ class EmailManager {
 
     // Create HTML content
     const content = `
-      ${this.templates.header("Contact Statistics Report", "Overview of your contacts database")}
+      ${this.templates.header("Contact Statistics Report 📊", "Overview of your contacts database")}
       ${this.templates.statsReport(stats)}
       ${this.templates.footer()}
     `;
@@ -232,17 +232,52 @@ class EmailManager {
     
     // Create plain text content
     const textBody = `Contact Statistics Report\n\n` +
-      `Total Contacts: ${stats.totalContacts}\n` +
-      `With Birthday: ${stats.withBirthday} (${stats.birthdayPercentage}%)\n` +
-      `With Email: ${stats.withEmail} (${stats.emailPercentage}%)\n` +
-      `With Phone: ${stats.withPhone} (${stats.phonePercentage}%)\n` +
-      `With City: ${stats.withCity} (${stats.cityPercentage}%)\n` +
-      `With Labels: ${stats.withLabels} (${stats.labelPercentage}%)\n` +
-      `With Instagram: ${stats.withInstagram} (${stats.instagramPercentage}%)\n\n` +
+      `📇 Total Contacts: ${stats.totalContacts}\n` +
+      `🎂 With Birthday: ${stats.withBirthday} (${stats.birthdayPercentage}%)\n` +
+      `📧 With Email: ${stats.withEmail} (${stats.emailPercentage}%)\n` +
+      `📱 With Phone: ${stats.withPhone} (${stats.phonePercentage}%)\n` +
+      `🌆 With City: ${stats.withCity} (${stats.cityPercentage}%)\n` +
+      `🏷️ With Labels: ${stats.withLabels} (${stats.labelPercentage}%)\n` +
+      `📸 With Instagram: ${stats.withInstagram} (${stats.instagramPercentage}%)\n\n` +
       `Label Distribution:\n` +
       Object.entries(stats.labelDistribution)
-        .map(([label, count]) => `${label}: ${count} contacts`)
+        .map(([label, count]) => `🏷️ ${label}: ${count} contacts`)
         .join('\n');
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+  /**
+   * Sends an email containing label statistics and distribution
+   * @param {Object} stats - Statistics object from ContactManager.generateContactStats()
+   * @param {Array<Object>} allLabels - Array of all labels with their IDs
+   */
+  sendLabelStatsEmail(stats, allLabels) {
+    const subject = `🏷️ Label Statistics Report 🏷️`;
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    // Create HTML content
+    const content = `
+      ${this.templates.header("Label Statistics Report 🏷️", "Overview of your contact labels and their usage")}
+      ${this.templates.labelStatsReport(stats, allLabels)}
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content);
+    
+    // Create plain text content
+    const textBody = `Label Statistics Report\n\n` +
+      `📇 Total Contacts: ${stats.totalContacts}\n` +
+      `🏷️ Total Labels: ${allLabels.length}\n` +
+      `👥 Contacts with Labels: ${stats.withLabels} (${stats.labelPercentage}%)\n\n` +
+      `Label Distribution:\n` +
+      Object.entries(stats.labelDistribution)
+        .sort((a, b) => b[1] - a[1])
+        .map(([label, count]) => 
+          `🏷️ ${label}: ${count} contacts (${(count/stats.totalContacts*100).toFixed(1)}%)`
+        ).join('\n');
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   }
@@ -270,30 +305,39 @@ class EmailTemplates {
       .header {
         text-align: center;
         margin-bottom: 30px;
+        padding: 20px;
+        background: linear-gradient(135deg, #6b8cff, #4466ff);
+        border-radius: 8px;
+        color: white;
       }
       .title {
-        color: #1a1a1a;
-        font-size: 24px;
+        color: #ffffff;
+        font-size: 28px;
         font-weight: bold;
         margin: 10px 0;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
       }
       .subtitle {
-        color: #666;
+        color: rgba(255,255,255,0.9);
         font-size: 16px;
         margin: 10px 0;
       }
       .section {
         margin: 20px 0;
-        padding: 15px;
+        padding: 20px;
         background: #f8f9fa;
-        border-radius: 6px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
       }
       .section-title {
         color: #2c3e50;
-        font-size: 18px;
-        margin-bottom: 15px;
+        font-size: 20px;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
         border-bottom: 2px solid #e9ecef;
-        padding-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
       .birthday-list {
         list-style: none;
@@ -301,74 +345,144 @@ class EmailTemplates {
         margin: 0;
       }
       .birthday-item {
-        padding: 10px;
-        margin: 5px 0;
-        border-left: 4px solid #007bff;
+        padding: 15px;
+        margin: 8px 0;
+        border-radius: 6px;
         background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         transition: all 0.2s;
+        border-left: 4px solid #4466ff;
       }
       .birthday-item:hover {
         transform: translateX(5px);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       }
       .contact-info {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
         align-items: center;
-        margin-top: 5px;
+        margin-top: 8px;
         font-size: 14px;
         color: #666;
       }
+      .contact-detail {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: #f8f9fa;
+        border-radius: 4px;
+      }
       .action-buttons {
-        margin-top: 15px;
-        text-align: center;
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
       }
       .button {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         padding: 8px 16px;
-        margin: 0 5px;
-        background-color: #007bff;
+        background-color: #4466ff;
         color: white;
         text-decoration: none;
-        border-radius: 4px;
+        border-radius: 6px;
         font-size: 14px;
-        transition: background-color 0.2s;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
       }
       .button:hover {
-        background-color: #0056b3;
+        background-color: #2b4bff;
+        transform: translateY(-1px);
+      }
+      .button.small {
+        padding: 4px 8px;
+        font-size: 12px;
       }
       .stats {
-        display: flex;
-        justify-content: space-around;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
         margin: 20px 0;
-        text-align: center;
       }
       .stat-item {
-        flex: 1;
-        padding: 10px;
+        text-align: center;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+      .stat-icon {
+        font-size: 24px;
+        margin-bottom: 8px;
       }
       .stat-number {
-        font-size: 24px;
+        font-size: 20px;
         font-weight: bold;
-        color: #007bff;
+        color: #4466ff;
+        margin: 5px 0;
       }
       .stat-label {
         font-size: 14px;
         color: #666;
       }
+      .progress-bar {
+        flex: 1;
+        height: 24px;
+        background: #f1f3f5;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+      }
+      .progress {
+        height: 100%;
+        background: linear-gradient(135deg, #6b8cff, #4466ff);
+        transition: width 0.3s ease;
+      }
+      .progress-text {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #2c3e50;
+        font-size: 12px;
+        font-weight: 500;
+      }
       .footer {
         margin-top: 30px;
-        padding-top: 20px;
+        padding: 20px;
         border-top: 1px solid #eaeaea;
         text-align: center;
         font-size: 12px;
         color: #666;
+        background: #f8f9fa;
+        border-radius: 8px;
       }
       .footer a {
-        color: #007bff;
+        color: #4466ff;
         text-decoration: none;
       }
       .footer a:hover {
+        text-decoration: underline;
+      }
+      .tag {
+        display: inline-block;
+        padding: 2px 6px;
+        background: #e9ecef;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #495057;
+        margin: 2px;
+      }
+      .contact-link {
+        color: #4466ff;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .contact-link:hover {
         text-decoration: underline;
       }
     `;
@@ -416,16 +530,60 @@ class EmailTemplates {
     }
 
     const contactItems = contacts.map(contact => {
-      const contactDetails = [];
-      if (contact.email) contactDetails.push(`Email: ${contact.email}`);
-      if (contact.phoneNumber) contactDetails.push(`Phone: ${contact.phoneNumber}`);
-      if (contact.city) contactDetails.push(`City: ${contact.city}`);
+      const details = [];
+      
+      // Add contact details with icons
+      if (contact.email) details.push(`
+        <span class="contact-detail">
+          📧 <a href="mailto:${contact.email}" class="contact-link">${contact.email}</a>
+        </span>
+      `);
+      
+      if (contact.phoneNumber) details.push(`
+        <span class="contact-detail">
+          📱 ${contact.phoneNumber}
+          ${contact.getWhatsAppLink() ? `<a href="${contact.getWhatsAppLink()}" class="button small" target="_blank">WhatsApp</a>` : ''}
+        </span>
+      `);
+      
+      if (contact.city) details.push(`
+        <span class="contact-detail">
+          🌆 ${contact.city}
+        </span>
+      `);
+
+      // Add labels with tags
+      if (contact.getLabels() && contact.getLabels().length > 0) {
+        details.push(`
+          <span class="contact-detail">
+            🏷️ ${contact.getLabels().map(label => `
+              <span class="tag">${label}</span>
+            `).join('')}
+          </span>
+        `);
+      }
+
+      // Add Instagram links if available
+      if (contact.instagramNames && contact.instagramNames.length > 0) {
+        details.push(`
+          <span class="contact-detail">
+            📸 ${contact.instagramNames.map(username => `
+              <a href="${contact.getInstagramLink(username)}" class="button small" target="_blank">${username}</a>
+            `).join(' ')}
+          </span>
+        `);
+      }
       
       return `
         <div class="birthday-item">
-          <strong>${contact.getName()}</strong>
+          <strong>👤 ${contact.getName()}</strong>
           <div class="contact-info">
-            ${contactDetails.join(' • ')}
+            ${details.join('')}
+          </div>
+          <div class="action-buttons">
+            <a href="https://contacts.google.com/search/${encodeURIComponent(contact.getName())}" class="button small" target="_blank">
+              👀 View Contact
+            </a>
           </div>
         </div>
       `;
@@ -433,9 +591,195 @@ class EmailTemplates {
 
     return `
       <div class="section">
-        <h2 class="section-title">Contacts Without Labels (${contacts.length})</h2>
+        <h2 class="section-title">👥 Contacts (${contacts.length})</h2>
         <div class="birthday-list">
           ${contactItems}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Creates a birthday list section for the email
+   * @param {Array<Contact>} contacts - List of contacts with upcoming birthdays
+   * @returns {string} HTML for the birthday list section
+   */
+  static birthdayList(contacts) {
+    if (!contacts || contacts.length === 0) {
+      return '<p>No upcoming birthdays found.</p>';
+    }
+
+    const birthdayItems = contacts.map(contact => {
+      const details = [];
+      details.push(`
+        <span class="contact-detail">
+          🎂 ${contact.getBirthdayShortFormat()}
+          ${contact.hasKnownBirthYear() ? ` (${contact.calculateAge()} years)` : ''}
+        </span>
+      `);
+      
+      if (contact.email) details.push(`
+        <span class="contact-detail">
+          📧 <a href="mailto:${contact.email}" class="contact-link">${contact.email}</a>
+        </span>
+      `);
+      
+      if (contact.phoneNumber) details.push(`
+        <span class="contact-detail">
+          📱 ${contact.phoneNumber}
+          ${contact.getWhatsAppLink() ? `<a href="${contact.getWhatsAppLink()}" class="button small" target="_blank">WhatsApp</a>` : ''}
+        </span>
+      `);
+
+      if (contact.city) details.push(`
+        <span class="contact-detail">
+          🌆 ${contact.city}
+        </span>
+      `);
+
+      // Add labels with tags
+      if (contact.getLabels() && contact.getLabels().length > 0) {
+        details.push(`
+          <span class="contact-detail">
+            🏷️ ${contact.getLabels().map(label => `
+              <span class="tag">${label}</span>
+            `).join('')}
+          </span>
+        `);
+      }
+
+      return `
+        <div class="birthday-item">
+          <strong>👤 ${contact.getName()}</strong>
+          <div class="contact-info">
+            ${details.join('')}
+          </div>
+          <div class="action-buttons">
+            <a href="https://contacts.google.com/search/${encodeURIComponent(contact.getName())}" class="button small" target="_blank">
+              👀 View Contact
+            </a>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="section">
+        <h2 class="section-title">🎂 Upcoming Birthdays (${contacts.length})</h2>
+        <div class="birthday-list">
+          ${birthdayItems}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Creates a statistics report section for the email
+   * @param {Object} stats - Statistics object from ContactManager.generateContactStats()
+   * @returns {string} HTML for the statistics section
+   */
+  static statsReport(stats) {
+    const mainStats = [
+      { label: 'Total Contacts', value: stats.totalContacts, icon: '📇' },
+      { label: 'With Birthday', value: `${stats.withBirthday} (${stats.birthdayPercentage}%)`, icon: '🎂' },
+      { label: 'With Email', value: `${stats.withEmail} (${stats.emailPercentage}%)`, icon: '📧' },
+      { label: 'With Phone', value: `${stats.withPhone} (${stats.phonePercentage}%)`, icon: '📱' },
+      { label: 'With City', value: `${stats.withCity} (${stats.cityPercentage}%)`, icon: '🌆' },
+      { label: 'With Labels', value: `${stats.withLabels} (${stats.labelPercentage}%)`, icon: '🏷️' },
+      { label: 'With Instagram', value: `${stats.withInstagram} (${stats.instagramPercentage}%)`, icon: '📸' }
+    ];
+
+    const mainStatsHtml = mainStats.map(stat => `
+      <div class="stat-item">
+        <div class="stat-icon">${stat.icon}</div>
+        <div class="stat-number">${stat.value}</div>
+        <div class="stat-label">${stat.label}</div>
+      </div>
+    `).join('');
+
+    const labelDistributionHtml = Object.entries(stats.labelDistribution)
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, count]) => `
+        <div class="birthday-item">
+          <strong>🏷️ ${label}</strong>
+          <div class="contact-info">
+            👥 ${count} contacts (${(count/stats.totalContacts*100).toFixed(1)}%)
+            <a href="#" class="button small" onclick="google.script.run.sendContactsWithLabelReport('${label}')">View Contacts</a>
+          </div>
+        </div>
+      `).join('');
+
+    return `
+      <div class="section">
+        <h2 class="section-title">📊 General Statistics</h2>
+        <div class="stats">
+          ${mainStatsHtml}
+        </div>
+      </div>
+      <div class="section">
+        <h2 class="section-title">🏷️ Label Distribution</h2>
+        <div class="birthday-list">
+          ${labelDistributionHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Creates a label statistics report section for the email
+   * @param {Object} stats - Statistics object from ContactManager.generateContactStats()
+   * @param {Array<Object>} allLabels - Array of all labels with their IDs
+   * @returns {string} HTML for the label statistics section
+   */
+  static labelStatsReport(stats, allLabels) {
+    const overviewStats = [
+      { label: 'Total Contacts', value: stats.totalContacts, icon: '📇' },
+      { label: 'Total Labels', value: allLabels.length, icon: '🏷️' },
+      { label: 'Labeled Contacts', value: `${stats.withLabels} (${stats.labelPercentage}%)`, icon: '👥' }
+    ];
+
+    const overviewHtml = overviewStats.map(stat => `
+      <div class="stat-item">
+        <div class="stat-icon">${stat.icon}</div>
+        <div class="stat-number">${stat.value}</div>
+        <div class="stat-label">${stat.label}</div>
+      </div>
+    `).join('');
+
+    const labelDistributionHtml = Object.entries(stats.labelDistribution)
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, count]) => {
+        const percentage = (count/stats.totalContacts*100).toFixed(1);
+        const progressWidth = Math.max(percentage, 5); // Minimum 5% width for visibility
+        return `
+          <div class="birthday-item">
+            <strong>🏷️ ${label}</strong>
+            <div class="contact-info">
+              <div class="progress-bar">
+                <div class="progress" style="width: ${progressWidth}%"></div>
+                <span class="progress-text">
+                  👥 ${count} contacts (${percentage}%)
+                </span>
+              </div>
+              <div class="action-buttons">
+                <a href="#" class="button small" onclick="google.script.run.sendContactsWithLabelReport('${label}')">View Contacts</a>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+    return `
+      <div class="section">
+        <h2 class="section-title">📊 Label Overview</h2>
+        <div class="stats">
+          ${overviewHtml}
+        </div>
+      </div>
+      <div class="section">
+        <h2 class="section-title">📈 Label Distribution</h2>
+        <div class="birthday-list">
+          ${labelDistributionHtml}
         </div>
       </div>
     `;

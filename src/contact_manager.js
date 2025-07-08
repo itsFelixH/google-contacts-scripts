@@ -376,7 +376,7 @@ class Contact {
       throw new Error('Name is required.');
     }
     this.name = name;
-    this.birthday = new Date(birthday) || '';
+    this.birthday = birthday ? new Date(birthday) : null;
     this.labels = Array.isArray(labels) ? labels : [];
     this.email = email || '';
     this.city = city || '';
@@ -396,7 +396,7 @@ class Contact {
 
   /**
    * Gets the birthday of the contact.
-   * @returns {Date} The birthday of the contact.
+   * @returns {Date|null} The birthday of the contact.
    */
   getBirthday() {
     return this.birthday;
