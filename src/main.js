@@ -111,6 +111,30 @@ function sendUpcomingBirthdaysReport(days = 7) {
 }
 
 /**
+ * Sends an email report of contacts without surnames (only first name)
+ * @throws {Error} When contact fetching or email sending fails
+ */
+function sendContactsWithoutSurnamesReport() {
+  try {
+    const contactManager = new ContactManager();
+    const emailManager = new EmailManager();
+
+    const contactsWithoutSurnames = contactManager.findContactsWithoutSurnames();
+    
+    if (contactsWithoutSurnames.length === 0) {
+      Logger.log('No contacts without surnames found');
+      return;
+    }
+    
+    emailManager.sendContactsWithoutSurnamesEmail(contactsWithoutSurnames);
+    Logger.log(`Sent contacts without surnames report (${contactsWithoutSurnames.length} contacts found)`);
+  } catch (error) {
+    Logger.log(`Error in sendContactsWithoutSurnamesReport: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
  * Sends an email report of contacts with potentially invalid phone numbers
  * @throws {Error} When contact fetching or email sending fails
  */

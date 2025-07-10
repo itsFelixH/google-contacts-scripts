@@ -180,6 +180,36 @@ class EmailManager {
 
 
   /**
+   * Sends an email containing a list of contacts without surnames
+   * @param {Contact[]} contactsWithoutSurnames - List of contacts without surnames
+   */
+  sendContactsWithoutSurnamesEmail(contactsWithoutSurnames) {
+    const subject = "👤 Contacts Without Surnames 👤";
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    const content = `
+      ${this.templates.header("Contacts Without Surnames Report", "These contacts only have a first name")}
+      ${this.templates.contactList(contactsWithoutSurnames, true)}
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content, 'warning');
+    
+    const textBody = `Contacts Without Surnames Report\n\n` +
+      contactsWithoutSurnames.map(contact => {
+        const details = [];
+        if (contact.email) details.push(`Email: ${contact.email}`);
+        if (contact.phoneNumber) details.push(`Phone: ${contact.phoneNumber}`);
+        if (contact.city) details.push(`City: ${contact.city}`);
+        return `${contact.getName()}\n${details.join('\n')}`;
+      }).join('\n\n');
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+  /**
    * Sends an email containing contacts with potentially invalid phone numbers
    * @param {Array<Contact>} contactsWithInvalidPhones - List of contacts with suspicious phone numbers
    */
