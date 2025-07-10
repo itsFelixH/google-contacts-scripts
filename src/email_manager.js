@@ -61,7 +61,7 @@ class EmailManager {
       ${this.templates.footer()}
     `;
 
-    const htmlBody = this.templates.wrapEmail(content);
+    const htmlBody = this.templates.wrapEmail(content, 'contacts');
     
     // Create plain text content
     const textBody = `Contacts Without Labels Report\n\n` +
@@ -87,14 +87,14 @@ class EmailManager {
     const toEmail = Session.getActiveUser().getEmail();
     const fromEmail = Session.getEffectiveUser().getEmail();
 
-    // Create HTML content
+    // Create HTML content with simplified template
     const content = `
       ${this.templates.header("Contacts Without Birthday Report", "These contacts don't have a birthday set")}
-      ${this.templates.contactList(contactsWithoutBirthday)}
+      ${this.templates.contactList(contactsWithoutBirthday, true)}
       ${this.templates.footer()}
     `;
 
-    const htmlBody = this.templates.wrapEmail(content);
+    const htmlBody = this.templates.wrapEmail(content, 'warning');
     
     // Create plain text content
     const textBody = `Contacts Without Birthday Report\n\n` +
@@ -128,7 +128,7 @@ class EmailManager {
       ${this.templates.footer()}
     `;
 
-    const htmlBody = this.templates.wrapEmail(content);
+    const htmlBody = this.templates.wrapEmail(content, 'labels');
     
     // Create plain text content
     const textBody = `Contacts With Label "${label}" Report\n\n` +
@@ -162,7 +162,7 @@ class EmailManager {
       ${this.templates.footer()}
     `;
 
-    const htmlBody = this.templates.wrapEmail(content);
+    const htmlBody = this.templates.wrapEmail(content, 'birthday');
     
     // Create plain text content
     const textBody = `Upcoming Birthdays Report (Next ${days} Days)\n\n` +
@@ -196,7 +196,7 @@ class EmailManager {
       ${this.templates.footer()}
     `;
 
-    const htmlBody = this.templates.wrapEmail(content);
+    const htmlBody = this.templates.wrapEmail(content, 'warning');
     
     // Create plain text content
     const textBody = `Invalid Phone Numbers Report\n\n` +
@@ -228,7 +228,7 @@ class EmailManager {
       ${this.templates.footer()}
     `;
 
-    const htmlBody = this.templates.wrapEmail(content);
+    const htmlBody = this.templates.wrapEmail(content, 'stats');
     
     // Create plain text content
     const textBody = `Contact Statistics Report\n\n` +
@@ -265,7 +265,7 @@ class EmailManager {
       ${this.templates.footer()}
     `;
 
-    const htmlBody = this.templates.wrapEmail(content);
+    const htmlBody = this.templates.wrapEmail(content, 'labels');
     
     // Create plain text content
     const textBody = `Label Statistics Report\n\n` +
@@ -289,9 +289,61 @@ class EmailManager {
  */
 class EmailTemplates {
   /**
-   * CSS styles for email templates
+   * Get the theme configuration for a specific content type
+   * @param {string} contentType - Type of content ('birthday', 'stats', 'contacts', 'labels', 'warning')
+   * @returns {Object} Theme configuration object
    */
-  static get styles() {
+  static getTheme(contentType = 'default') {
+    const themes = {
+      birthday: {
+        headerGradient: 'linear-gradient(135deg, #FF6B6B, #FF8E8E)',
+        accentColor: '#FF6B6B',
+        iconColor: '#FF4949',
+        borderColor: '#FFE0E0'
+      },
+      stats: {
+        headerGradient: 'linear-gradient(135deg, #4834D4, #686DE0)',
+        accentColor: '#4834D4',
+        iconColor: '#686DE0',
+        borderColor: '#E4E2FF'
+      },
+      contacts: {
+        headerGradient: 'linear-gradient(135deg, #6B8CFF, #4466FF)',
+        accentColor: '#4466FF',
+        iconColor: '#6B8CFF',
+        borderColor: '#E5EAFF'
+      },
+      labels: {
+        headerGradient: 'linear-gradient(135deg, #20BF6B, #26DE81)',
+        accentColor: '#20BF6B',
+        iconColor: '#26DE81',
+        borderColor: '#E0FFE9'
+      },
+      warning: {
+        headerGradient: 'linear-gradient(135deg, #FA8231, #FD9644)',
+        accentColor: '#FA8231',
+        iconColor: '#FD9644',
+        borderColor: '#FFE5D3'
+      },
+      default: {
+        headerGradient: 'linear-gradient(135deg, #6B8CFF, #4466FF)',
+        accentColor: '#4466FF',
+        iconColor: '#6B8CFF',
+        borderColor: '#E5EAFF'
+      }
+    };
+    
+    return themes[contentType] || themes.default;
+  }
+
+  /**
+   * CSS styles for email templates
+   * @param {string} contentType - Type of content for styling
+   * @returns {string} CSS styles
+   */
+  static getStyles(contentType = 'default') {
+    const theme = this.getTheme(contentType);
+    
     return `
       .email-container {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -306,7 +358,7 @@ class EmailTemplates {
         text-align: center;
         margin-bottom: 30px;
         padding: 20px;
-        background: linear-gradient(135deg, #6b8cff, #4466ff);
+        background: ${theme.headerGradient};
         border-radius: 8px;
         color: white;
       }
@@ -334,7 +386,7 @@ class EmailTemplates {
         font-size: 20px;
         margin-bottom: 20px;
         padding-bottom: 10px;
-        border-bottom: 2px solid #e9ecef;
+        border-bottom: 2px solid ${theme.borderColor};
         display: flex;
         align-items: center;
         gap: 8px;
@@ -351,7 +403,7 @@ class EmailTemplates {
         background: white;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         transition: all 0.2s;
-        border-left: 4px solid #4466ff;
+        border-left: 4px solid ${theme.accentColor};
       }
       .birthday-item:hover {
         transform: translateX(5px);
@@ -369,10 +421,49 @@ class EmailTemplates {
       .contact-detail {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 8px;
         padding: 4px 8px;
         background: #f8f9fa;
         border-radius: 4px;
+      }
+      
+      /* Simplified template styles */
+      .birthday-item.simple {
+        padding: 10px;
+        margin: 4px 0;
+        background: white;
+        border-radius: 4px;
+        border-left: 2px solid ${theme.accentColor};
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      
+      .simple-details {
+        color: #666;
+        font-size: 14px;
+        flex: 1;
+      }
+      
+      .link-button {
+        color: ${theme.accentColor};
+        text-decoration: none;
+        font-size: 14px;
+      }
+      
+      .link-button:hover {
+        text-decoration: underline;
+      }
+      
+      /* WhatsApp button specific styles */
+      .button.whatsapp {
+        background-color: #25D366;
+        margin-left: 8px;
+      }
+      
+      .button.whatsapp:hover {
+        background-color: #128C7E;
       }
       .action-buttons {
         margin-top: 10px;
@@ -385,7 +476,7 @@ class EmailTemplates {
         align-items: center;
         gap: 6px;
         padding: 8px 16px;
-        background-color: #4466ff;
+        background-color: ${theme.accentColor};
         color: white;
         text-decoration: none;
         border-radius: 6px;
@@ -395,7 +486,7 @@ class EmailTemplates {
         cursor: pointer;
       }
       .button:hover {
-        background-color: #2b4bff;
+        background-color: ${theme.iconColor};
         transform: translateY(-1px);
       }
       .button.small {
@@ -418,11 +509,12 @@ class EmailTemplates {
       .stat-icon {
         font-size: 24px;
         margin-bottom: 8px;
+        color: ${theme.iconColor};
       }
       .stat-number {
         font-size: 20px;
         font-weight: bold;
-        color: #4466ff;
+        color: ${theme.accentColor};
         margin: 5px 0;
       }
       .stat-label {
@@ -439,7 +531,7 @@ class EmailTemplates {
       }
       .progress {
         height: 100%;
-        background: linear-gradient(135deg, #6b8cff, #4466ff);
+        background: ${theme.headerGradient};
         transition: width 0.3s ease;
       }
       .progress-text {
@@ -462,7 +554,7 @@ class EmailTemplates {
         border-radius: 8px;
       }
       .footer a {
-        color: #4466ff;
+        color: ${theme.accentColor};
         text-decoration: none;
       }
       .footer a:hover {
@@ -471,14 +563,14 @@ class EmailTemplates {
       .tag {
         display: inline-block;
         padding: 2px 6px;
-        background: #e9ecef;
+        background: ${theme.borderColor};
         border-radius: 4px;
         font-size: 12px;
-        color: #495057;
+        color: ${theme.accentColor};
         margin: 2px;
       }
       .contact-link {
-        color: #4466ff;
+        color: ${theme.accentColor};
         text-decoration: none;
         font-weight: 500;
       }
@@ -486,6 +578,7 @@ class EmailTemplates {
         text-decoration: underline;
       }
     `;
+
   }
 
   /**
@@ -524,12 +617,28 @@ class EmailTemplates {
    * @param {Array<Contact>} contacts - List of contacts to display
    * @returns {string} HTML for the contact list section
    */
-  static contactList(contacts) {
+  static contactList(contacts, simplified = false) {
     if (!contacts || contacts.length === 0) {
       return '<p>No contacts found.</p>';
     }
 
     const contactItems = contacts.map(contact => {
+      if (simplified) {
+        // Simplified version for long lists (e.g. Contacts Without Birthday report)
+        const details = [];
+        if (contact.email) details.push(contact.email);
+        if (contact.phoneNumber) details.push(contact.phoneNumber);
+        
+        return `
+          <div class="birthday-item simple">
+            <strong>${contact.getName()}</strong>
+            ${details.length > 0 ? `<div class="simple-details">${details.join(' • ')}</div>` : ''}
+            <a href="https://contacts.google.com/search/${encodeURIComponent(contact.getName())}" class="link-button" target="_blank">Edit</a>
+          </div>
+        `;
+      }
+
+      // Full detailed version for other reports
       const details = [];
       
       // Add contact details with icons
@@ -542,7 +651,7 @@ class EmailTemplates {
       if (contact.phoneNumber) details.push(`
         <span class="contact-detail">
           📱 ${contact.phoneNumber}
-          ${contact.getWhatsAppLink() ? `<a href="${contact.getWhatsAppLink()}" class="button small" target="_blank">WhatsApp</a>` : ''}
+          ${contact.getWhatsAppLink() ? `<a href="${contact.getWhatsAppLink()}" class="button small whatsapp" target="_blank">WhatsApp</a>` : ''}
         </span>
       `);
       
@@ -788,16 +897,17 @@ class EmailTemplates {
   /**
    * Wraps email content in a standard template with styles
    * @param {string} content - Email content to wrap
+   * @param {string} contentType - Type of content for styling
    * @returns {string} Complete HTML email
    */
-  static wrapEmail(content) {
+  static wrapEmail(content, contentType = 'default') {
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>${this.styles}</style>
+        <style>${this.getStyles(contentType)}</style>
       </head>
       <body>
         <div class="email-container">
