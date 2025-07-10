@@ -6,9 +6,11 @@ class ContactManager {
   /**
    * Creates a ContactManager instance
    * @param {string[]} [labelFilter=[]] - Optional labels to filter contacts by
+   * @param {boolean} [useCache=true] - Whether to use caching
    */
-  constructor(labelFilter = []) {
+  constructor(labelFilter = [], useCache = true) {
     try {
+      this.useCache = useCache;
       this.contacts = this.fetchContacts(labelFilter);
     } catch (error) {
       Logger.log(`Error initializing ContactManager: ${error.message}`);
@@ -25,6 +27,16 @@ class ContactManager {
    * @throws {Error} When API calls fail after max retries
    */
   fetchContacts(labelFilter = [], maxRetries = 3) {
+    const cacheKey = `contacts_${JSON.stringify(labelFilter.sort())}`;
+    
+    if (this.useCache) {
+      const cachedContacts = Cache.get(cacheKey);
+      if (cachedContacts) {
+        Logger.log(`📦 Using cached contacts (${cachedContacts.length} contacts)`);
+        return cachedContacts.map(data => this.deserializeContact(data));
+      }
+    }
+    
     try {
       this.validateLabelFilter(labelFilter);
       const peopleService = People.People;
@@ -66,11 +78,55 @@ class ContactManager {
         }
       } while (pageToken && attempt <= maxRetries);
 
+      if (this.useCache && contacts.length > 0) {
+        const serializedContacts = contacts.map(contact => this.serializeContact(contact));
+        Cache.set(cacheKey, serializedContacts, 30 * 60 * 1000);
+        Logger.log(`💾 Cached ${contacts.length} contacts`);
+      }
+      
       Logger.log(`📇 Fetched ${contacts.length} contacts!`);
       return contacts;
     } catch (error) {
       Logger.log(`💥 Critical error fetching contacts: ${error.message}`);
       throw error;
+    }
+  }
+
+  serializeContact(contact) {
+    return {
+      name: contact.name,
+      birthday: contact.birthday ? contact.birthday.toISOString() : null,
+      labels: contact.labels,
+      email: contact.email,
+      city: contact.city,
+      phoneNumber: contact.phoneNumber,
+      instagramNames: contact.instagramNames
+    };
+  }
+
+  deserializeContact(data) {
+    return new Contact(
+      data.name,
+      data.birthday ? new Date(data.birthday) : null,
+      data.labels || [],
+      data.email || '',
+      data.city || '',
+      data.phoneNumber || '',
+      data.instagramNames || []
+    );
+  }
+
+  clearCache() {
+    try {
+      const properties = PropertiesService.getScriptProperties().getProperties();
+      Object.keys(properties).forEach(key => {
+        if (key.startsWith('contacts_')) {
+          Cache.delete(key);
+        }
+      });
+      Logger.log('Contact cache cleared');
+    } catch (error) {
+      Logger.log(`Error clearing contact cache: ${error.message}`);
     }
   }
 
