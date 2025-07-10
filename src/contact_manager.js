@@ -448,25 +448,6 @@ class ContactManager {
     }
   }
 
-  /**
-   * Finds recently added contacts
-   * @param {number} [days=7] - Number of days to look back
-   * @returns {Contact[]} Array of recently added contacts
-   */
-  findRecentContacts(days = 7) {
-    try {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - days);
-      
-      // Note: Google Contacts API doesn't provide creation date
-      // This is a placeholder - would need additional metadata
-      Logger.log(`Recent contacts feature requires additional metadata tracking`);
-      return [];
-    } catch (error) {
-      Logger.log(`Error finding recent contacts: ${error.message}`);
-      return [];
-    }
-  }
 
   /**
    * Gets label usage statistics
