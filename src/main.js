@@ -187,7 +187,7 @@ function sendStatisticsReport() {
 }
 
 /**
- * Sends some reports in one batch
+ * Sends all quick win reports in one batch
  * @throws {Error} When any report fails
  */
 function sendAllQuickReports() {
