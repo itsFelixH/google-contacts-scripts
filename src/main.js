@@ -412,6 +412,33 @@ function sendDuplicateContactsReport() {
 
 
 /**
+ * Clears all cached data
+ * @throws {Error} When cache clearing fails
+ */
+function clearAllCache() {
+  try {
+    Cache.clear();
+    Logger.log('All cache cleared successfully');
+  } catch (error) {
+    Logger.log(`Error clearing cache: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Gets cache statistics
+ * @returns {Object} Cache statistics
+ */
+function getCacheStats() {
+  try {
+    return Cache.getStats();
+  } catch (error) {
+    Logger.log(`Error getting cache stats: ${error.message}`);
+    return { error: error.message };
+  }
+}
+
+/**
  * Gets application health status and basic metrics
  * @returns {Object} Health status information
  */
@@ -420,6 +447,7 @@ function getHealthStatus() {
     const startTime = Date.now();
     const contactManager = new ContactManager();
     const labelManager = new LabelManager();
+    const cacheStats = getCacheStats();
     const endTime = Date.now();
     
     return {
@@ -427,7 +455,8 @@ function getHealthStatus() {
       timestamp: new Date().toISOString(),
       responseTime: endTime - startTime,
       contactCount: contactManager.contacts.length,
-      labelCount: labelManager.labels.length
+      labelCount: labelManager.labels.length,
+      cache: cacheStats
     };
   } catch (error) {
     Logger.log(`Health check failed: ${error.message}`);
