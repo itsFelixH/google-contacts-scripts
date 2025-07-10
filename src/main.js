@@ -187,6 +187,43 @@ function sendStatisticsReport() {
 }
 
 /**
+ * Sends some reports in one batch
+ * @throws {Error} When any report fails
+ */
+function sendAllQuickReports() {
+  try {
+    Logger.log('Starting all quick win reports...');
+    
+    const reports = [
+      () => sendMissingFieldReport('email'),
+      () => sendMissingFieldReport('phone'), 
+      () => sendContactsWithoutSurnamesReport(),
+      () => sendLabelUsageReport(),
+      () => sendContactsByCityReport(),
+      () => sendDuplicateContactsReport()
+    ];
+    
+    let successful = 0;
+    let failed = 0;
+    
+    reports.forEach((reportFn, index) => {
+      try {
+        reportFn();
+        successful++;
+      } catch (error) {
+        failed++;
+        Logger.log(`Report ${index + 1} failed: ${error.message}`);
+      }
+    });
+    
+    Logger.log(`Quick reports completed: ${successful} successful, ${failed} failed`);
+  } catch (error) {
+    Logger.log(`Error in sendAllQuickReports: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
  * Tests contact fetching and logging functionality
  * @param {string[]} [labelFilter=[]] - Optional labels to filter by
  * @throws {Error} When contact operations fail
@@ -279,6 +316,100 @@ function runAllTests() {
     throw new Error(`${testResults.failed} test(s) failed`);
   }
 }
+
+/**
+ * Sends email report of contacts missing specific field
+ * @param {string} field - Field to check ('email', 'phone', 'city', 'birthday')
+ * @throws {Error} When field is invalid or operation fails
+ */
+function sendMissingFieldReport(field) {
+  try {
+    const validFields = ['email', 'phone', 'city', 'birthday'];
+    if (!validFields.includes(field)) {
+      throw new Error(`Invalid field. Must be one of: ${validFields.join(', ')}`);
+    }
+
+    const contactManager = new ContactManager();
+    const emailManager = new EmailManager();
+    const contacts = contactManager.findContactsMissingField(field);
+    
+    if (contacts.length === 0) {
+      Logger.log(`No contacts missing ${field} found`);
+      return;
+    }
+    
+    emailManager.sendMissingFieldEmail(field, contacts);
+    Logger.log(`Sent missing ${field} report (${contacts.length} contacts found)`);
+  } catch (error) {
+    Logger.log(`Error in sendMissingFieldReport: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Sends label usage statistics report
+ * @throws {Error} When operation fails
+ */
+function sendLabelUsageReport() {
+  try {
+    const contactManager = new ContactManager();
+    const emailManager = new EmailManager();
+    const labelStats = contactManager.getLabelUsageStats();
+    
+    emailManager.sendLabelUsageStatsEmail(labelStats);
+    Logger.log(`Sent label usage statistics report`);
+  } catch (error) {
+    Logger.log(`Error in sendLabelUsageReport: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Sends contacts grouped by city report
+ * @throws {Error} When operation fails
+ */
+function sendContactsByCityReport() {
+  try {
+    const contactManager = new ContactManager();
+    const emailManager = new EmailManager();
+    const cityGroups = contactManager.getContactsByCity();
+    
+    if (cityGroups.length === 0) {
+      Logger.log('No city data found');
+      return;
+    }
+    
+    emailManager.sendContactsByCityEmail(cityGroups);
+    Logger.log(`Sent contacts by city report (${cityGroups.length} cities)`);
+  } catch (error) {
+    Logger.log(`Error in sendContactsByCityReport: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Sends potential duplicate contacts report
+ * @throws {Error} When operation fails
+ */
+function sendDuplicateContactsReport() {
+  try {
+    const contactManager = new ContactManager();
+    const emailManager = new EmailManager();
+    const duplicates = contactManager.findPotentialDuplicates();
+    
+    if (duplicates.length === 0) {
+      Logger.log('No potential duplicates found');
+      return;
+    }
+    
+    emailManager.sendDuplicatesEmail(duplicates);
+    Logger.log(`Sent duplicate contacts report (${duplicates.length} groups found)`);
+  } catch (error) {
+    Logger.log(`Error in sendDuplicateContactsReport: ${error.message}`);
+    throw error;
+  }
+}
+
 
 /**
  * Gets application health status and basic metrics

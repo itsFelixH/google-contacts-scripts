@@ -180,6 +180,164 @@ class EmailManager {
 
 
   /**
+   * Sends an email containing contacts missing a specific field
+   * @param {string} field - Field name (email, phone, city, birthday)
+   * @param {Contact[]} contacts - Contacts missing the field
+   */
+  sendMissingFieldEmail(field, contacts) {
+    const fieldNames = {
+      email: 'Email Addresses',
+      phone: 'Phone Numbers', 
+      city: 'City Information',
+      birthday: 'Birthdays'
+    };
+    
+    const subject = `📋 Contacts Missing ${fieldNames[field]} 📋`;
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    const content = `
+      ${this.templates.header(`Contacts Missing ${fieldNames[field]}`, `These contacts are missing ${field} information`)}
+      ${this.templates.contactList(contacts, true)}
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content, 'warning');
+    const textBody = `Contacts Missing ${fieldNames[field]} Report\n\n` +
+      contacts.map(contact => contact.getName()).join('\n');
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+  /**
+   * Sends label usage statistics email
+   * @param {Object} labelStats - Label usage statistics
+   */
+  sendLabelUsageStatsEmail(labelStats) {
+    const subject = "📊 Label Usage Statistics 📊";
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    const content = `
+      ${this.templates.header("Label Usage Statistics", "Overview of how your contact labels are being used")}
+      <div class="section">
+        <h2 class="section-title">📈 Usage Overview</h2>
+        <div class="stats">
+          <div class="stat-item">
+            <div class="stat-icon">🏷️</div>
+            <div class="stat-number">${labelStats.totalLabels}</div>
+            <div class="stat-label">Total Labels</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">👑</div>
+            <div class="stat-number">${labelStats.mostUsed?.count || 0}</div>
+            <div class="stat-label">Most Used: ${labelStats.mostUsed?.label || 'N/A'}</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">📉</div>
+            <div class="stat-number">${labelStats.leastUsed?.count || 0}</div>
+            <div class="stat-label">Least Used: ${labelStats.leastUsed?.label || 'N/A'}</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">❌</div>
+            <div class="stat-number">${labelStats.unlabeledCount}</div>
+            <div class="stat-label">Unlabeled Contacts</div>
+          </div>
+        </div>
+      </div>
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content, 'stats');
+    const textBody = `Label Usage Statistics\n\n` +
+      `Total Labels: ${labelStats.totalLabels}\n` +
+      `Most Used: ${labelStats.mostUsed?.label} (${labelStats.mostUsed?.count})\n` +
+      `Least Used: ${labelStats.leastUsed?.label} (${labelStats.leastUsed?.count})\n` +
+      `Unlabeled Contacts: ${labelStats.unlabeledCount}`;
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+  /**
+   * Sends contacts grouped by city email
+   * @param {Object[]} cityGroups - Contacts grouped by city
+   */
+  sendContactsByCityEmail(cityGroups) {
+    const subject = "🌆 Contacts by City 🌆";
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    const cityList = cityGroups.map(group => `
+      <div class="birthday-item">
+        <strong>🌆 ${group.city}</strong>
+        <div class="contact-info">
+          👥 ${group.count} contacts
+        </div>
+      </div>
+    `).join('');
+
+    const content = `
+      ${this.templates.header("Contacts by City", "Geographic distribution of your contacts")}
+      <div class="section">
+        <h2 class="section-title">🗺️ City Distribution (${cityGroups.length})</h2>
+        <div class="birthday-list">
+          ${cityList}
+        </div>
+      </div>
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content, 'contacts');
+    const textBody = `Contacts by City Report\n\n` +
+      cityGroups.map(group => `${group.city}: ${group.count} contacts`).join('\n');
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+  /**
+   * Sends potential duplicates email
+   * @param {Object[]} duplicateGroups - Groups of potential duplicate contacts
+   */
+  sendDuplicatesEmail(duplicateGroups) {
+    const subject = "🔍 Potential Duplicate Contacts 🔍";
+    const senderName = DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+    const toEmail = Session.getActiveUser().getEmail();
+    const fromEmail = Session.getEffectiveUser().getEmail();
+
+    const duplicateList = duplicateGroups.map((group, index) => `
+      <div class="birthday-item">
+        <strong>📋 Group ${index + 1} (${group.count} contacts)</strong>
+        <div class="contact-info">
+          ${group.contacts.map(contact => `<span class="tag">${contact.getName()}</span>`).join('')}
+          <br><small>Reason: ${group.reason}</small>
+        </div>
+      </div>
+    `).join('');
+
+    const content = `
+      ${this.templates.header("Potential Duplicate Contacts", "These contacts may be duplicates that need review")}
+      <div class="section">
+        <h2 class="section-title">🔍 Duplicate Groups (${duplicateGroups.length})</h2>
+        <div class="birthday-list">
+          ${duplicateList}
+        </div>
+      </div>
+      ${this.templates.footer()}
+    `;
+
+    const htmlBody = this.templates.wrapEmail(content, 'warning');
+    const textBody = `Potential Duplicate Contacts Report\n\n` +
+      duplicateGroups.map((group, i) => 
+        `Group ${i + 1}: ${group.contacts.map(c => c.getName()).join(', ')}`
+      ).join('\n');
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+  /**
    * Sends an email containing a list of contacts without surnames
    * @param {Contact[]} contactsWithoutSurnames - List of contacts without surnames
    */
