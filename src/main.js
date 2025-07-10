@@ -81,31 +81,18 @@ function sendInvalidPhonesReport() {
 }
 
 /**
- * Sends an email report with contact statistics
+ * Sends a comprehensive statistics report including both contact and label statistics
  */
-function sendContactStatsReport() {
-  const contactManager = new ContactManager();
-  const emailManager = new EmailManager();
-
-  const stats = contactManager.generateContactStats();
-  emailManager.sendContactStatsEmail(stats);
-
-  Logger.log('Sent contact statistics report');
-}
-
-/**
- * Sends an email report with label statistics and distribution
- */
-function sendLabelStatsReport() {
+function sendStatisticsReport() {
   const contactManager = new ContactManager();
   const labelManager = new LabelManager();
   const emailManager = new EmailManager();
 
   const stats = contactManager.generateContactStats();
   const allLabels = labelManager.fetchLabels();
-  emailManager.sendLabelStatsEmail(stats, allLabels);
+  emailManager.sendCombinedStatsEmail(stats, allLabels);
 
-  Logger.log('Sent label statistics report');
+  Logger.log('Sent comprehensive statistics report');
 }
 
 

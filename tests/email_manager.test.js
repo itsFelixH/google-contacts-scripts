@@ -9,6 +9,48 @@ function runEmailManagerTests() {
   testSendContactStatsEmail();
   testSendLabelStatsEmail();
   testEmailTemplates();
+  testEmailThemes();
+}
+
+function testEmailThemes() {
+  // Test theme generation for different content types
+  try {
+    const birthdayTheme = EmailTemplates.getTheme('birthday');
+    const statsTheme = EmailTemplates.getTheme('stats');
+    const contactsTheme = EmailTemplates.getTheme('contacts');
+    const labelsTheme = EmailTemplates.getTheme('labels');
+    const warningTheme = EmailTemplates.getTheme('warning');
+    const defaultTheme = EmailTemplates.getTheme('default');
+    const unknownTheme = EmailTemplates.getTheme('unknown');
+
+    // Verify each theme has required properties
+    const themes = [birthdayTheme, statsTheme, contactsTheme, labelsTheme, warningTheme, defaultTheme, unknownTheme];
+    themes.forEach(theme => {
+      if (!theme.headerGradient || !theme.accentColor || !theme.iconColor || !theme.borderColor) {
+        throw new Error('Theme missing required properties');
+      }
+    });
+
+    // Verify unknown theme returns default theme
+    if (JSON.stringify(unknownTheme) !== JSON.stringify(defaultTheme)) {
+      throw new Error('Unknown theme should return default theme');
+    }
+
+    // Test theme application in email template
+    const content = `<div>Test Content</div>`;
+    const birthdayEmail = EmailTemplates.wrapEmail(content, 'birthday');
+    const statsEmail = EmailTemplates.wrapEmail(content, 'stats');
+
+    // Verify theme colors are applied
+    if (!birthdayEmail.includes(birthdayTheme.headerGradient) || !statsEmail.includes(statsTheme.headerGradient)) {
+      throw new Error('Theme colors not properly applied to email template');
+    }
+
+    Logger.log("✅ EmailTemplates.getTheme: Successfully generated and applied themes");
+  } catch (error) {
+    Logger.log(`❌ EmailTemplates.getTheme: Failed to generate or apply themes - ${error.message}`);
+    throw error;
+  }
 }
 
 function testSendUnlabeledContactsEmail() {
