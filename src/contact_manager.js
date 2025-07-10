@@ -310,6 +310,52 @@ class ContactManager {
   }
 
   /**
+   * Basic duplicate detection based on name similarity
+   * @returns {Object[]} Array of potential duplicate groups
+   */
+  findPotentialDuplicates() {
+    try {
+      const duplicateGroups = [];
+      const processed = new Set();
+      
+      this.contacts.forEach((contact, i) => {
+        if (processed.has(i)) return;
+        
+        const similarContacts = [contact];
+        const name1 = contact.getName().toLowerCase().trim();
+        
+        this.contacts.forEach((otherContact, j) => {
+          if (i !== j && !processed.has(j)) {
+            const name2 = otherContact.getName().toLowerCase().trim();
+            
+            // Simple similarity check
+            if (name1 === name2 || 
+                (contact.email && contact.email === otherContact.email) ||
+                (contact.phoneNumber && contact.phoneNumber === otherContact.phoneNumber)) {
+              similarContacts.push(otherContact);
+              processed.add(j);
+            }
+          }
+        });
+        
+        if (similarContacts.length > 1) {
+          duplicateGroups.push({
+            contacts: similarContacts,
+            count: similarContacts.length,
+            reason: 'name/email/phone match'
+          });
+        }
+        processed.add(i);
+      });
+      
+      return duplicateGroups;
+    } catch (error) {
+      Logger.log(`Error finding duplicates: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
    * Finds all contacts with upcoming birthdays within the specified number of days
    * @param {number} days Number of days to look ahead (default: 7)
    * @returns {Array<Contact>} Array of contacts with upcoming birthdays, sorted by date
@@ -381,6 +427,164 @@ class ContactManager {
   }
 
   /**
+   * Finds contacts missing specific fields
+   * @param {string} field - Field to check ('email', 'phone', 'city', 'birthday')
+   * @returns {Contact[]} Array of contacts missing the specified field
+   */
+  findContactsMissingField(field) {
+    try {
+      return this.contacts.filter(contact => {
+        switch(field) {
+          case 'email': return !contact.email || !contact.email.trim();
+          case 'phone': return !contact.phoneNumber || !contact.phoneNumber.trim();
+          case 'city': return !contact.city || !contact.city.trim();
+          case 'birthday': return !contact.getBirthday();
+          default: return false;
+        }
+      });
+    } catch (error) {
+      Logger.log(`Error finding contacts missing ${field}: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Finds recently added contacts
+   * @param {number} [days=7] - Number of days to look back
+   * @returns {Contact[]} Array of recently added contacts
+   */
+  findRecentContacts(days = 7) {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      
+      // Note: Google Contacts API doesn't provide creation date
+      // This is a placeholder - would need additional metadata
+      Logger.log(`Recent contacts feature requires additional metadata tracking`);
+      return [];
+    } catch (error) {
+      Logger.log(`Error finding recent contacts: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Gets label usage statistics
+   * @returns {Object} Label usage statistics
+   */
+  getLabelUsageStats() {
+    try {
+      const stats = this.generateContactStats();
+      const labelStats = Object.entries(stats.labelDistribution)
+        .map(([label, count]) => ({
+          label,
+          count,
+          percentage: ((count / stats.totalContacts) * 100).toFixed(1)
+        }))
+        .sort((a, b) => b.count - a.count);
+      
+      return {
+        totalLabels: labelStats.length,
+        mostUsed: labelStats[0] || null,
+        leastUsed: labelStats[labelStats.length - 1] || null,
+        allLabels: labelStats,
+        unlabeledCount: stats.totalContacts - stats.withLabels
+      };
+    } catch (error) {
+      Logger.log(`Error getting label usage stats: ${error.message}`);
+      return {};
+    }
+  }
+
+  /**
+   * Groups contacts by city
+   * @returns {Object} Contacts grouped by city
+   */
+  getContactsByCity() {
+    try {
+      const cityGroups = {};
+      
+      this.contacts.forEach(contact => {
+        const city = contact.city?.trim() || 'No City';
+        if (!cityGroups[city]) {
+          cityGroups[city] = [];
+        }
+        cityGroups[city].push(contact);
+      });
+      
+      return Object.entries(cityGroups)
+        .map(([city, contacts]) => ({ city, contacts, count: contacts.length }))
+        .sort((a, b) => b.count - a.count);
+    } catch (error) {
+      Logger.log(`Error grouping contacts by city: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Finds contacts with unusually long names
+   * @param {number} [maxLength=50] - Maximum reasonable name length
+   * @returns {Contact[]} Array of contacts with long names
+   */
+  findLongNames(maxLength = 50) {
+    try {
+      return this.contacts.filter(contact => 
+        contact.getName().length > maxLength
+      );
+    } catch (error) {
+      Logger.log(`Error finding long names: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Adds label to multiple contacts
+   * @param {Contact[]} contacts - Contacts to update
+   * @param {string} label - Label to add
+   * @returns {number} Number of contacts updated
+   */
+  bulkAddLabel(contacts, label) {
+    try {
+      let updated = 0;
+      contacts.forEach(contact => {
+        if (!contact.getLabels().includes(label)) {
+          contact.labels.push(label);
+          updated++;
+        }
+      });
+      Logger.log(`Added label "${label}" to ${updated} contacts`);
+      return updated;
+    } catch (error) {
+      Logger.log(`Error in bulk add label: ${error.message}`);
+      return 0;
+    }
+  }
+
+  /**
+   * Removes label from multiple contacts
+   * @param {Contact[]} contacts - Contacts to update
+   * @param {string} label - Label to remove
+   * @returns {number} Number of contacts updated
+   */
+  bulkRemoveLabel(contacts, label) {
+    try {
+      let updated = 0;
+      contacts.forEach(contact => {
+        const index = contact.labels.indexOf(label);
+        if (index > -1) {
+          contact.labels.splice(index, 1);
+          updated++;
+        }
+      });
+      Logger.log(`Removed label "${label}" from ${updated} contacts`);
+      return updated;
+    } catch (error) {
+      Logger.log(`Error in bulk remove label: ${error.message}`);
+      return 0;
+    }
+  }
+
+  /**
    * Generates statistics about the contacts collection
    * @returns {Object} Object containing various statistics
    */
@@ -392,6 +596,8 @@ class ContactManager {
     const withCity = this.contacts.filter(c => c.city).length;
     const withLabels = this.contacts.filter(c => c.getLabels().length > 0).length;
     const withInstagram = this.contacts.filter(c => c.instagramNames.length > 0).length;
+    const withoutSurnames = this.findContactsWithoutSurnames().length;
+    const longNames = this.findLongNames().length;
 
     // Get label distribution
     const labelCounts = {};
@@ -409,12 +615,15 @@ class ContactManager {
       withCity,
       withLabels,
       withInstagram,
+      withoutSurnames,
+      longNames,
       birthdayPercentage: (withBirthday / totalContacts * 100).toFixed(1),
       emailPercentage: (withEmail / totalContacts * 100).toFixed(1),
       phonePercentage: (withPhone / totalContacts * 100).toFixed(1),
       cityPercentage: (withCity / totalContacts * 100).toFixed(1),
       labelPercentage: (withLabels / totalContacts * 100).toFixed(1),
       instagramPercentage: (withInstagram / totalContacts * 100).toFixed(1),
+      surnamePercentage: ((totalContacts - withoutSurnames) / totalContacts * 100).toFixed(1),
       labelDistribution: labelCounts
     };
   }
