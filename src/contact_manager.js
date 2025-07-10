@@ -365,6 +365,22 @@ class ContactManager {
   }
 
   /**
+   * Finds contacts without surnames (only first name)
+   * @returns {Contact[]} Array of contacts without surnames
+   */
+  findContactsWithoutSurnames() {
+    try {
+      return this.contacts.filter(contact => {
+        const name = contact.getName().trim();
+        return name && !name.includes(' ');
+      });
+    } catch (error) {
+      Logger.log(`Error finding contacts without surnames: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
    * Generates statistics about the contacts collection
    * @returns {Object} Object containing various statistics
    */
