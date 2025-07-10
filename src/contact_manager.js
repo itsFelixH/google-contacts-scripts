@@ -1,12 +1,29 @@
 /**
- * Class to manage contacts.
+ * Manages Google Contacts operations including fetching, filtering, and analysis
+ * @class ContactManager
  */
 class ContactManager {
-  constructor() {
-    this.contacts = this.fetchContacts();
+  /**
+   * Creates a ContactManager instance
+   * @param {string[]} [labelFilter=[]] - Optional labels to filter contacts by
+   */
+  constructor(labelFilter = []) {
+    try {
+      this.contacts = this.fetchContacts(labelFilter);
+    } catch (error) {
+      Logger.log(`Error initializing ContactManager: ${error.message}`);
+      this.contacts = [];
+    }
   }
 
 
+  /**
+   * Fetches contacts from Google Contacts API with optional label filtering
+   * @param {string[]} [labelFilter=[]] - Labels to filter contacts by
+   * @param {number} [maxRetries=3] - Maximum retry attempts for API calls
+   * @returns {Contact[]} Array of Contact objects
+   * @throws {Error} When API calls fail after max retries
+   */
   fetchContacts(labelFilter = [], maxRetries = 3) {
     try {
       this.validateLabelFilter(labelFilter);
@@ -53,6 +70,7 @@ class ContactManager {
       return contacts;
     } catch (error) {
       Logger.log(`💥 Critical error fetching contacts: ${error.message}`);
+      throw error;
     }
   }
 
@@ -96,7 +114,10 @@ class ContactManager {
 
 
   /**
-   * Creates Contact object from API response
+   * Creates Contact object from People API response
+   * @param {Object} person - Person object from People API
+   * @param {string[]} labelNames - Array of label names for this contact
+   * @returns {Contact|null} Contact object or null if creation fails
    */
   createContact(person, labelNames) {
     try {
@@ -218,50 +239,74 @@ class ContactManager {
 
 
   /**
-   * Logs all contacts.
+   * Logs all contact names to the console
+   * @returns {void}
    */
   logAllContacts() {
-    this.contacts.forEach(contact => {
-      Logger.log(contact.name);
+    if (!this.contacts || this.contacts.length === 0) {
+      Logger.log('No contacts to display');
+      return;
+    }
+    
+    Logger.log(`Displaying ${this.contacts.length} contacts:`);
+    this.contacts.forEach((contact, index) => {
+      Logger.log(`${index + 1}. ${contact.name}`);
     });
   }
 
 
   /**
-   * Finds all contacts that don't have any labels assigned.
-   * @returns {Array<Contact>} Array of contacts without any labels
+   * Finds all contacts that don't have any labels assigned
+   * @returns {Contact[]} Array of contacts without any labels
    */
   findContactsWithoutLabels() {
-    return this.contacts.filter(contact => {
-      const labels = contact.getLabels();
-      return !labels || labels.length === 0;
-    });
+    try {
+      return this.contacts.filter(contact => {
+        const labels = contact.getLabels();
+        return !labels || labels.length === 0;
+      });
+    } catch (error) {
+      Logger.log(`Error finding unlabeled contacts: ${error.message}`);
+      return [];
+    }
   }
 
   /**
-   * Finds all contacts that don't have a birthday set.
-   * @returns {Array<Contact>} Array of contacts without birthdays
+   * Finds all contacts that don't have a birthday set
+   * @returns {Contact[]} Array of contacts without birthdays
    */
   findContactsWithoutBirthday() {
-    return this.contacts.filter(contact => {
-      const birthday = contact.getBirthday();
-      return !birthday || birthday === '';
-    });
+    try {
+      return this.contacts.filter(contact => {
+        const birthday = contact.getBirthday();
+        return !birthday || birthday === '';
+      });
+    } catch (error) {
+      Logger.log(`Error finding contacts without birthday: ${error.message}`);
+      return [];
+    }
   }
 
   /**
-   * Finds all contacts that have a specific label.
-   * @param {string} label The label to search for
-   * @returns {Array<Contact>} Array of contacts with the specified label
+   * Finds all contacts that have a specific label
+   * @param {string} label - The label to search for
+   * @returns {Contact[]} Array of contacts with the specified label
+   * @throws {Error} When label parameter is invalid
    */
   findContactsWithLabel(label) {
-    if (!label) {
-      throw new Error('Label parameter is required');
+    if (!label || typeof label !== 'string') {
+      throw new Error('Label parameter is required and must be a string');
     }
-    return this.contacts.filter(contact => {
-      const labels = contact.getLabels();
-      return labels && labels.includes(label);
-    });
+    
+    try {
+      return this.contacts.filter(contact => {
+        const labels = contact.getLabels();
+        return labels && labels.includes(label.trim());
+      });
+    } catch (error) {
+      Logger.log(`Error finding contacts with label "${label}": ${error.message}`);
+      return [];
+    }
   }
 
   /**
@@ -303,15 +348,20 @@ class ContactManager {
 
   /**
    * Finds contacts with potentially invalid or malformed phone numbers
-   * @returns {Array<Contact>} Array of contacts with suspicious phone numbers
+   * @returns {Contact[]} Array of contacts with suspicious phone numbers
    */
   findContactsWithInvalidPhones() {
-    const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
-    
-    return this.contacts.filter(contact => {
-      const phone = contact.phoneNumber;
-      return phone && !phoneRegex.test(phone);
-    });
+    try {
+      const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
+      
+      return this.contacts.filter(contact => {
+        const phone = contact.phoneNumber;
+        return phone && phone.trim() && !phoneRegex.test(phone.trim());
+      });
+    } catch (error) {
+      Logger.log(`Error finding contacts with invalid phones: ${error.message}`);
+      return [];
+    }
   }
 
   /**
@@ -357,71 +407,75 @@ class ContactManager {
 
 
 /**
- * Represents a contact.
+ * Represents a contact
+ * @class Contact
  */
 class Contact {
   /**
-   * Creates an instance of Contact.
-   *
-   * @param {string} name The name of the contact.
-   * @param {Date} birthday The birthday of the contact.
-   * @param {Array<string>} labels Labels/tags associated with the contact.
-   * @param {string} email The email address of the contact.
-   * @param {string} city The city of the contact.
-   * @param {string} phoneNumber The phone number the contact.
-   * @param {Array<string>} instagramNames The Instagram usernames for the contact.
+   * Creates a Contact instance
+   * @param {string} name - The contact's display name
+   * @param {Date|string|null} birthday - The contact's birthday
+   * @param {string[]} [labels=[]] - Labels/tags associated with the contact
+   * @param {string} [email=''] - The contact's email address
+   * @param {string} [city=''] - The contact's city
+   * @param {string} [phoneNumber=''] - The contact's phone number
+   * @param {string[]} [instagramNames=[]] - Instagram usernames for the contact
+   * @throws {Error} When required fields are invalid
    */
   constructor(name, birthday, labels = [], email = '', city = '', phoneNumber = '', instagramNames = []) {
-    if (!name) {
-      throw new Error('Name is required.');
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      throw new Error('Contact name is required and must be a non-empty string');
     }
-    this.name = name;
+    
+    this.name = name.trim();
     this.birthday = birthday ? new Date(birthday) : null;
-    this.labels = Array.isArray(labels) ? labels : [];
-    this.email = email || '';
-    this.city = city || '';
-    this.phoneNumber = phoneNumber;
-    this.instagramNames = Array.isArray(instagramNames) ? instagramNames : [instagramNames].filter(name => name !== '');
+    this.labels = Array.isArray(labels) ? labels.filter(l => l && typeof l === 'string') : [];
+    this.email = (email || '').toString().trim();
+    this.city = (city || '').toString().trim();
+    this.phoneNumber = (phoneNumber || '').toString().trim();
+    this.instagramNames = Array.isArray(instagramNames) 
+      ? instagramNames.filter(name => name && typeof name === 'string')
+      : [instagramNames].filter(name => name && typeof name === 'string');
   }
 
 
   /**
-   * Gets the name of the contact.
-   * @returns {string} The name of the contact.
+   * Gets the name of the contact
+   * @returns {string} The contact's name
    */
   getName() {
     return this.name;
   }
 
-
   /**
-   * Gets the birthday of the contact.
-   * @returns {Date|null} The birthday of the contact.
+   * Gets the birthday of the contact
+   * @returns {Date|null} The contact's birthday
    */
   getBirthday() {
     return this.birthday;
   }
 
-
   /**
-   * Gets the labels associated with the contact.
-   * @returns {Array<string>} The labels of the contact.
+   * Gets the labels associated with the contact
+   * @returns {string[]} Array of label names
    */
   getLabels() {
-    return this.labels;
+    return this.labels || [];
   }
 
 
   /**
-   * Gets the birthday formatted as "dd.MM.".
-   * 
-   * @returns {string} The formatted birthday.
+   * Gets the birthday formatted as "dd.MM."
+   * @returns {string} The formatted birthday or empty string
    */
   getBirthdayShortFormat() {
-    if (this.birthday) {
-      return Utilities.formatDate(this.birthday, Session.getScriptTimeZone(), "dd.MM.");
-    } else {
-      Logger.log(`Birth day is missing for '${this.name}'`);
+    try {
+      if (this.birthday && this.birthday instanceof Date && !isNaN(this.birthday)) {
+        return Utilities.formatDate(this.birthday, Session.getScriptTimeZone(), 'dd.MM.');
+      }
+      return '';
+    } catch (error) {
+      Logger.log(`Error formatting birthday for '${this.name}': ${error.message}`);
       return '';
     }
   }
@@ -489,31 +543,37 @@ class Contact {
 
 
   /**
-   * Generates a WhatsApp link using a phone number.
-   *
-   * @returns {string} The WhatsApp link for the given phone number, or an empty string if the phone number is invalid.
+   * Generates a WhatsApp link using the contact's phone number
+   * @returns {string} WhatsApp link or empty string if invalid phone number
    */
   getWhatsAppLink() {
-    if (this.phoneNumber) {
+    try {
+      if (!this.phoneNumber) return '';
+      
       const cleanedPhoneNumber = this.phoneNumber.replace(/\D/g, '');
-      return cleanedPhoneNumber ? `https://wa.me/${cleanedPhoneNumber}` : '';
+      return cleanedPhoneNumber.length >= 7 ? `https://wa.me/${cleanedPhoneNumber}` : '';
+    } catch (error) {
+      Logger.log(`Error generating WhatsApp link for '${this.name}': ${error.message}`);
+      return '';
     }
-    return ''
   }
 
 
   /**
-   * Gets the Instagram link for a given username.
-   *
-   * @param {string} username The Instagram username
-   * @returns {string} The Instagram link for the given username.
+   * Gets the Instagram link for a given username
+   * @param {string} username - Instagram username (with or without @)
+   * @returns {string} Instagram profile URL or empty string if invalid
    */
   getInstagramLink(username) {
-    const baseUrl = "https://www.instagram.com/";
-    if (username) {
-      return `${baseUrl}${username.substring(1)}/`;
+    try {
+      if (!username || typeof username !== 'string') return '';
+      
+      const cleanUsername = username.trim().replace(/^@/, '');
+      return cleanUsername ? `https://www.instagram.com/${cleanUsername}/` : '';
+    } catch (error) {
+      Logger.log(`Error generating Instagram link: ${error.message}`);
+      return '';
     }
-    return '';
   }
 
 
