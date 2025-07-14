@@ -6,13 +6,14 @@ class ContactManager {
   /**
    * Creates a ContactManager instance
    * @param {string[]} [labelFilter=[]] - Optional labels to filter contacts by
+   * @throws {Error} When initialization fails
    */
   constructor(labelFilter = []) {
     try {
       this.contacts = this.fetchContacts(labelFilter);
     } catch (error) {
       Logger.log(`Error initializing ContactManager: ${error.message}`);
-      this.contacts = [];
+      throw error;
     }
   }
 
