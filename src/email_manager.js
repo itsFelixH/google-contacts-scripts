@@ -40,7 +40,11 @@ class EmailManager {
     ].join("\r\n");
 
     const rawMessage = Utilities.base64EncodeWebSafe(mailData);
-    Gmail.Users.Messages.send({ raw: rawMessage }, "me");
+    try {
+      Gmail.Users.Messages.send({ raw: rawMessage }, "me");
+    } catch (error) {
+      console.error("Error sending email:", error);
+    }
   }
 
 
