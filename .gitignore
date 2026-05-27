@@ -4,8 +4,12 @@ node_modules/
 # pnpm
 pnpm-debug.log*
 
-# clasp
+# clasp — contains your script ID
+.clasp.json
 .clasprc.json
+
+# config — contains personal settings
+src/config.js
 
 # OS files
 .DS_Store
