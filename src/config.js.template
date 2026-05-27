@@ -1,0 +1,99 @@
+/**
+ * @fileoverview Configuration settings for Google Contacts Scripts
+ *
+ * Copy this file to config.js and customize the values below.
+ * Do NOT commit config.js — it contains personal settings.
+ */
+
+/**
+ * Application configuration
+ * @readonly
+ */
+const CONFIG = {
+  /**
+   * Email settings
+   */
+  email: {
+    /** Recipient email address. Defaults to the active user's email. */
+    recipientEmail: '',
+
+    /** Sender display name. Defaults to the Apps Script project name. */
+    senderName: '',
+  },
+
+  /**
+   * Report settings
+   */
+  reports: {
+    /** Number of days to look ahead for upcoming birthdays */
+    upcomingBirthdaysDays: 7,
+
+    /** Maximum contacts to include in a single email report (0 = unlimited) */
+    maxContactsPerReport: 0,
+
+    /** Include contact edit links in reports */
+    includeEditLinks: true,
+
+    /** Include WhatsApp links for contacts with phone numbers */
+    includeWhatsAppLinks: true,
+  },
+
+  /**
+   * Contact validation rules
+   */
+  validation: {
+    /** Minimum phone number length to be considered valid */
+    minPhoneLength: 7,
+
+    /** Maximum reasonable name length before flagging */
+    maxNameLength: 50,
+
+    /** Regex pattern for valid phone numbers */
+    phoneRegex: /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/,
+  },
+
+  /**
+   * API settings
+   */
+  api: {
+    /** Page size for People API requests */
+    pageSize: 100,
+
+    /** Maximum retry attempts for failed API calls */
+    maxRetries: 3,
+
+    /** Person fields to request from the People API */
+    personFields: 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies',
+  },
+
+  /**
+   * Logging settings
+   */
+  logging: {
+    /** Enable verbose logging */
+    verbose: false,
+  },
+};
+
+/**
+ * Returns the configured recipient email, falling back to the active user's email.
+ * @returns {string} Recipient email address
+ */
+function getRecipientEmail() {
+  return CONFIG.email.recipientEmail || Session.getActiveUser().getEmail();
+}
+
+/**
+ * Returns the configured sender name, falling back to the script project name.
+ * @returns {string} Sender display name
+ */
+function getSenderName() {
+  if (CONFIG.email.senderName) {
+    return CONFIG.email.senderName;
+  }
+  try {
+    return DriveApp.getFileById(ScriptApp.getScriptId()).getName();
+  } catch (e) {
+    return 'Google Contacts Scripts';
+  }
+}
