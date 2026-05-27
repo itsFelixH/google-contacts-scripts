@@ -3,16 +3,46 @@
  */
 
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Config validation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Checks whether label filtering is correctly configured.
+ * @returns {boolean} true if valid, false if misconfigured
+ */
+function isLabelFilterConfigured() {
+  if (useLabel && (!labelFilter || labelFilter.length === 0)) {
+    Logger.log('⚠️ useLabel is enabled but labelFilter is empty — no contacts will match.');
+    Logger.log('   Add label names to labelFilter in config.js, or set useLabel to false.');
+    return false;
+  }
+  return true;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Report functions
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /**
  * Sends an email report of all contacts that don't have any labels assigned.
  */
 function sendUnlabeledContactsReport() {
   try {
+    if (!isLabelFilterConfigured()) return;
+    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+
     const contacts = fetchContacts(useLabel ? labelFilter : []);
     const unlabeled = findContactsWithoutLabels(contacts);
 
     if (unlabeled.length === 0) {
       Logger.log('No unlabeled contacts found');
+      return;
+    }
+
+    if (isDryRun) {
+      Logger.log(`🧪 [DRY RUN] Would send unlabeled contacts report (${unlabeled.length} contacts)`);
       return;
     }
 
@@ -31,11 +61,19 @@ function sendUnlabeledContactsReport() {
  */
 function sendContactsWithoutBirthdayReport() {
   try {
+    if (!isLabelFilterConfigured()) return;
+    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+
     const contacts = fetchContacts(useLabel ? labelFilter : []);
     const missing = findContactsWithoutBirthday(contacts);
 
     if (missing.length === 0) {
       Logger.log('No contacts without birthday found');
+      return;
+    }
+
+    if (isDryRun) {
+      Logger.log(`🧪 [DRY RUN] Would send contacts without birthday report (${missing.length} contacts)`);
       return;
     }
 
@@ -83,6 +121,8 @@ function sendContactsWithLabelReport(label) {
  */
 function sendUpcomingBirthdaysReport(days) {
   try {
+    if (!isLabelFilterConfigured()) return;
+    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
     const lookAhead = days || (typeof upcomingBirthdaysDays !== 'undefined' ? upcomingBirthdaysDays : 7);
 
     if (typeof lookAhead !== 'number' || lookAhead < 1 || lookAhead > 365) {
@@ -94,6 +134,11 @@ function sendUpcomingBirthdaysReport(days) {
 
     if (upcoming.length === 0) {
       Logger.log(`No upcoming birthdays in the next ${lookAhead} days`);
+      return;
+    }
+
+    if (isDryRun) {
+      Logger.log(`🧪 [DRY RUN] Would send upcoming birthdays report (${upcoming.length} contacts, ${lookAhead} days)`);
       return;
     }
 
@@ -158,13 +203,20 @@ function sendInvalidPhonesReport() {
  */
 function sendStatisticsReport() {
   try {
+    if (!isLabelFilterConfigured()) return;
+    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+
     const contacts = fetchContacts(useLabel ? labelFilter : []);
     const labelManager = new LabelManager();
-    const emailManager = new EmailManager();
-
     const stats = generateContactStats(contacts);
     const allLabels = labelManager.fetchLabels();
 
+    if (isDryRun) {
+      Logger.log(`🧪 [DRY RUN] Would send statistics report (${stats.totalContacts} contacts)`);
+      return;
+    }
+
+    const emailManager = new EmailManager();
     emailManager.sendContactStatsEmail(stats);
     emailManager.sendLabelStatsEmail(stats, allLabels);
     Logger.log('Sent comprehensive statistics report');
