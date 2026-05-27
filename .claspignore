@@ -1,0 +1,15 @@
+node_modules/**
+tests/**
+coverage/**
+.git/**
+.vscode/**
+package.json
+package-lock.json
+pnpm-lock.yaml
+renovate.json
+README.md
+ROADMAP.md
+.clasp.json
+.claspignore
+.gitignore
+src/config.js.template
