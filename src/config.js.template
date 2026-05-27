@@ -1,99 +1,110 @@
-/**
- * @fileoverview Configuration settings for Google Contacts Scripts
- *
- * Copy this file to config.js and customize the values below.
- * Do NOT commit config.js — it contains personal settings.
- */
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║                        GOOGLE CONTACTS SCRIPTS                              ║
+// ║                        Configuration Settings                               ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  Copy this file to config.js and adjust the values below.                   ║
+// ║  Do NOT commit config.js — it may contain personal settings.                ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
 
-/**
- * Application configuration
- * @readonly
- */
-const CONFIG = {
-  /**
-   * Email settings
-   */
-  email: {
-    /** Recipient email address. Defaults to the active user's email. */
-    recipientEmail: '',
 
-    /** Sender display name. Defaults to the Apps Script project name. */
-    senderName: '',
-  },
+// ═══════════════════════════════════════════════════════════════════════════════
+// 1. FEATURES — Which reports should be available?
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  /**
-   * Report settings
-   */
-  reports: {
-    /** Number of days to look ahead for upcoming birthdays */
-    upcomingBirthdaysDays: 7,
+// ─── Email notifications ──────────────────────────────────────────────────────
 
-    /** Maximum contacts to include in a single email report (0 = unlimited) */
-    maxContactsPerReport: 0,
+const sendUnlabeledReport = true;
+const sendMissingBirthdayReport = true;
+const sendUpcomingBirthdaysReport = true;
+const sendInvalidPhonesReport = true;
+const sendMissingSurnamesReport = true;
+const sendDuplicatesReport = true;
+const sendStatisticsReport = true;
 
-    /** Include contact edit links in reports */
-    includeEditLinks: true,
+// ─── Contact filtering ────────────────────────────────────────────────────────
 
-    /** Include WhatsApp links for contacts with phone numbers */
-    includeWhatsAppLinks: true,
-  },
+// Set useLabel to true and add label names to only report on specific contacts.
+// When false, all contacts are included.
+const useLabel = false;
+const labelFilter = []; // e.g. ['Friends', 'Family']
 
-  /**
-   * Contact validation rules
-   */
-  validation: {
-    /** Minimum phone number length to be considered valid */
-    minPhoneLength: 7,
 
-    /** Maximum reasonable name length before flagging */
-    maxNameLength: 50,
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2. REPORT SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
 
-    /** Regex pattern for valid phone numbers */
-    phoneRegex: /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/,
-  },
+// ─── Upcoming birthdays ───────────────────────────────────────────────────────
 
-  /**
-   * API settings
-   */
-  api: {
-    /** Page size for People API requests */
-    pageSize: 100,
+const upcomingBirthdaysDays = 7; // days to look ahead
 
-    /** Maximum retry attempts for failed API calls */
-    maxRetries: 3,
+// ─── Limits ───────────────────────────────────────────────────────────────────
 
-    /** Person fields to request from the People API */
-    personFields: 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies',
-  },
+const maxContactsPerReport = 0; // 0 = unlimited
 
-  /**
-   * Logging settings
-   */
-  logging: {
-    /** Enable verbose logging */
-    verbose: false,
-  },
+// ─── Links ────────────────────────────────────────────────────────────────────
+
+const includeEditLinks = true;
+const includeWhatsAppLinks = true;
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 3. SCHEDULES — When should things run?
+// ═══════════════════════════════════════════════════════════════════════════════
+// Used by setupSchedules(). Run it once after deploying.
+// Hours are approximate — Apps Script triggers fire within a ±1 hour window.
+
+const scheduleReportDay = ScriptApp.WeekDay.MONDAY;
+const scheduleReportHour = 8;
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+//   ✅ You can stop here. Everything below is optional customization.
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 4. VALIDATION RULES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const minPhoneLength = 7;
+const maxNameLength = 50;
+const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 5. API SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const apiPageSize = 100;
+const apiMaxRetries = 3;
+const apiPersonFields = 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies';
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 6. EMAIL CUSTOMIZATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Email subjects ───────────────────────────────────────────────────────────
+
+const emailSubjects = {
+  unlabeled: '🏷️ Contacts Without Labels 🏷️',
+  missingBirthday: '🎂 Contacts Without Birthday 🎂',
+  upcomingBirthdays: '🎂 Upcoming Birthdays 🎂',
+  invalidPhones: '📱 Invalid Phone Numbers 📱',
+  missingSurnames: '👤 Contacts Without Surnames 👤',
+  duplicates: '🔍 Potential Duplicate Contacts 🔍',
+  statistics: '📊 Contact Statistics 📊',
+  missingField: '📋 Contacts Missing {field} 📋',
+  labelUsage: '📊 Label Usage Statistics 📊',
+  contactsByCity: '🌆 Contacts by City 🌆',
 };
 
-/**
- * Returns the configured recipient email, falling back to the active user's email.
- * @returns {string} Recipient email address
- */
-function getRecipientEmail() {
-  return CONFIG.email.recipientEmail || Session.getActiveUser().getEmail();
-}
 
-/**
- * Returns the configured sender name, falling back to the script project name.
- * @returns {string} Sender display name
- */
-function getSenderName() {
-  if (CONFIG.email.senderName) {
-    return CONFIG.email.senderName;
-  }
-  try {
-    return DriveApp.getFileById(ScriptApp.getScriptId()).getName();
-  } catch (e) {
-    return 'Google Contacts Scripts';
-  }
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// 7. ADVANCED
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const verboseLogging = false;
+const dryRun = false; // true = preview mode, no emails sent
