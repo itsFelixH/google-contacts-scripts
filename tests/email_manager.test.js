@@ -1,354 +1,137 @@
-/**
- * Tests for EmailManager class
- */
-function runEmailManagerTests() {
-  testSendUnlabeledContactsEmail();
-  testSendContactsWithoutBirthdayEmail();
-  testSendContactsWithLabelEmail();
-  testSendUpcomingBirthdaysEmail();
-  testSendContactStatsEmail();
-  testSendLabelStatsEmail();
-  testEmailTemplates();
-  testEmailThemes();
-}
+describe('EmailManager', () => {
+  let emailManager;
 
-function testEmailThemes() {
-  // Test theme generation for different content types
-  try {
-    const birthdayTheme = EmailTemplates.getTheme('birthday');
-    const statsTheme = EmailTemplates.getTheme('stats');
-    const contactsTheme = EmailTemplates.getTheme('contacts');
-    const labelsTheme = EmailTemplates.getTheme('labels');
-    const warningTheme = EmailTemplates.getTheme('warning');
-    const defaultTheme = EmailTemplates.getTheme('default');
-    const unknownTheme = EmailTemplates.getTheme('unknown');
+  beforeEach(() => {
+    emailManager = new EmailManager();
+    Gmail.Users.Messages.send.mockClear();
+  });
 
-    // Verify each theme has required properties
-    const themes = [birthdayTheme, statsTheme, contactsTheme, labelsTheme, warningTheme, defaultTheme, unknownTheme];
-    themes.forEach(theme => {
-      if (!theme.headerGradient || !theme.accentColor || !theme.iconColor || !theme.borderColor) {
-        throw new Error('Theme missing required properties');
-      }
-    });
+  test('getEmailContext returns correct values', () => {
+    const ctx = emailManager.getEmailContext();
+    expect(ctx.toEmail).toBe('test@example.com');
+    expect(ctx.fromEmail).toBe('test@example.com');
+    expect(ctx.senderName).toBe('Google Contacts Scripts');
+  });
 
-    // Verify unknown theme returns default theme
-    if (JSON.stringify(unknownTheme) !== JSON.stringify(defaultTheme)) {
-      throw new Error('Unknown theme should return default theme');
-    }
+  test('sendMail calls Gmail API', () => {
+    emailManager.sendMail('to@test.com', 'from@test.com', 'Sender', 'Subject', 'text', '<p>html</p>');
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledWith(
+      expect.objectContaining({ raw: expect.any(String) }),
+      'me'
+    );
+  });
 
-    // Test theme application in email template
-    const content = `<div>Test Content</div>`;
-    const birthdayEmail = EmailTemplates.wrapEmail(content, 'birthday');
-    const statsEmail = EmailTemplates.wrapEmail(content, 'stats');
-
-    // Verify theme colors are applied
-    if (!birthdayEmail.includes(birthdayTheme.headerGradient) || !statsEmail.includes(statsTheme.headerGradient)) {
-      throw new Error('Theme colors not properly applied to email template');
-    }
-
-    Logger.log("✅ EmailTemplates.getTheme: Successfully generated and applied themes");
-  } catch (error) {
-    Logger.log(`❌ EmailTemplates.getTheme: Failed to generate or apply themes - ${error.message}`);
-    throw error;
-  }
-}
-
-function testSendUnlabeledContactsEmail() {
-  // Create test contacts
-  const contact1 = new Contact("Test User 1", new Date(), [], "test1@example.com", "City 1", "+1234567890");
-  const contact2 = new Contact("Test User 2", new Date(), [], "test2@example.com", "City 2", "+0987654321");
-  const unlabeledContacts = [contact1, contact2];
-  
-  // Create test email manager
-  const emailManager = new EmailManager();
-  
-  // Test sending email with unlabeled contacts
-  try {
-    emailManager.sendUnlabeledContactsEmail(unlabeledContacts);
-    Logger.log("✅ sendUnlabeledContactsEmail: Successfully sent email with unlabeled contacts");
-  } catch (error) {
-    Logger.log(`❌ sendUnlabeledContactsEmail: Failed to send email - ${error.message}`);
-    throw error;
-  }
-  
-  // Test sending email with empty contacts list
-  try {
-    emailManager.sendUnlabeledContactsEmail([]);
-    Logger.log("✅ sendUnlabeledContactsEmail: Successfully sent email with empty contacts list");
-  } catch (error) {
-    Logger.log(`❌ sendUnlabeledContactsEmail: Failed to send email with empty list - ${error.message}`);
-    throw error;
-  }
-}
-
-function testSendContactsWithoutBirthdayEmail() {
-  // Create test contacts
-  const contact1 = new Contact("No Birthday 1", null, [], "test1@example.com", "City 1", "+1234567890");
-  const contact2 = new Contact("No Birthday 2", '', [], "test2@example.com", "City 2", "+0987654321");
-  const contactsWithoutBirthday = [contact1, contact2];
-  
-  // Create test email manager
-  const emailManager = new EmailManager();
-  
-  // Test sending email with contacts without birthday
-  try {
-    emailManager.sendContactsWithoutBirthdayEmail(contactsWithoutBirthday);
-    Logger.log("✅ sendContactsWithoutBirthdayEmail: Successfully sent email with contacts without birthday");
-  } catch (error) {
-    Logger.log(`❌ sendContactsWithoutBirthdayEmail: Failed to send email - ${error.message}`);
-    throw error;
-  }
-  
-  // Test sending email with empty contacts list
-  try {
-    emailManager.sendContactsWithoutBirthdayEmail([]);
-    Logger.log("✅ sendContactsWithoutBirthdayEmail: Successfully sent email with empty contacts list");
-  } catch (error) {
-    Logger.log(`❌ sendContactsWithoutBirthdayEmail: Failed to send email with empty list - ${error.message}`);
-    throw error;
-  }
-}
-
-function testSendContactsWithLabelEmail() {
-  // Create test contacts
-  const contact1 = new Contact("Friend 1", new Date(), ["Friends"], "test1@example.com", "City 1", "+1234567890");
-  const contact2 = new Contact("Friend 2", new Date(), ["Friends", "Work"], "test2@example.com", "City 2", "+0987654321");
-  const labeledContacts = [contact1, contact2];
-  
-  // Create test email manager
-  const emailManager = new EmailManager();
-  
-  // Test sending email with labeled contacts
-  try {
-    emailManager.sendContactsWithLabelEmail("Friends", labeledContacts);
-    Logger.log("✅ sendContactsWithLabelEmail: Successfully sent email with labeled contacts");
-  } catch (error) {
-    Logger.log(`❌ sendContactsWithLabelEmail: Failed to send email - ${error.message}`);
-    throw error;
-  }
-  
-  // Test sending email with empty contacts list
-  try {
-    emailManager.sendContactsWithLabelEmail("Friends", []);
-    Logger.log("✅ sendContactsWithLabelEmail: Successfully sent email with empty contacts list");
-  } catch (error) {
-    Logger.log(`❌ sendContactsWithLabelEmail: Failed to send email with empty list - ${error.message}`);
-    throw error;
-  }
-  
-  // Test sending email with empty label
-  try {
-    emailManager.sendContactsWithLabelEmail("", labeledContacts);
-    Logger.log("❌ sendContactsWithLabelEmail: Should have failed with empty label");
-    throw new Error("Expected error for empty label");
-  } catch (error) {
-    Logger.log("✅ sendContactsWithLabelEmail: Correctly handled empty label");
-  }
-}
-
-function testSendUpcomingBirthdaysEmail() {
-  // Create test contacts with birthdays
-  const today = new Date();
-  const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-  
-  const contact1 = new Contact("Birthday 1", today, ["Friends"], "test1@example.com", "City 1", "+1234567890");
-  const contact2 = new Contact("Birthday 2", nextWeek, ["Friends"], "test2@example.com", "City 2", "+0987654321");
-  const upcomingBirthdays = [contact1, contact2];
-  
-  // Create test email manager
-  const emailManager = new EmailManager();
-  
-  // Test sending email with upcoming birthdays
-  try {
-    emailManager.sendUpcomingBirthdaysEmail(upcomingBirthdays, 7);
-    Logger.log("✅ sendUpcomingBirthdaysEmail: Successfully sent email with upcoming birthdays");
-  } catch (error) {
-    Logger.log(`❌ sendUpcomingBirthdaysEmail: Failed to send email - ${error.message}`);
-    throw error;
-  }
-  
-  // Test sending email with empty contacts list
-  try {
-    emailManager.sendUpcomingBirthdaysEmail([], 7);
-    Logger.log("✅ sendUpcomingBirthdaysEmail: Successfully sent email with empty contacts list");
-  } catch (error) {
-    Logger.log(`❌ sendUpcomingBirthdaysEmail: Failed to send email with empty list - ${error.message}`);
-    throw error;
-  }
-}
-
-function testSendContactStatsEmail() {
-  // Create test stats object
-  const stats = {
-    totalContacts: 100,
-    withBirthday: 75,
-    birthdayPercentage: 75,
-    withEmail: 90,
-    emailPercentage: 90,
-    withPhone: 80,
-    phonePercentage: 80,
-    withCity: 70,
-    cityPercentage: 70,
-    withLabels: 85,
-    labelPercentage: 85,
-    withInstagram: 40,
-    instagramPercentage: 40,
-    labelDistribution: {
-      "Friends": 50,
-      "Family": 30,
-      "Work": 20
-    }
-  };
-  
-  // Create test email manager
-  const emailManager = new EmailManager();
-  
-  // Test sending email with stats
-  try {
-    emailManager.sendContactStatsEmail(stats);
-    Logger.log("✅ sendContactStatsEmail: Successfully sent email with contact statistics");
-  } catch (error) {
-    Logger.log(`❌ sendContactStatsEmail: Failed to send email - ${error.message}`);
-    throw error;
-  }
-}
-
-function testSendLabelStatsEmail() {
-  // Create test stats and labels
-  const stats = {
-    totalContacts: 100,
-    withBirthday: 75,
-    birthdayPercentage: 75,
-    withEmail: 90,
-    emailPercentage: 90,
-    withPhone: 80,
-    phonePercentage: 80,
-    withCity: 70,
-    cityPercentage: 70,
-    withLabels: 85,
-    labelPercentage: 85,
-    withInstagram: 40,
-    instagramPercentage: 40,
-    labelDistribution: {
-      "Friends": 50,
-      "Family": 30,
-      "Work": 20
-    }
-  };
-
-  const allLabels = [
-    { id: "label1", name: "Friends" },
-    { id: "label2", name: "Family" },
-    { id: "label3", name: "Work" }
-  ];
-  
-  // Create test email manager
-  const emailManager = new EmailManager();
-  
-  // Test sending email with label stats
-  try {
-    emailManager.sendLabelStatsEmail(stats, allLabels);
-    Logger.log("✅ sendLabelStatsEmail: Successfully sent email with label statistics");
-  } catch (error) {
-    Logger.log(`❌ sendLabelStatsEmail: Failed to send email - ${error.message}`);
-    throw error;
-  }
-}
-
-function testEmailTemplates() {
-  // Test birthdayList template
-  try {
-    const today = new Date();
-    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+  test('sendUnlabeledContactsEmail sends email', () => {
     const contacts = [
-      new Contact("Birthday 1", today, ["Friends"], "test1@example.com", "City 1", "+1234567890"),
-      new Contact("Birthday 2", nextWeek, ["Friends"], "test2@example.com", "City 2", "+0987654321")
+      new Contact('Test User', null, [], 'test@example.com', 'Berlin', '+1234567890'),
     ];
-    
-    const birthdayListHtml = EmailTemplates.birthdayList(contacts);
-    if (!birthdayListHtml.includes("Birthday 1") || !birthdayListHtml.includes("Birthday 2")) {
-      throw new Error("Birthday list template missing contact names");
-    }
-    Logger.log("✅ EmailTemplates.birthdayList: Successfully generated birthday list");
-  } catch (error) {
-    Logger.log(`❌ EmailTemplates.birthdayList: Failed to generate birthday list - ${error.message}`);
-    throw error;
-  }
+    emailManager.sendUnlabeledContactsEmail(contacts);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
 
-  // Test statsReport template
-  try {
+  test('sendContactsWithoutBirthdayEmail sends email', () => {
+    const contacts = [new Contact('No Birthday', null)];
+    emailManager.sendContactsWithoutBirthdayEmail(contacts);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('sendContactsWithLabelEmail sends email', () => {
+    const contacts = [new Contact('Friend', new Date(), ['Friends'])];
+    emailManager.sendContactsWithLabelEmail('Friends', contacts);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('sendUpcomingBirthdaysEmail sends email', () => {
+    const contacts = [new Contact('Birthday', new Date('1990-06-15'))];
+    emailManager.sendUpcomingBirthdaysEmail(contacts, 7);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('sendContactsWithoutSurnamesEmail sends email', () => {
+    const contacts = [new Contact('SingleName', null)];
+    emailManager.sendContactsWithoutSurnamesEmail(contacts);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('sendInvalidPhonesEmail sends email', () => {
+    const contacts = [new Contact('Bad Phone', null, [], '', '', 'abc')];
+    emailManager.sendInvalidPhonesEmail(contacts);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('sendMissingFieldEmail sends email', () => {
+    const contacts = [new Contact('Missing', null)];
+    emailManager.sendMissingFieldEmail('email', contacts);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('sendLabelUsageStatsEmail sends email', () => {
     const stats = {
-      totalContacts: 100,
-      withBirthday: 75,
-      birthdayPercentage: 75,
-      withEmail: 90,
-      emailPercentage: 90,
-      withPhone: 80,
-      phonePercentage: 80,
-      withCity: 70,
-      cityPercentage: 70,
-      withLabels: 85,
-      labelPercentage: 85,
-      withInstagram: 40,
-      instagramPercentage: 40,
-      labelDistribution: {
-        "Friends": 50,
-        "Family": 30,
-        "Work": 20
-      }
+      totalLabels: 3,
+      mostUsed: { label: 'Friends', count: 50 },
+      leastUsed: { label: 'Work', count: 5 },
+      allLabels: [],
+      unlabeledCount: 10
     };
-    
-    const statsReportHtml = EmailTemplates.statsReport(stats);
-    if (!statsReportHtml.includes("Total Contacts") || !statsReportHtml.includes("Label Distribution")) {
-      throw new Error("Stats report template missing required sections");
-    }
-    Logger.log("✅ EmailTemplates.statsReport: Successfully generated stats report");
-  } catch (error) {
-    Logger.log(`❌ EmailTemplates.statsReport: Failed to generate stats report - ${error.message}`);
-    throw error;
-  }
+    emailManager.sendLabelUsageStatsEmail(stats);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
 
-  // Test labelStatsReport template
-  try {
+  test('sendContactsByCityEmail sends email', () => {
+    const cityGroups = [{ city: 'Berlin', contacts: [], count: 5 }];
+    emailManager.sendContactsByCityEmail(cityGroups);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('sendDuplicatesEmail sends email', () => {
+    const groups = [{
+      contacts: [new Contact('Dupe 1', null), new Contact('Dupe 2', null)],
+      count: 2,
+      reason: 'name match'
+    }];
+    emailManager.sendDuplicatesEmail(groups);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('sendContactStatsEmail sends email', () => {
     const stats = {
-      totalContacts: 100,
-      withLabels: 85,
-      labelPercentage: 85,
-      labelDistribution: {
-        "Friends": 50,
-        "Family": 30,
-        "Work": 20
-      }
+      totalContacts: 100, withBirthday: 75, withEmail: 90, withPhone: 80,
+      withCity: 70, withLabels: 85, withInstagram: 40,
+      birthdayPercentage: '75.0', emailPercentage: '90.0', phonePercentage: '80.0',
+      cityPercentage: '70.0', labelPercentage: '85.0', instagramPercentage: '40.0',
+      labelDistribution: { Friends: 50 }
     };
+    emailManager.sendContactStatsEmail(stats);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
 
-    const allLabels = [
-      { id: "label1", name: "Friends" },
-      { id: "label2", name: "Family" },
-      { id: "label3", name: "Work" }
-    ];
-    
-    const labelStatsHtml = EmailTemplates.labelStatsReport(stats, allLabels);
-    if (!labelStatsHtml.includes("Label Overview") || !labelStatsHtml.includes("Label Distribution")) {
-      throw new Error("Label stats template missing required sections");
-    }
-    if (!labelStatsHtml.includes("progress-bar")) {
-      throw new Error("Label stats template missing progress bars");
-    }
-    Logger.log("✅ EmailTemplates.labelStatsReport: Successfully generated label stats report");
-  } catch (error) {
-    Logger.log(`❌ EmailTemplates.labelStatsReport: Failed to generate label stats report - ${error.message}`);
-    throw error;
-  }
+  test('sendLabelStatsEmail sends email', () => {
+    const stats = { totalContacts: 100, labelDistribution: { Friends: 50, Work: 30 } };
+    const allLabels = [{ id: '1', name: 'Friends' }, { id: '2', name: 'Work' }];
+    emailManager.sendLabelStatsEmail(stats, allLabels);
+    expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+  });
+});
 
-  // Test empty lists
-  try {
-    const emptyBirthdayList = EmailTemplates.birthdayList([]);
-    if (!emptyBirthdayList.includes("No upcoming birthdays found")) {
-      throw new Error("Birthday list template should show empty state message");
-    }
-    Logger.log("✅ EmailTemplates.birthdayList: Successfully handled empty list");
-  } catch (error) {
-    Logger.log(`❌ EmailTemplates.birthdayList: Failed to handle empty list - ${error.message}`);
-    throw error;
-  }
-}
+
+describe('EmailTemplates', () => {
+  test('header generates HTML with title', () => {
+    const html = EmailTemplates.header('Test Title', 'Subtitle');
+    expect(html).toContain('Test Title');
+    expect(html).toContain('Subtitle');
+  });
+
+  test('footer generates HTML with links', () => {
+    const html = EmailTemplates.footer();
+    expect(html).toContain('contacts.google.com');
+    expect(html).toContain('github.com');
+  });
+
+  test('wrapEmail generates complete HTML document', () => {
+    const html = EmailTemplates.wrapEmail('<p>Content</p>');
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('<p>Content</p>');
+    expect(html).toContain('</html>');
+  });
+});

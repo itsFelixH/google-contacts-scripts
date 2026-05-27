@@ -1,139 +1,84 @@
-function mockPeopleAPI() {
-  // Mock the Google People API responses
-  const mockLabels = [
-    { resourceName: "contactGroups/123", name: "Friends" },
-    { resourceName: "contactGroups/456", name: "Work" },
-    { resourceName: "contactGroups/789", name: "Family" }
-  ];
+describe('LabelManager', () => {
+  beforeEach(() => {
+    // Mock People API for label operations
+    People.ContactGroups.list.mockReturnValue({
+      contactGroups: [
+        { resourceName: 'contactGroups/123' },
+        { resourceName: 'contactGroups/456' },
+        { resourceName: 'contactGroups/789' }
+      ]
+    });
 
-  global.People = {
-    ContactGroups: {
-      list: () => ({
-        contactGroups: mockLabels
-      }),
-      batchGet: ({ resourceNames }) => ({
-        responses: mockLabels.map(label => ({
-          contactGroup: label
-        }))
-      }),
-      create: ({ contactGroup }) => ({
-        resourceName: "contactGroups/new",
-        name: contactGroup.name
-      })
-    }
-  };
+    People.ContactGroups.batchGet.mockReturnValue({
+      responses: [
+        { contactGroup: { resourceName: 'contactGroups/123', name: 'Friends' } },
+        { contactGroup: { resourceName: 'contactGroups/456', name: 'Work' } },
+        { contactGroup: { resourceName: 'contactGroups/789', name: 'Family' } }
+      ]
+    });
+  });
 
-  return mockLabels;
-}
+  test('initializes with labels from API', () => {
+    const manager = new LabelManager();
+    expect(manager.labels).toHaveLength(3);
+    expect(manager.labels[0].name).toBe('Friends');
+  });
 
-function testLabelManagerInitialization() {
-  const mockLabels = mockPeopleAPI();
-  const labelManager = new LabelManager();
-  
-  assertEquals(
-    labelManager.labels.length,
-    mockLabels.length,
-    "Should initialize with correct number of labels"
-  );
-}
+  test('getLabelNameById returns correct name', () => {
+    const manager = new LabelManager();
+    expect(manager.getLabelNameById('contactGroups/123')).toBe('Friends');
+    expect(manager.getLabelNameById('123')).toBe('Friends');
+  });
 
-function testGetLabelNameById() {
-  const labelManager = new LabelManager();
+  test('getLabelNameById returns null for unknown IDs', () => {
+    const manager = new LabelManager();
+    expect(manager.getLabelNameById('invalid')).toBeNull();
+  });
 
-  // Test valid label ID
-  const labelName = labelManager.getLabelNameById("contactGroups/123");
-  assertEquals(labelName, "Friends", "Should return correct label name for valid ID");
+  test('getLabelNameById returns null for system labels', () => {
+    const manager = new LabelManager();
+    expect(manager.getLabelNameById('myContacts')).toBeNull();
+    expect(manager.getLabelNameById('starred')).toBeNull();
+  });
 
-  // Test invalid label ID
-  const invalidLabel = labelManager.getLabelNameById("invalid");
-  assertEquals(invalidLabel, null, "Should return null for invalid ID");
+  test('getLabelNamesByIds returns valid names only', () => {
+    const manager = new LabelManager();
+    const names = manager.getLabelNamesByIds(['contactGroups/123', 'contactGroups/456', 'invalid']);
+    expect(names).toEqual(['Friends', 'Work']);
+  });
 
-  // Test system labels
-  assertEquals(
-    labelManager.getLabelNameById("myContacts"),
-    null,
-    "Should return null for system label myContacts"
-  );
-  assertEquals(
-    labelManager.getLabelNameById("starred"),
-    null,
-    "Should return null for system label starred"
-  );
-}
+  test('labelExistsById checks correctly', () => {
+    const manager = new LabelManager();
+    expect(manager.labelExistsById('contactGroups/123')).toBe(true);
+    expect(manager.labelExistsById('123')).toBe(true);
+    expect(manager.labelExistsById('invalid')).toBe(false);
+  });
 
-function testGetLabelNamesByIds() {
-  const labelManager = new LabelManager();
-  const labelIds = ["contactGroups/123", "contactGroups/456", "invalid"];
-  const labelNames = labelManager.getLabelNamesByIds(labelIds);
+  test('labelExistsByName checks correctly', () => {
+    const manager = new LabelManager();
+    expect(manager.labelExistsByName('Friends')).toBe(true);
+    expect(manager.labelExistsByName('NonExistent')).toBe(false);
+  });
 
-  assertArrayEquals(
-    labelNames,
-    ["Friends", "Work"],
-    "Should return array of valid label names only"
-  );
-}
+  test('addLabel creates and stores new label', () => {
+    People.ContactGroups.create.mockReturnValue({
+      resourceName: 'contactGroups/new',
+      name: 'New Group'
+    });
 
-function testLabelExistence() {
-  const labelManager = new LabelManager();
+    const manager = new LabelManager();
+    const newLabel = manager.addLabel('New Group');
 
-  // Test by ID
-  assert(
-    labelManager.labelExistsById("contactGroups/123"),
-    "Should find existing label by ID"
-  );
-  assert(
-    !labelManager.labelExistsById("invalid"),
-    "Should not find non-existent label by ID"
-  );
+    expect(newLabel).not.toBeNull();
+    expect(newLabel.name).toBe('New Group');
+    expect(manager.labelExistsByName('New Group')).toBe(true);
+    expect(manager.labels).toHaveLength(4);
+  });
 
-  // Test by name
-  assert(
-    labelManager.labelExistsByName("Friends"),
-    "Should find existing label by name"
-  );
-  assert(
-    !labelManager.labelExistsByName("Invalid"),
-    "Should not find non-existent label by name"
-  );
-}
+  test('handles API errors gracefully', () => {
+    People.ContactGroups.list.mockImplementation(() => { throw new Error('API Error'); });
 
-function testAddLabel() {
-  const labelManager = new LabelManager();
-  const newLabel = labelManager.addLabel("New Group");
-
-  assert(newLabel !== null, "Should successfully add new label");
-  assertEquals(newLabel.name, "New Group", "New label should have correct name");
-  assert(
-    labelManager.labelExistsByName("New Group"),
-    "New label should exist in manager"
-  );
-}
-
-function runLabelManagerTests() {
-  const tests = [
-    testLabelManagerInitialization,
-    testGetLabelNameById,
-    testGetLabelNamesByIds,
-    testLabelExistence,
-    testAddLabel
-  ];
-
-  let passed = 0;
-  let failed = 0;
-
-  for (const test of tests) {
-    try {
-      test();
-      Logger.log(`✅ ${test.name} passed`);
-      passed++;
-    } catch (e) {
-      Logger.log(`❌ ${test.name} failed: ${e.message}`);
-      failed++;
-    }
-  }
-
-  Logger.log(`\nTest Summary:`);
-  Logger.log(`Total: ${tests.length}`);
-  Logger.log(`Passed: ${passed}`);
-  Logger.log(`Failed: ${failed}`);
-}
+    const manager = new LabelManager();
+    expect(manager.labels).toEqual([]);
+  });
+});

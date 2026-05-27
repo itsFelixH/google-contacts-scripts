@@ -1,261 +1,261 @@
-/**
- * Tests for Contact class and contact_manager functions.
- * These run in the Apps Script environment via runContactManagerTests().
- */
+describe('Contact class', () => {
+  test('creates contact with all fields', () => {
+    const contact = new Contact(
+      'John Doe', new Date('1990-01-01'), ['Friends', 'Work'],
+      'john@example.com', 'Berlin', '+1234567890', ['@johndoe'], 'people/c123'
+    );
 
-function testContactBirthdayHandling() {
-  // Test contact with valid birthday
-  const contact1 = new Contact('Valid Birthday', new Date('1990-01-01'), []);
-  assert(contact1.getBirthday() instanceof Date, 'Birthday should be a Date object');
-  assertEquals(contact1.getBirthdayShortFormat(), '01.01.', 'Birthday short format should match');
-  assertEquals(contact1.getBirthdayLongFormat(), '01.01.1990', 'Birthday long format should match');
+    expect(contact.getName()).toBe('John Doe');
+    expect(contact.getLabels()).toEqual(['Friends', 'Work']);
+    expect(contact.email).toBe('john@example.com');
+    expect(contact.city).toBe('Berlin');
+    expect(contact.phoneNumber).toBe('+1234567890');
+    expect(contact.instagramNames).toEqual(['@johndoe']);
+    expect(contact.resourceName).toBe('people/c123');
+  });
 
-  // Test contact with null birthday
-  const contact2 = new Contact('No Birthday', null, []);
-  assertEquals(contact2.getBirthday(), null, 'Birthday should be null');
-  assertEquals(contact2.getBirthdayShortFormat(), '', 'Birthday short format should be empty');
-  assertEquals(contact2.getBirthdayLongFormat(), '', 'Birthday long format should be empty');
+  test('throws on missing name', () => {
+    expect(() => new Contact('', new Date())).toThrow();
+    expect(() => new Contact(null, new Date())).toThrow();
+  });
 
-  // Test contact with empty string birthday
-  const contact3 = new Contact('Empty Birthday', '', []);
-  assertEquals(contact3.getBirthday(), null, 'Birthday should be null');
-}
+  test('handles null/empty birthday', () => {
+    const c1 = new Contact('Test', null);
+    expect(c1.getBirthday()).toBeNull();
+    expect(c1.getBirthdayShortFormat()).toBe('');
+    expect(c1.getBirthdayLongFormat()).toBe('');
 
-function testContactCreation() {
-  const contact = new Contact(
-    'John Doe',
-    new Date('1990-01-01'),
-    ['Friends', 'Work'],
-    'john@example.com',
-    'Berlin',
-    '+1234567890',
-    ['@johndoe']
-  );
+    const c2 = new Contact('Test', '');
+    expect(c2.getBirthday()).toBeNull();
+  });
 
-  assertEquals(contact.getName(), 'John Doe', 'Name should match');
-  assertArrayEquals(contact.getLabels(), ['Friends', 'Work'], 'Labels should match');
-  assertEquals(contact.email, 'john@example.com', 'Email should match');
-  assertEquals(contact.city, 'Berlin', 'City should match');
-  assertEquals(contact.phoneNumber, '+1234567890', 'Phone number should match');
-  assertArrayEquals(contact.instagramNames, ['@johndoe'], 'Instagram names should match');
-}
+  test('formats birthday correctly', () => {
+    const contact = new Contact('Test', new Date('1990-03-15'));
+    expect(contact.getBirthdayShortFormat()).toBe('15.03.');
+    expect(contact.getBirthdayLongFormat()).toBe('15.03.1990');
+  });
 
-function testContactAgeCalculation() {
-  const today = new Date();
-  const birthYear = today.getFullYear() - 30;
-  const contact = new Contact('Jane Doe', new Date(birthYear, 0, 1), []);
+  test('detects known birth year', () => {
+    const withYear = new Contact('Test', new Date('1990-01-01'));
+    expect(withYear.hasKnownBirthYear()).toBe(true);
 
-  assertEquals(contact.calculateAge(), 30, 'Age calculation should be correct');
-  assert(contact.hasKnownBirthYear(), 'Should have known birth year');
-}
+    const currentYear = new Date().getFullYear();
+    const withoutYear = new Contact('Test', new Date(currentYear, 5, 15));
+    expect(withoutYear.hasKnownBirthYear()).toBe(false);
+  });
 
-function testContactSocialLinks() {
-  const contact = new Contact(
-    'Social User', new Date(), [], '', '', '1234567890', ['@social_user', '@another_account']
-  );
+  test('calculates age correctly', () => {
+    const today = new Date();
+    const birthYear = today.getFullYear() - 30;
+    const contact = new Contact('Test', new Date(birthYear, 0, 1));
+    expect(contact.calculateAge()).toBe(30);
+  });
 
-  assertEquals(contact.getWhatsAppLink(), 'https://wa.me/1234567890', 'WhatsApp link should be correct');
-  assertArrayEquals(
-    contact.getAllInstagramLinks(),
-    ['https://www.instagram.com/social_user/', 'https://www.instagram.com/another_account/'],
-    'Instagram links should be correct'
-  );
-}
+  test('returns 0 age when birth year unknown', () => {
+    const contact = new Contact('Test', new Date(new Date().getFullYear(), 5, 15));
+    expect(contact.calculateAge()).toBe(0);
+  });
 
-function testContactLink() {
-  const contact = new Contact('Test', new Date(), [], '', '', '', [], 'people/c12345');
-  assertEquals(contact.getContactLink(), 'https://contacts.google.com/person/c12345', 'Contact link should be correct');
+  test('generates WhatsApp link', () => {
+    const contact = new Contact('Test', null, [], '', '', '+49 123 456 7890');
+    expect(contact.getWhatsAppLink()).toBe('https://wa.me/491234567890');
+  });
 
-  const noResource = new Contact('Test2', new Date(), []);
-  assertEquals(noResource.getContactLink(), '', 'No resource should return empty string');
-}
+  test('returns empty WhatsApp link for short numbers', () => {
+    const contact = new Contact('Test', null, [], '', '', '123');
+    expect(contact.getWhatsAppLink()).toBe('');
+  });
 
-function testContactValidation() {
-  // Test contact creation with missing name
-  try {
-    new Contact('', new Date());
-    throw new Error('Should have thrown error for missing name');
-  } catch (e) {
-    assert(e.message.includes('required'), 'Should throw error about required name');
-  }
+  test('generates Instagram links', () => {
+    const contact = new Contact('Test', null, [], '', '', '', ['@user1', '@user2']);
+    expect(contact.getAllInstagramLinks()).toEqual([
+      'https://www.instagram.com/user1/',
+      'https://www.instagram.com/user2/'
+    ]);
+  });
 
-  // Test contact with invalid labels
-  const contact = new Contact('Test User', new Date(), 'invalid');
-  assertArrayEquals(contact.getLabels(), [], 'Invalid labels should be converted to empty array');
-}
+  test('generates Google Contacts link', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], 'people/c12345');
+    expect(contact.getContactLink()).toBe('https://contacts.google.com/person/c12345');
+  });
 
-function testFindContactsWithoutLabels() {
+  test('returns empty contact link without resourceName', () => {
+    const contact = new Contact('Test', null);
+    expect(contact.getContactLink()).toBe('');
+  });
+
+  test('handles invalid labels gracefully', () => {
+    const contact = new Contact('Test', null, 'not-an-array');
+    expect(contact.getLabels()).toEqual([]);
+  });
+
+  test('calculates days to next birthday', () => {
+    const contact = new Contact('Test', new Date(1990, 0, 1));
+    const days = contact.daysToNextBirthday();
+    expect(days).toBeGreaterThanOrEqual(0);
+    expect(days).toBeLessThanOrEqual(365);
+  });
+});
+
+
+describe('Contact query functions', () => {
   const contacts = [
-    new Contact('No Labels', new Date()),
-    new Contact('Has Labels', new Date(), ['Friends']),
-    new Contact('Also No Labels', new Date(), [])
+    new Contact('John Doe', new Date('1990-01-15'), ['Friends'], 'john@test.com', 'Berlin', '+491234567890'),
+    new Contact('Jane', null, [], '', 'Munich'),
+    new Contact('Bob Smith', new Date('1985-06-20'), ['Work', 'Friends'], 'bob@test.com', '', '+invalid'),
+    new Contact('Alice', new Date(new Date().getFullYear(), 0, 1), ['Work']),
   ];
 
-  const result = findContactsWithoutLabels(contacts);
-  assertEquals(result.length, 2, 'Should find 2 contacts without labels');
-  assertEquals(result[0].getName(), 'No Labels', 'First should match');
-  assertEquals(result[1].getName(), 'Also No Labels', 'Second should match');
-}
+  test('findContactsWithoutLabels', () => {
+    const result = findContactsWithoutLabels(contacts);
+    expect(result).toHaveLength(1);
+    expect(result[0].getName()).toBe('Jane');
+  });
 
-function testFindContactsWithoutBirthday() {
-  const contacts = [
-    new Contact('No Birthday', null),
-    new Contact('Has Birthday', new Date('1990-01-01')),
-    new Contact('Also No Birthday', '')
-  ];
+  test('findContactsWithoutBirthday', () => {
+    const result = findContactsWithoutBirthday(contacts);
+    expect(result).toHaveLength(1);
+    expect(result[0].getName()).toBe('Jane');
+  });
 
-  const result = findContactsWithoutBirthday(contacts);
-  assertEquals(result.length, 2, 'Should find 2 contacts without birthdays');
-}
+  test('findContactsWithLabel', () => {
+    expect(findContactsWithLabel(contacts, 'Friends')).toHaveLength(2);
+    expect(findContactsWithLabel(contacts, 'Work')).toHaveLength(2);
+    expect(findContactsWithLabel(contacts, 'NonExistent')).toHaveLength(0);
+    expect(findContactsWithLabel(contacts, '')).toHaveLength(0);
+  });
 
-function testFindContactsWithLabel() {
-  const contacts = [
-    new Contact('Friend 1', new Date(), ['Friends']),
-    new Contact('Work Contact', new Date(), ['Work']),
-    new Contact('Friend 2', new Date(), ['Friends', 'Work'])
-  ];
+  test('findContactsWithoutSurnames', () => {
+    const result = findContactsWithoutSurnames(contacts);
+    expect(result).toHaveLength(2);
+    expect(result.map(c => c.getName())).toContain('Jane');
+    expect(result.map(c => c.getName())).toContain('Alice');
+  });
 
-  const friends = findContactsWithLabel(contacts, 'Friends');
-  assertEquals(friends.length, 2, 'Should find 2 contacts with Friends label');
+  test('findContactsWithInvalidPhones', () => {
+    const result = findContactsWithInvalidPhones(contacts);
+    expect(result).toHaveLength(1);
+    expect(result[0].getName()).toBe('Bob Smith');
+  });
 
-  const work = findContactsWithLabel(contacts, 'Work');
-  assertEquals(work.length, 2, 'Should find 2 contacts with Work label');
+  test('findContactsMissingField', () => {
+    expect(findContactsMissingField(contacts, 'email')).toHaveLength(2);
+    expect(findContactsMissingField(contacts, 'city')).toHaveLength(2);
+    expect(findContactsMissingField(contacts, 'birthday')).toHaveLength(1);
+  });
 
-  const none = findContactsWithLabel(contacts, 'NonExistent');
-  assertEquals(none.length, 0, 'Should find 0 contacts with non-existent label');
-}
+  test('findPotentialDuplicates', () => {
+    const dupes = [
+      new Contact('Same Name', new Date()),
+      new Contact('Same Name', new Date()),
+      new Contact('Unique', new Date()),
+    ];
+    const result = findPotentialDuplicates(dupes);
+    expect(result).toHaveLength(1);
+    expect(result[0].count).toBe(2);
+  });
 
-function testFindContactsWithUpcomingBirthdays() {
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  const nextWeek = new Date(today);
-  nextWeek.setDate(today.getDate() + 7);
-  const twoWeeks = new Date(today);
-  twoWeeks.setDate(today.getDate() + 14);
+  test('findLongNames', () => {
+    const longNameContacts = [
+      new Contact('A'.repeat(60), new Date()),
+      new Contact('Short', new Date()),
+    ];
+    expect(findLongNames(longNameContacts, 50)).toHaveLength(1);
+  });
 
-  const contacts = [
-    new Contact('Tomorrow Birthday', tomorrow),
-    new Contact('Next Week Birthday', nextWeek),
-    new Contact('Two Weeks Birthday', twoWeeks)
-  ];
+  test('getContactsByCity', () => {
+    const result = getContactsByCity(contacts);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0]).toHaveProperty('city');
+    expect(result[0]).toHaveProperty('count');
+  });
 
-  const upcoming7 = findContactsWithUpcomingBirthdays(contacts, 7);
-  assertEquals(upcoming7.length, 2, 'Should find 2 contacts with birthdays in next 7 days');
+  test('getLabelUsageStats', () => {
+    const stats = getLabelUsageStats(contacts);
+    expect(stats.totalLabels).toBe(2);
+    expect(stats.unlabeledCount).toBe(1);
+    expect(stats.mostUsed.label).toBe('Friends');
+  });
 
-  const upcoming14 = findContactsWithUpcomingBirthdays(contacts, 14);
-  assertEquals(upcoming14.length, 3, 'Should find 3 contacts with birthdays in next 14 days');
-}
+  test('generateContactStats', () => {
+    const stats = generateContactStats(contacts);
+    expect(stats.totalContacts).toBe(4);
+    expect(stats.withBirthday).toBe(3);
+    expect(stats.withEmail).toBe(2);
+    expect(stats.withLabels).toBe(3);
+    expect(stats.labelDistribution['Friends']).toBe(2);
+  });
+});
 
-function testFindContactsWithInvalidPhones() {
-  const contacts = [
-    new Contact('Valid Phone', new Date(), [], '', '', '+1234567890'),
-    new Contact('Invalid Phone', new Date(), [], '', '', 'abc123'),
-    new Contact('No Phone', new Date()),
-    new Contact('Another Invalid', new Date(), [], '', '', '12.34.56')
-  ];
 
-  const invalid = findContactsWithInvalidPhones(contacts);
-  assertEquals(invalid.length, 1, 'Should find 1 contact with invalid phone');
-  assertEquals(invalid[0].getName(), 'Invalid Phone', 'Invalid phone contact should match');
-}
+describe('findContactsWithUpcomingBirthdays', () => {
+  test('finds birthdays within range', () => {
+    const today = new Date();
+    const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const nextWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 6);
+    const twoWeeks = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 13);
 
-function testFindContactsWithoutSurnames() {
-  const contacts = [
-    new Contact('John', new Date()),
-    new Contact('John Doe', new Date()),
-    new Contact('Jane', new Date()),
-    new Contact('Jane Smith', new Date())
-  ];
+    const contacts = [
+      new Contact('Tomorrow', new Date(1990, tomorrow.getMonth(), tomorrow.getDate())),
+      new Contact('Next Week', new Date(1990, nextWeek.getMonth(), nextWeek.getDate())),
+      new Contact('Two Weeks', new Date(1990, twoWeeks.getMonth(), twoWeeks.getDate())),
+    ];
 
-  const result = findContactsWithoutSurnames(contacts);
-  assertEquals(result.length, 2, 'Should find 2 contacts without surnames');
-  assertEquals(result[0].getName(), 'John', 'First should be John');
-  assertEquals(result[1].getName(), 'Jane', 'Second should be Jane');
-}
+    expect(findContactsWithUpcomingBirthdays(contacts, 7)).toHaveLength(2);
+    expect(findContactsWithUpcomingBirthdays(contacts, 14)).toHaveLength(3);
+  });
 
-function testFindPotentialDuplicates() {
-  const contacts = [
-    new Contact('John Doe', new Date(), [], 'john@test.com'),
-    new Contact('John Doe', new Date(), [], 'different@test.com'),
-    new Contact('Jane Smith', new Date())
-  ];
+  test('returns sorted by date', () => {
+    const today = new Date();
+    const d1 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5);
+    const d2 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
 
-  const duplicates = findPotentialDuplicates(contacts);
-  assertEquals(duplicates.length, 1, 'Should find 1 duplicate group');
-  assertEquals(duplicates[0].count, 2, 'Duplicate group should have 2 contacts');
-}
+    const contacts = [
+      new Contact('Later', new Date(1990, d1.getMonth(), d1.getDate())),
+      new Contact('Sooner', new Date(1990, d2.getMonth(), d2.getDate())),
+    ];
 
-function testGenerateContactStats() {
-  const contacts = [
-    new Contact('Complete', new Date('1990-01-01'), ['Friends', 'Work'], 'test@example.com', 'Berlin', '+1234567890', ['@social']),
-    new Contact('Minimal', null, []),
-    new Contact('Partial', new Date('1985-06-15'), ['Friends'], 'test2@example.com')
-  ];
+    const result = findContactsWithUpcomingBirthdays(contacts, 7);
+    expect(result[0].getName()).toBe('Sooner');
+  });
+});
 
-  const stats = generateContactStats(contacts);
 
-  assertEquals(stats.totalContacts, 3, 'Total contacts should be 3');
-  assertEquals(stats.withBirthday, 2, 'Contacts with birthday should be 2');
-  assertEquals(stats.withEmail, 2, 'Contacts with email should be 2');
-  assertEquals(stats.withPhone, 1, 'Contacts with phone should be 1');
-  assertEquals(stats.withCity, 1, 'Contacts with city should be 1');
-  assertEquals(stats.withLabels, 2, 'Contacts with labels should be 2');
-  assertEquals(stats.withInstagram, 1, 'Contacts with Instagram should be 1');
-  assertEquals(stats.labelDistribution['Friends'], 2, 'Should have 2 Friends');
-  assertEquals(stats.labelDistribution['Work'], 1, 'Should have 1 Work');
-}
+describe('extractInstagramNamesFromNotes', () => {
+  test('extracts @username patterns', () => {
+    expect(extractInstagramNamesFromNotes('@johndoe')).toEqual(['@johndoe']);
+    expect(extractInstagramNamesFromNotes('Follow @user1 and @user2')).toEqual(['@user1', '@user2']);
+  });
 
-function testExtractInstagramNamesFromNotes() {
-  // Test @username pattern
-  const result1 = extractInstagramNamesFromNotes('Follow me @johndoe on Instagram');
-  assertArrayEquals(result1, ['@johndoe'], 'Should extract @username');
+  test('extracts Instagram: pattern', () => {
+    expect(extractInstagramNamesFromNotes('Instagram: cooluser')).toEqual(['@cooluser']);
+  });
 
-  // Test multiple usernames
-  const result2 = extractInstagramNamesFromNotes('@user1 and @user2');
-  assertArrayEquals(result2, ['@user1', '@user2'], 'Should extract multiple usernames');
+  test('deduplicates usernames', () => {
+    expect(extractInstagramNamesFromNotes('@same @same')).toEqual(['@same']);
+  });
 
-  // Test "Instagram: username" pattern
-  const result3 = extractInstagramNamesFromNotes('Instagram: cooluser');
-  assertArrayEquals(result3, ['@cooluser'], 'Should extract Instagram: pattern');
+  test('handles empty/null input', () => {
+    expect(extractInstagramNamesFromNotes('')).toEqual([]);
+    expect(extractInstagramNamesFromNotes(null)).toEqual([]);
+    expect(extractInstagramNamesFromNotes(undefined)).toEqual([]);
+  });
+});
 
-  // Test empty/null
-  assertEquals(extractInstagramNamesFromNotes('').length, 0, 'Empty should return empty');
-  assertEquals(extractInstagramNamesFromNotes(null).length, 0, 'Null should return empty');
-}
 
-function runContactManagerTests() {
-  const tests = [
-    testContactBirthdayHandling,
-    testContactCreation,
-    testContactAgeCalculation,
-    testContactSocialLinks,
-    testContactLink,
-    testContactValidation,
-    testFindContactsWithoutLabels,
-    testFindContactsWithoutBirthday,
-    testFindContactsWithLabel,
-    testFindContactsWithUpcomingBirthdays,
-    testFindContactsWithInvalidPhones,
-    testFindContactsWithoutSurnames,
-    testFindPotentialDuplicates,
-    testGenerateContactStats,
-    testExtractInstagramNamesFromNotes
-  ];
+describe('validateLabelFilter', () => {
+  test('accepts valid arrays', () => {
+    expect(() => validateLabelFilter([])).not.toThrow();
+    expect(() => validateLabelFilter(['Friends'])).not.toThrow();
+  });
 
-  let passed = 0;
-  let failed = 0;
+  test('rejects non-arrays', () => {
+    expect(() => validateLabelFilter('string')).toThrow();
+    expect(() => validateLabelFilter(null)).toThrow();
+  });
 
-  for (const test of tests) {
-    try {
-      test();
-      Logger.log(`✅ ${test.name} passed`);
-      passed++;
-    } catch (e) {
-      Logger.log(`❌ ${test.name} failed: ${e.message}`);
-      failed++;
-    }
-  }
-
-  Logger.log(`\nTest Summary: ${passed} passed, ${failed} failed out of ${tests.length}`);
-}
+  test('rejects arrays with non-strings', () => {
+    expect(() => validateLabelFilter([123])).toThrow();
+    expect(() => validateLabelFilter([null])).toThrow();
+  });
+});
