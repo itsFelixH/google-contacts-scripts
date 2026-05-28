@@ -10,27 +10,28 @@
 
 
 /**
- * All function names that setupSchedules manages.
- * Only these triggers are touched — user-created triggers are left alone.
+ * Maps report config keys to their trigger function names.
  */
-const MANAGED_FUNCTIONS = [
-  'sendUpcomingBirthdaysReport',
-  'sendDuplicateContactsReport',
-  'sendLabelOverviewReport',
-  'sendMissingInfoReportAll',
-  'sendDataQualityReport',
-  'sendContactOverviewReport',
-  'runAutoLabeling'
-];
+const REPORT_FUNCTIONS = {
+  upcomingBirthdays: 'sendUpcomingBirthdaysReport',
+  duplicates:        'sendDuplicateContactsReport',
+  contactOverview:   'sendContactOverviewReport',
+  labelOverview:     'sendLabelOverviewReport',
+  missingInfo:       'sendMissingInfoReportAll',
+  dataQuality:       'sendDataQualityReport',
+  autoLabeling:      'runAutoLabeling',
+};
 
 
 /**
- * Creates time-based triggers based on your config.
+ * All function names that setupSchedules manages.
+ */
+const MANAGED_FUNCTIONS = Object.values(REPORT_FUNCTIONS);
+
+
+/**
+ * Creates time-based triggers based on your reportSchedules config.
  * Run this once after deploying. Safe to re-run — removes existing managed triggers first.
- *
- * Default schedule:
- * - Weekly: Upcoming Birthdays, Auto-labeling
- * - Monthly: Duplicates, Label Overview, Missing Info, Data Quality, Contact Overview
  */
 function setupSchedules() {
   // Remove existing managed triggers
@@ -50,66 +51,35 @@ function setupSchedules() {
   const hour = typeof scheduleHour !== 'undefined' ? scheduleHour : 8;
   const weekDay = typeof weeklyReportDay !== 'undefined' ? weeklyReportDay : ScriptApp.WeekDay.MONDAY;
   const monthDay = typeof monthlyReportDay !== 'undefined' ? monthlyReportDay : 1;
-  const doAutoLabel = typeof scheduleAutoLabeling !== 'undefined' ? scheduleAutoLabeling : false;
+  const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
 
-  // ─── Weekly triggers ────────────────────────────────────────────────────────
+  let created = 0;
 
-  // Upcoming Birthdays — weekly (covers next 14 days by default)
-  ScriptApp.newTrigger('sendUpcomingBirthdaysReport')
-    .timeBased()
-    .onWeekDay(weekDay)
-    .atHour(hour)
-    .create();
-  Logger.log(`✅ Upcoming Birthdays — weekly at ~${hour}:00`);
+  // Create a trigger for each enabled report
+  Object.entries(REPORT_FUNCTIONS).forEach(([key, fn]) => {
+    const frequency = schedules[key] || 'off';
+    if (frequency === 'off') return;
 
-  // Auto-labeling — weekly (optional)
-  if (doAutoLabel) {
-    ScriptApp.newTrigger('runAutoLabeling')
-      .timeBased()
-      .onWeekDay(weekDay)
-      .atHour(hour)
-      .create();
-    Logger.log(`✅ Auto-labeling — weekly at ~${hour}:00`);
+    const trigger = ScriptApp.newTrigger(fn).timeBased();
+
+    if (frequency === 'weekly') {
+      trigger.onWeekDay(weekDay).atHour(hour).create();
+      Logger.log(`✅ ${key} — weekly at ~${hour}:00`);
+      created++;
+    } else if (frequency === 'monthly') {
+      trigger.onMonthDay(monthDay).atHour(hour).create();
+      Logger.log(`✅ ${key} — monthly on day ${monthDay} at ~${hour}:00`);
+      created++;
+    } else {
+      Logger.log(`⚠️ ${key} — unknown frequency "${frequency}", skipping`);
+    }
+  });
+
+  if (created === 0) {
+    Logger.log('ℹ️ No schedules enabled. Set frequencies in reportSchedules config.');
+  } else {
+    Logger.log(`🎉 ${created} schedule(s) set up!`);
   }
-
-  // ─── Monthly triggers ───────────────────────────────────────────────────────
-
-  ScriptApp.newTrigger('sendDuplicateContactsReport')
-    .timeBased()
-    .onMonthDay(monthDay)
-    .atHour(hour)
-    .create();
-  Logger.log(`✅ Duplicate Contacts — monthly on day ${monthDay} at ~${hour}:00`);
-
-  ScriptApp.newTrigger('sendLabelOverviewReport')
-    .timeBased()
-    .onMonthDay(monthDay)
-    .atHour(hour)
-    .create();
-  Logger.log(`✅ Label Overview — monthly on day ${monthDay} at ~${hour}:00`);
-
-  ScriptApp.newTrigger('sendMissingInfoReportAll')
-    .timeBased()
-    .onMonthDay(monthDay)
-    .atHour(hour)
-    .create();
-  Logger.log(`✅ Missing Info — monthly on day ${monthDay} at ~${hour}:00`);
-
-  ScriptApp.newTrigger('sendDataQualityReport')
-    .timeBased()
-    .onMonthDay(monthDay)
-    .atHour(hour)
-    .create();
-  Logger.log(`✅ Data Quality — monthly on day ${monthDay} at ~${hour}:00`);
-
-  ScriptApp.newTrigger('sendContactOverviewReport')
-    .timeBased()
-    .onMonthDay(monthDay)
-    .atHour(hour)
-    .create();
-  Logger.log(`✅ Contact Overview — monthly on day ${monthDay} at ~${hour}:00`);
-
-  Logger.log('🎉 All schedules set up!');
 }
 
 
