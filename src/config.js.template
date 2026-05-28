@@ -80,10 +80,21 @@ const includeWhatsAppLinks = true;        // add WhatsApp links next to phone nu
 // ═══════════════════════════════════════════════════════════════════════════════
 // Used by setupSchedules(). Run it once after deploying.
 // Hours are approximate — Apps Script triggers fire within a ±1 hour window.
+//
+// Each entry: { fn: 'functionName', frequency: 'daily'|'weekly'|'monthly', day, hour }
+//   - daily:   runs every day at the given hour
+//   - weekly:  runs on the given day at the given hour
+//   - monthly: runs on the 1st of each month at the given hour
+//
+// 'day' uses ScriptApp.WeekDay (only needed for weekly).
 
-const scheduleReportDay = ScriptApp.WeekDay.MONDAY;  // weekly reports day
-const scheduleReportHour = 8;                        // hour for all triggers
-const birthdaySchedule = 'daily';                    // 'daily' or 'weekly'
+const scheduleHour = 8; // default hour for all triggers
+
+const schedules = [
+  { fn: 'sendUpcomingBirthdaysReport', frequency: 'daily',   hour: scheduleHour },
+  { fn: 'sendAllReports',             frequency: 'weekly',  day: ScriptApp.WeekDay.MONDAY, hour: scheduleHour },
+  { fn: 'sendContactOverviewReport',  frequency: 'monthly', hour: scheduleHour },
+];
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
