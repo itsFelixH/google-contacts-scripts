@@ -78,23 +78,24 @@ const includeWhatsAppLinks = true;        // add WhatsApp links next to phone nu
 // ═══════════════════════════════════════════════════════════════════════════════
 // 3. SCHEDULES — When should things run?
 // ═══════════════════════════════════════════════════════════════════════════════
-// Used by setupSchedules(). Run it once after deploying.
+// Run setupSchedules() once after deploying. Safe to re-run after changes.
 // Hours are approximate — Apps Script triggers fire within a ±1 hour window.
-//
-// Each entry: { fn: 'functionName', frequency: 'daily'|'weekly'|'monthly', day, hour }
-//   - daily:   runs every day at the given hour
-//   - weekly:  runs on the given day at the given hour
-//   - monthly: runs on the 1st of each month at the given hour
-//
-// 'day' uses ScriptApp.WeekDay (only needed for weekly).
 
-const scheduleHour = 8; // default hour for all triggers
+// What time of day to send reports (0–23)
+const scheduleHour = 8;
 
-const schedules = [
-  { fn: 'sendUpcomingBirthdaysReport', frequency: 'daily',   hour: scheduleHour },
-  { fn: 'sendAllReports',             frequency: 'weekly',  day: ScriptApp.WeekDay.MONDAY, hour: scheduleHour },
-  { fn: 'sendContactOverviewReport',  frequency: 'monthly', hour: scheduleHour },
-];
+// ─── Upcoming Birthdays ───────────────────────────────────────────────────────
+// How often to check for birthdays: 'daily' or 'weekly'
+const birthdaySchedule = 'daily';
+
+// ─── All other reports ────────────────────────────────────────────────────────
+// Which day to send the weekly batch (all enabled reports).
+// Options: MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
+const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
+
+// ─── Contact Overview ─────────────────────────────────────────────────────────
+// Sent once a month on the 1st. Set to false to disable.
+const monthlyOverview = true;
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
