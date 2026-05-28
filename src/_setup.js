@@ -15,7 +15,10 @@
  */
 const MANAGED_FUNCTIONS = [
   'sendUpcomingBirthdaysReport',
-  'sendAllReports',
+  'sendDuplicateContactsReport',
+  'sendLabelOverviewReport',
+  'sendMissingInfoReportAll',
+  'sendDataQualityReport',
   'sendContactOverviewReport',
   'runAutoLabeling'
 ];
@@ -24,6 +27,10 @@ const MANAGED_FUNCTIONS = [
 /**
  * Creates time-based triggers based on your config.
  * Run this once after deploying. Safe to re-run — removes existing managed triggers first.
+ *
+ * Default schedule:
+ * - Weekly: Upcoming Birthdays, Auto-labeling
+ * - Monthly: Duplicates, Label Overview, Missing Info, Data Quality, Contact Overview
  */
 function setupSchedules() {
   // Remove existing managed triggers
@@ -41,40 +48,21 @@ function setupSchedules() {
 
   // Read config with defaults
   const hour = typeof scheduleHour !== 'undefined' ? scheduleHour : 8;
-  const bSchedule = typeof birthdaySchedule !== 'undefined' ? birthdaySchedule : 'daily';
   const weekDay = typeof weeklyReportDay !== 'undefined' ? weeklyReportDay : ScriptApp.WeekDay.MONDAY;
-  const doMonthly = typeof monthlyOverview !== 'undefined' ? monthlyOverview : true;
+  const monthDay = typeof monthlyReportDay !== 'undefined' ? monthlyReportDay : 1;
+  const doAutoLabel = typeof scheduleAutoLabeling !== 'undefined' ? scheduleAutoLabeling : false;
 
-  // 1. Upcoming Birthdays — daily or weekly
-  const birthdayTrigger = ScriptApp.newTrigger('sendUpcomingBirthdaysReport').timeBased();
-  if (bSchedule === 'weekly') {
-    birthdayTrigger.onWeekDay(weekDay).atHour(hour).create();
-    Logger.log(`✅ Upcoming Birthdays — weekly at ~${hour}:00`);
-  } else {
-    birthdayTrigger.everyDays(1).atHour(hour).create();
-    Logger.log(`✅ Upcoming Birthdays — daily at ~${hour}:00`);
-  }
+  // ─── Weekly triggers ────────────────────────────────────────────────────────
 
-  // 2. All Reports — weekly
-  ScriptApp.newTrigger('sendAllReports')
+  // Upcoming Birthdays — weekly (covers next 14 days by default)
+  ScriptApp.newTrigger('sendUpcomingBirthdaysReport')
     .timeBased()
     .onWeekDay(weekDay)
     .atHour(hour)
     .create();
-  Logger.log(`✅ All Reports — weekly at ~${hour}:00`);
+  Logger.log(`✅ Upcoming Birthdays — weekly at ~${hour}:00`);
 
-  // 3. Contact Overview — monthly (optional)
-  if (doMonthly) {
-    ScriptApp.newTrigger('sendContactOverviewReport')
-      .timeBased()
-      .onMonthDay(1)
-      .atHour(hour)
-      .create();
-    Logger.log(`✅ Contact Overview — 1st of each month at ~${hour}:00`);
-  }
-
-  // 4. Auto-labeling — weekly (optional)
-  const doAutoLabel = typeof scheduleAutoLabeling !== 'undefined' ? scheduleAutoLabeling : false;
+  // Auto-labeling — weekly (optional)
   if (doAutoLabel) {
     ScriptApp.newTrigger('runAutoLabeling')
       .timeBased()
@@ -83,6 +71,43 @@ function setupSchedules() {
       .create();
     Logger.log(`✅ Auto-labeling — weekly at ~${hour}:00`);
   }
+
+  // ─── Monthly triggers ───────────────────────────────────────────────────────
+
+  ScriptApp.newTrigger('sendDuplicateContactsReport')
+    .timeBased()
+    .onMonthDay(monthDay)
+    .atHour(hour)
+    .create();
+  Logger.log(`✅ Duplicate Contacts — monthly on day ${monthDay} at ~${hour}:00`);
+
+  ScriptApp.newTrigger('sendLabelOverviewReport')
+    .timeBased()
+    .onMonthDay(monthDay)
+    .atHour(hour)
+    .create();
+  Logger.log(`✅ Label Overview — monthly on day ${monthDay} at ~${hour}:00`);
+
+  ScriptApp.newTrigger('sendMissingInfoReportAll')
+    .timeBased()
+    .onMonthDay(monthDay)
+    .atHour(hour)
+    .create();
+  Logger.log(`✅ Missing Info — monthly on day ${monthDay} at ~${hour}:00`);
+
+  ScriptApp.newTrigger('sendDataQualityReport')
+    .timeBased()
+    .onMonthDay(monthDay)
+    .atHour(hour)
+    .create();
+  Logger.log(`✅ Data Quality — monthly on day ${monthDay} at ~${hour}:00`);
+
+  ScriptApp.newTrigger('sendContactOverviewReport')
+    .timeBased()
+    .onMonthDay(monthDay)
+    .atHour(hour)
+    .create();
+  Logger.log(`✅ Contact Overview — monthly on day ${monthDay} at ~${hour}:00`);
 
   Logger.log('🎉 All schedules set up!');
 }
