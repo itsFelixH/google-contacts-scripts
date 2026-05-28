@@ -72,7 +72,7 @@ const maxContactsPerReport = 0;           // 0 = unlimited, otherwise caps the l
 // ─── Links ────────────────────────────────────────────────────────────────────
 
 const includeEditLinks = true;            // add "edit" links next to contact names
-const includeWhatsAppLinks = true;        // add WhatsApp links next to phone numbers
+const includeWhatsAppLinks = false;       // add WhatsApp links next to phone numbers
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -129,11 +129,11 @@ const defaultCountryCode = '+49';
 
 // ─── Name formatter ───────────────────────────────────────────────────────────
 
-const nameSwapLastFirst = true;           // convert "Last, First" → "First Last"
+const nameSwapLastFirst = false;          // convert "Last, First" → "First Last"
 
 // ─── Action reports ───────────────────────────────────────────────────────────
-// Send a summary email after each action runs. Set to false to disable.
-const sendActionReports = true;
+// Send a summary email after each action runs. Set to true to enable.
+const sendActionReports = false;
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -144,33 +144,24 @@ const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 6. API SETTINGS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const apiPageSize = 100;
-const apiMaxRetries = 3;
-const apiPersonFields = 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies';
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 7. EMAIL CUSTOMIZATION
+// 6. EMAIL CUSTOMIZATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── Email subjects (override defaults) ───────────────────────────────────────
 // Use {days} in upcomingBirthdays, {field} in missingInfo as placeholders.
 
 const emailSubjects = {
-  upcomingBirthdays: '🎂 Upcoming Birthdays',
-  duplicates: '🔍 Duplicate Contacts',
-  overview: '📊 Contact Overview',
-  labelOverview: '🏷️ Label Overview',
-  missingInfo: '📋 Missing Info: {field}',
-  dataQuality: '🔧 Data Quality',
+  upcomingBirthdays: '🎂 Birthdays This Week',
+  duplicates: '🔍 Possible Duplicates',
+  overview: '📊 Contacts Overview',
+  labelOverview: '🏷️ Labels Overview',
+  missingInfo: '📋 Missing {field}',
+  dataQuality: '🔧 Data Quality Issues',
 };
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 8. ADVANCED
+// 7. ADVANCED
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const dryRun = false; // true = preview mode, no emails sent
