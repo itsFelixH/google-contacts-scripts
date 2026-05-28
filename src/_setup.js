@@ -10,33 +10,14 @@
 
 
 /**
- * Returns the configured schedules, or sensible defaults.
- * @returns {Object[]}
+ * All function names that setupSchedules manages.
+ * Only these triggers are touched — user-created triggers are left alone.
  */
-function getSchedules() {
-  if (typeof schedules !== 'undefined' && Array.isArray(schedules)) {
-    return schedules;
-  }
-
-  // Legacy / fallback defaults
-  const hour = typeof scheduleHour !== 'undefined' ? scheduleHour : 8;
-  const day = typeof scheduleReportDay !== 'undefined' ? scheduleReportDay : ScriptApp.WeekDay.MONDAY;
-
-  return [
-    { fn: 'sendUpcomingBirthdaysReport', frequency: 'daily', hour },
-    { fn: 'sendAllReports', frequency: 'weekly', day, hour },
-    { fn: 'sendContactOverviewReport', frequency: 'monthly', hour },
-  ];
-}
-
-
-/**
- * Gets the list of function names managed by setupSchedules.
- * @returns {string[]}
- */
-function getManagedFunctions() {
-  return getSchedules().map(s => s.fn);
-}
+const MANAGED_FUNCTIONS = [
+  'sendUpcomingBirthdaysReport',
+  'sendAllReports',
+  'sendContactOverviewReport'
+];
 
 
 /**
@@ -44,12 +25,9 @@ function getManagedFunctions() {
  * Run this once after deploying. Safe to re-run — removes existing managed triggers first.
  */
 function setupSchedules() {
-  const configuredSchedules = getSchedules();
-  const managedFns = configuredSchedules.map(s => s.fn);
-
-  // Remove only triggers managed by this script
+  // Remove existing managed triggers
   const existing = ScriptApp.getProjectTriggers().filter(
-    trigger => managedFns.includes(trigger.getHandlerFunction())
+    trigger => MANAGED_FUNCTIONS.includes(trigger.getHandlerFunction())
   );
 
   if (existing.length > 0) {
@@ -60,36 +38,41 @@ function setupSchedules() {
     });
   }
 
-  // Create triggers from config
-  configuredSchedules.forEach(schedule => {
-    const { fn, frequency, day, hour } = schedule;
-    const triggerHour = hour || 8;
-    const trigger = ScriptApp.newTrigger(fn).timeBased();
+  // Read config with defaults
+  const hour = typeof scheduleHour !== 'undefined' ? scheduleHour : 8;
+  const bSchedule = typeof birthdaySchedule !== 'undefined' ? birthdaySchedule : 'daily';
+  const weekDay = typeof weeklyReportDay !== 'undefined' ? weeklyReportDay : ScriptApp.WeekDay.MONDAY;
+  const doMonthly = typeof monthlyOverview !== 'undefined' ? monthlyOverview : true;
 
-    switch (frequency) {
-      case 'daily':
-        trigger.everyDays(1).atHour(triggerHour).create();
-        Logger.log(`✅ ${fn} — daily at ~${triggerHour}:00`);
-        break;
+  // 1. Upcoming Birthdays — daily or weekly
+  const birthdayTrigger = ScriptApp.newTrigger('sendUpcomingBirthdaysReport').timeBased();
+  if (bSchedule === 'weekly') {
+    birthdayTrigger.onWeekDay(weekDay).atHour(hour).create();
+    Logger.log(`✅ Upcoming Birthdays — weekly at ~${hour}:00`);
+  } else {
+    birthdayTrigger.everyDays(1).atHour(hour).create();
+    Logger.log(`✅ Upcoming Birthdays — daily at ~${hour}:00`);
+  }
 
-      case 'weekly':
-        const weekDay = day || ScriptApp.WeekDay.MONDAY;
-        trigger.onWeekDay(weekDay).atHour(triggerHour).create();
-        Logger.log(`✅ ${fn} — weekly at ~${triggerHour}:00`);
-        break;
+  // 2. All Reports — weekly
+  ScriptApp.newTrigger('sendAllReports')
+    .timeBased()
+    .onWeekDay(weekDay)
+    .atHour(hour)
+    .create();
+  Logger.log(`✅ All Reports — weekly at ~${hour}:00`);
 
-      case 'monthly':
-        trigger.onMonthDay(1).atHour(triggerHour).create();
-        Logger.log(`✅ ${fn} — 1st of each month at ~${triggerHour}:00`);
-        break;
+  // 3. Contact Overview — monthly (optional)
+  if (doMonthly) {
+    ScriptApp.newTrigger('sendContactOverviewReport')
+      .timeBased()
+      .onMonthDay(1)
+      .atHour(hour)
+      .create();
+    Logger.log(`✅ Contact Overview — 1st of each month at ~${hour}:00`);
+  }
 
-      default:
-        Logger.log(`⚠️ ${fn} — unknown frequency "${frequency}", skipping`);
-        return;
-    }
-  });
-
-  Logger.log(`🎉 ${configuredSchedules.length} schedule(s) set up!`);
+  Logger.log('🎉 All schedules set up!');
 }
 
 
@@ -98,9 +81,8 @@ function setupSchedules() {
  * User-created triggers for other functions are left untouched.
  */
 function removeSchedules() {
-  const managedFns = getManagedFunctions();
   const existing = ScriptApp.getProjectTriggers().filter(
-    trigger => managedFns.includes(trigger.getHandlerFunction())
+    trigger => MANAGED_FUNCTIONS.includes(trigger.getHandlerFunction())
   );
 
   if (existing.length === 0) {
