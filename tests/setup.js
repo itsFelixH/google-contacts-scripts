@@ -34,6 +34,7 @@ global.weeklyReportDay = 2; // MONDAY
 global.monthlyOverview = true;
 global.autoLabelRules = [];
 global.defaultCountryCode = '+49';
+global.scheduleAutoLabeling = false;
 
 // Mock Logger
 global.Logger = {
