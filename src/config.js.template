@@ -38,7 +38,7 @@ const enabledReports = {
 
 // ─── Upcoming Birthdays ───────────────────────────────────────────────────────
 
-const upcomingBirthdaysDays = 7;          // days to look ahead (1–365)
+const upcomingBirthdaysDays = 14;         // days to look ahead (1–365)
 const birthdayShowAge = true;             // show "turns X" if birth year is known
 
 // ─── Birthday date format ─────────────────────────────────────────────────────
@@ -84,21 +84,17 @@ const includeWhatsAppLinks = true;        // add WhatsApp links next to phone nu
 // What time of day to send reports (0–23)
 const scheduleHour = 8;
 
-// ─── Upcoming Birthdays ───────────────────────────────────────────────────────
-// How often to check for birthdays: 'daily' or 'weekly'
-const birthdaySchedule = 'daily';
-
-// ─── All other reports ────────────────────────────────────────────────────────
-// Which day to send the weekly batch (all enabled reports).
+// ─── Weekly reports ───────────────────────────────────────────────────────────
+// Which day for weekly reports (Upcoming Birthdays + Auto-labeling).
 // Options: MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
 const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
 
-// ─── Contact Overview ─────────────────────────────────────────────────────────
-// Sent once a month on the 1st. Set to false to disable.
-const monthlyOverview = true;
+// ─── Monthly reports ──────────────────────────────────────────────────────────
+// Which day of the month for monthly reports (1–28).
+const monthlyReportDay = 1;
 
 // ─── Auto-labeling ───────────────────────────────────────────────────────────
-// Run auto-labeling rules weekly alongside reports. Set to false to disable.
+// Run auto-labeling rules weekly alongside birthday report. Set to true to enable.
 const scheduleAutoLabeling = false;
 
 
