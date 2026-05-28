@@ -21,14 +21,45 @@ const labelFilter = []; // e.g. ['Friends', 'Family']
 // 2. REPORT SETTINGS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── Upcoming birthdays ───────────────────────────────────────────────────────
+// ─── Enable/disable individual reports ────────────────────────────────────────
+// Set to false to skip a report in sendAllReports().
 
-const upcomingBirthdaysDays = 7; // days to look ahead
+const enabledReports = {
+  upcomingBirthdays: true,
+  duplicates: true,
+  contactOverview: true,
+  labelOverview: true,
+  missingInfo: true,
+  dataQuality: true,
+};
+
+// ─── Upcoming Birthdays ───────────────────────────────────────────────────────
+
+const upcomingBirthdaysDays = 7;          // days to look ahead (1–365)
+const birthdayShowAge = true;             // show "turns X" if birth year is known
+const birthdaySkipIfEmpty = true;         // don't send if no upcoming birthdays
+
+// ─── Missing Info ─────────────────────────────────────────────────────────────
+// Which fields to check when running sendAllReports().
+// Options: 'email', 'phone', 'city', 'birthday'
+
+const missingInfoFields = ['email', 'phone', 'birthday'];
+
+// ─── Duplicate Contacts ───────────────────────────────────────────────────────
+// Which fields to compare when detecting duplicates.
+// Options: 'name', 'email', 'phone'
+
+const duplicateMatchFields = ['name', 'email', 'phone'];
+
+// ─── General ──────────────────────────────────────────────────────────────────
+
+const maxContactsPerReport = 0;           // 0 = unlimited, otherwise caps the list
+const skipEmptyReports = true;            // don't send reports with 0 results
 
 // ─── Links ────────────────────────────────────────────────────────────────────
 
-const includeEditLinks = true;
-const includeWhatsAppLinks = true;
+const includeEditLinks = true;            // add "edit" links next to contact names
+const includeWhatsAppLinks = true;        // add WhatsApp links next to phone numbers
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -37,8 +68,9 @@ const includeWhatsAppLinks = true;
 // Used by setupSchedules(). Run it once after deploying.
 // Hours are approximate — Apps Script triggers fire within a ±1 hour window.
 
-const scheduleReportDay = ScriptApp.WeekDay.MONDAY;
-const scheduleReportHour = 8;
+const scheduleReportDay = ScriptApp.WeekDay.MONDAY;  // weekly reports day
+const scheduleReportHour = 8;                        // hour for all triggers
+const birthdaySchedule = 'daily';                    // 'daily' or 'weekly'
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -71,6 +103,7 @@ const apiPersonFields = 'names,birthdays,memberships,emailAddresses,phoneNumbers
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── Email subjects (override defaults) ───────────────────────────────────────
+// Use {days} in upcomingBirthdays, {field} in missingInfo as placeholders.
 
 const emailSubjects = {
   upcomingBirthdays: '🎂 Upcoming Birthdays',
