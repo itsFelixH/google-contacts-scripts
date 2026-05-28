@@ -1,15 +1,34 @@
 /**
- * Email Manager — handles all email-related functionality.
+ * @fileoverview Email formatting and sending.
+ *
+ * EmailManager builds both plain-text and HTML versions of each report
+ * and sends them as multipart MIME messages via the Gmail API.
+ * EmailTemplates provides the minimal HTML wrapper.
+ */
+
+
+/**
+ * Builds and sends email reports.
+ *
+ * Each `send*Email` method takes pre-filtered data, formats it into
+ * a plain-text body and an HTML body, then sends via Gmail API.
+ * All emails are sent to the script owner (self-addressed reports).
  */
 class EmailManager {
+
   constructor() {
+    /** @type {typeof EmailTemplates} HTML template helpers */
     this.templates = EmailTemplates;
+
+    /** @type {Object} Custom email subjects from config */
     this.subjects = typeof emailSubjects !== 'undefined' ? emailSubjects : {};
   }
 
 
+  // ─── Core ───────────────────────────────────────────────────────────────────
+
   /**
-   * Gets common email context (sender, recipient).
+   * Gets the sender/recipient context for self-addressed emails.
    * @returns {{toEmail: string, fromEmail: string, senderName: string}}
    */
   getEmailContext() {
@@ -20,18 +39,20 @@ class EmailManager {
     };
   }
 
-
   /**
-   * Sends an email via Gmail API.
-   * @param {string} toEmail Recipient email address
-   * @param {string} fromEmail Sender email address
-   * @param {string} senderName Name of the sender
-   * @param {string} subject Email subject
-   * @param {string} textBody Plain text email body
-   * @param {string} htmlBody HTML email body
+   * Sends a multipart MIME email (plain text + HTML) via the Gmail API.
+   *
+   * @param {string} toEmail Recipient
+   * @param {string} fromEmail Sender address
+   * @param {string} senderName Display name for the sender
+   * @param {string} subject Email subject (will be UTF-8 encoded)
+   * @param {string} textBody Plain text version
+   * @param {string} htmlBody HTML version
    */
   sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody) {
     const boundary = `boundary_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+    // Build raw MIME message with both text and HTML parts
     const mailData = [
       `MIME-Version: 1.0`,
       `To: ${toEmail}`,
@@ -58,17 +79,20 @@ class EmailManager {
   }
 
 
+  // ─── Report emails ──────────────────────────────────────────────────────────
+
   /**
    * Sends the Upcoming Birthdays report.
-   * @param {Contact[]} contacts
-   * @param {number} days
+   *
+   * @param {Contact[]} contacts Contacts with upcoming birthdays (pre-filtered)
+   * @param {number} days How many days ahead was searched
    */
   sendUpcomingBirthdaysEmail(contacts, days) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
     const subject = (this.subjects.upcomingBirthdays || '🎂 Upcoming Birthdays').replace('{days}', days);
-
     const showAge = typeof birthdayShowAge !== 'undefined' ? birthdayShowAge : true;
 
+    // Build per-contact display data
     const lines = contacts.map(contact => {
       const age = (showAge && contact.hasKnownBirthYear()) ? ` (turns ${contact.calculateAge() + 1})` : '';
       const daysUntil = contact.daysToNextBirthday();
@@ -76,12 +100,14 @@ class EmailManager {
       return { name: contact.getName(), age, daysLabel, contact };
     });
 
+    // Plain text
     const textBody = [`🎂 Upcoming Birthdays (next ${days} days)`, '',
       ...lines.map(l => `  • ${l.name}${l.age} — ${l.daysLabel}`)
     ].join('\n');
 
+    // HTML
     const listHtml = lines.map(l => {
-      const info = this._contactInfoHtml(l.contact);
+      const info = this._formatContactDetails(l.contact);
       return `<li>${l.daysLabel} — <strong>${l.name}</strong>${l.age}${info}</li>`;
     }).join('\n');
 
@@ -94,21 +120,23 @@ class EmailManager {
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   }
 
-
   /**
    * Sends the Duplicate Contacts report.
-   * @param {Object[]} duplicateGroups
+   *
+   * @param {Object[]} duplicateGroups Array of { contacts, count, reason }
    */
   sendDuplicateContactsEmail(duplicateGroups) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
     const subject = this.subjects.duplicates || '🔍 Duplicate Contacts';
 
+    // Plain text
     const textBody = ['🔍 Duplicate Contacts', '',
       ...duplicateGroups.map((g, i) =>
         `  Group ${i + 1}: ${g.contacts.map(c => c.getName()).join(', ')} (${g.reason})`
       )
     ].join('\n');
 
+    // HTML
     const listHtml = duplicateGroups.map((g, i) =>
       `<li><strong>Group ${i + 1}</strong> (${g.count}): ${g.contacts.map(c => c.getName()).join(', ')}<br>↳ ${g.reason}</li>`
     ).join('\n');
@@ -122,10 +150,10 @@ class EmailManager {
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   }
 
-
   /**
-   * Sends the Contact Overview report (general stats).
-   * @param {Object} stats
+   * Sends the Contact Overview report (general statistics).
+   *
+   * @param {Object} stats Output from computeContactStats()
    */
   sendContactOverviewEmail(stats) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
@@ -151,19 +179,19 @@ class EmailManager {
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   }
 
-
   /**
-   * Sends the Label Overview report (label stats + unlabeled contacts).
-   * @param {Object} labelStats from getLabelUsageStats()
-   * @param {Contact[]} unlabeledContacts
-   * @param {Object} labelDistribution { labelName: count }
-   * @param {number} totalContacts
+   * Sends the Label Overview report (stats + distribution + unlabeled list).
+   *
+   * @param {Object} labelStats Output from computeLabelStats()
+   * @param {Contact[]} unlabeledContacts Contacts with no labels
+   * @param {Object} labelDistribution Map of label name → contact count
+   * @param {number} totalContacts Total contacts (for percentage calculation)
    */
   sendLabelOverviewEmail(labelStats, unlabeledContacts, labelDistribution, totalContacts) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
     const subject = this.subjects.labelOverview || '🏷️ Label Overview';
 
-    // Text version
+    // ── Plain text ──
     const textLines = [
       '🏷️ Label Overview', '',
       `Total Labels: ${labelStats.totalLabels}`,
@@ -184,7 +212,7 @@ class EmailManager {
 
     const textBody = textLines.join('\n');
 
-    // HTML version
+    // ── HTML ──
     const summaryHtml = [
       `<p>🏷️ Total Labels: <strong>${labelStats.totalLabels}</strong></p>`,
       `<p>👑 Most Used: <strong>${labelStats.mostUsed?.label || 'N/A'}</strong> (${labelStats.mostUsed?.count || 0})</p>`,
@@ -198,6 +226,7 @@ class EmailManager {
         `<li>🏷️ <strong>${label}</strong>: ${count} (${(count / totalContacts * 100).toFixed(1)}%)</li>`
       ).join('\n');
 
+    // Only show unlabeled section if there are any
     let unlabeledHtml = '';
     if (unlabeledContacts.length > 0) {
       const items = unlabeledContacts.map(c => {
@@ -219,24 +248,27 @@ class EmailManager {
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   }
 
-
   /**
-   * Sends the Missing Info report (contacts missing a specific field).
-   * @param {string} field 'email' | 'phone' | 'city' | 'birthday'
-   * @param {Contact[]} contacts
+   * Sends the Missing Info report for a specific field.
+   *
+   * @param {string} field Which field is missing: 'email', 'phone', 'city', or 'birthday'
+   * @param {Contact[]} contacts Contacts missing that field
    */
   sendMissingInfoEmail(field, contacts) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
+
     const fieldNames = { email: 'Email', phone: 'Phone', city: 'City', birthday: 'Birthday' };
     const fieldEmojis = { email: '📧', phone: '📱', city: '🌆', birthday: '🎂' };
     const emoji = fieldEmojis[field] || '📋';
-    const name = fieldNames[field] || field;
-    const subject = (this.subjects.missingInfo || `${emoji} Missing Info: {field}`).replace('{field}', name);
+    const displayName = fieldNames[field] || field;
+    const subject = (this.subjects.missingInfo || `${emoji} Missing Info: {field}`).replace('{field}', displayName);
 
-    const textBody = [`${emoji} Contacts Missing ${name}`, '',
+    // Plain text
+    const textBody = [`${emoji} Contacts Missing ${displayName}`, '',
       ...contacts.map(c => `  • ${c.getName()}`)
     ].join('\n');
 
+    // HTML — include edit links if configured
     const listHtml = contacts.map(c => {
       const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
         ? ` — <a href="${c.getContactLink()}">edit</a>` : '';
@@ -244,7 +276,7 @@ class EmailManager {
     }).join('\n');
 
     const htmlBody = this.templates.wrapEmail(
-      this.templates.header(`${emoji} Missing Info: ${name}`, `${contacts.length} contacts are missing ${name.toLowerCase()}`) +
+      this.templates.header(`${emoji} Missing Info: ${displayName}`, `${contacts.length} contacts are missing ${displayName.toLowerCase()}`) +
       `<ul>${listHtml}</ul>` +
       this.templates.footer()
     );
@@ -252,23 +284,23 @@ class EmailManager {
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   }
 
-
   /**
-   * Sends the Data Quality report (surnames + invalid phones combined).
-   * @param {Contact[]} noSurname Contacts without surnames
+   * Sends the Data Quality report (missing surnames + invalid phones).
+   *
+   * @param {Contact[]} missingSurnames Contacts without a surname
    * @param {Contact[]} invalidPhones Contacts with invalid phone numbers
    */
-  sendDataQualityEmail(noSurname, invalidPhones) {
+  sendDataQualityEmail(missingSurnames, invalidPhones) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
     const subject = this.subjects.dataQuality || '🔧 Data Quality';
-    const total = noSurname.length + invalidPhones.length;
+    const totalIssues = missingSurnames.length + invalidPhones.length;
 
-    // Text version
-    const textLines = ['🔧 Data Quality', '', `${total} issues found`, ''];
+    // ── Plain text ──
+    const textLines = ['🔧 Data Quality', '', `${totalIssues} issues found`, ''];
 
-    if (noSurname.length > 0) {
-      textLines.push(`👤 Missing Surnames (${noSurname.length}):`);
-      textLines.push(...noSurname.map(c => `  • ${c.getName()}`));
+    if (missingSurnames.length > 0) {
+      textLines.push(`👤 Missing Surnames (${missingSurnames.length}):`);
+      textLines.push(...missingSurnames.map(c => `  • ${c.getName()}`));
       textLines.push('');
     }
     if (invalidPhones.length > 0) {
@@ -278,16 +310,16 @@ class EmailManager {
 
     const textBody = textLines.join('\n');
 
-    // HTML version
+    // ── HTML ──
     let sectionsHtml = '';
 
-    if (noSurname.length > 0) {
-      const items = noSurname.map(c => {
+    if (missingSurnames.length > 0) {
+      const items = missingSurnames.map(c => {
         const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
           ? ` — <a href="${c.getContactLink()}">edit</a>` : '';
         return `<li>${c.getName()}${editLink}</li>`;
       }).join('\n');
-      sectionsHtml += `<h3>👤 Missing Surnames (${noSurname.length})</h3>\n<ul>${items}</ul>`;
+      sectionsHtml += `<h3>👤 Missing Surnames (${missingSurnames.length})</h3>\n<ul>${items}</ul>`;
     }
 
     if (invalidPhones.length > 0) {
@@ -298,7 +330,7 @@ class EmailManager {
     }
 
     const htmlBody = this.templates.wrapEmail(
-      this.templates.header('🔧 Data Quality', `${total} issues found`) +
+      this.templates.header('🔧 Data Quality', `${totalIssues} issues found`) +
       sectionsHtml +
       this.templates.footer()
     );
@@ -307,19 +339,25 @@ class EmailManager {
   }
 
 
-  // ─── Private helpers ──────────────────────────────────────────────────────────
+  // ─── Private helpers ────────────────────────────────────────────────────────
 
   /**
-   * Builds contact info line (email, phone, city) as HTML.
-   * @param {Contact} contact
-   * @returns {string}
+   * Formats a contact's details (email, phone, city, labels) as an HTML snippet.
+   * Used as a secondary line under the contact name in list items.
+   *
+   * @param {Contact} contact The contact to format
+   * @returns {string} HTML string (empty if no details available)
    * @private
    */
-  _contactInfoHtml(contact) {
+  _formatContactDetails(contact) {
     const parts = [];
-    if (contact.email) parts.push(`📧 <a href="mailto:${contact.email}">${contact.email}</a>`);
+
+    if (contact.email) {
+      parts.push(`📧 <a href="mailto:${contact.email}">${contact.email}</a>`);
+    }
     if (contact.phoneNumber) {
       let phonePart = `📱 ${contact.phoneNumber}`;
+      // Append WhatsApp link if configured
       if (typeof includeWhatsAppLinks !== 'undefined' && includeWhatsAppLinks) {
         const waLink = contact.getWhatsAppLink();
         if (waLink) phonePart += ` (<a href="${waLink}">WhatsApp</a>)`;
@@ -335,32 +373,39 @@ class EmailManager {
 }
 
 
+// ═══════════════════════════════════════════════════════════════════════════════
+
+
 /**
- * Email templates — simple HTML wrapper, no heavy styling.
+ * Minimal HTML email templates.
+ * Uses inline styles sparingly — just enough for readability across email clients.
  */
 class EmailTemplates {
+
   /**
-   * Creates a header/title section.
-   * @param {string} heading
-   * @param {string} [subtitle]
-   * @returns {string}
+   * Renders a report header (title + optional subtitle).
+   *
+   * @param {string} heading Main title text
+   * @param {string} [subtitle] Optional subtitle/description
+   * @returns {string} HTML string
    */
   static header(heading, subtitle = '') {
     return `<h2>${heading}</h2>${subtitle ? `<p>${subtitle}</p>` : ''}\n`;
   }
 
   /**
-   * Creates a footer with links.
-   * @returns {string}
+   * Renders the email footer with action links.
+   * @returns {string} HTML string
    */
   static footer() {
     return `<hr><p><a href="https://contacts.google.com">Manage Contacts</a> · <a href="https://github.com/itsFelixH/google-contacts-scripts">GitHub</a></p>\n`;
   }
 
   /**
-   * Wraps email content in a minimal HTML shell.
-   * @param {string} content
-   * @returns {string}
+   * Wraps content in a complete HTML document with minimal styling.
+   *
+   * @param {string} content The email body HTML
+   * @returns {string} Complete HTML document
    */
   static wrapEmail(content) {
     return `<!DOCTYPE html>
