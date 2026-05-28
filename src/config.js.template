@@ -88,13 +88,13 @@ const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
 const monthlyReportDay = 1;
 
 const reportSchedules = {
-  upcomingBirthdays: 'off',               // 'weekly' or 'off'
-  duplicates:        'off',               // 'monthly' or 'off'
-  contactOverview:   'off',               // 'monthly' or 'off'
-  labelOverview:     'off',               // 'monthly' or 'off'
-  missingInfo:       'off',               // 'monthly' or 'off'
-  dataQuality:       'off',               // 'monthly' or 'off'
-  autoLabeling:      'off',               // 'weekly' or 'off'
+  upcomingBirthdays: 'off',               // 'weekly' | 'monthly' | 'off'
+  duplicates:        'off',               // 'weekly' | 'monthly' | 'off'
+  contactOverview:   'off',               // 'weekly' | 'monthly' | 'off'
+  labelOverview:     'off',               // 'weekly' | 'monthly' | 'off'
+  missingInfo:       'off',               // 'weekly' | 'monthly' | 'off'
+  dataQuality:       'off',               // 'weekly' | 'monthly' | 'off'
+  autoLabeling:      'off',               // 'weekly' | 'monthly' | 'off'
 };
 
 
