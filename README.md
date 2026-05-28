@@ -233,9 +233,31 @@ const emailSubjects = {
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `dryRun` | `false` | Preview mode — logs what would be sent, no emails |
+| `dryRun` | `false` | Preview mode — logs what would be sent/changed, no actual changes |
 | `verboseLogging` | `false` | Extra logging for debugging |
 | `phoneRegex` | see template | Regex for valid phone numbers |
+
+### Actions config
+
+**Auto-labeling rules:**
+
+```js
+const autoLabelRules = [
+  { field: 'email', contains: '@company.com', label: 'Work' },
+  { field: 'city', equals: 'berlin', label: 'Berlin' },
+  { field: 'email', endsWith: '.de', label: 'Germany' },
+  { field: 'name', startsWith: 'dr.', label: 'Doctors' },
+];
+```
+
+Rule conditions: `contains`, `equals`, `startsWith`, `endsWith` (all case-insensitive).
+Fields: `email`, `phone`, `city`, `name`.
+
+**Phone normalizer:**
+
+```js
+const defaultCountryCode = '+49';  // prepended when converting "0xxx" → "+49xxx"
+```
 
 ## Running manually
 
@@ -248,6 +270,15 @@ You can run any report individually from the Apps Script editor:
 - `sendMissingInfoReport('email')` — also: `'phone'`, `'city'`, `'birthday'`
 - `sendDataQualityReport()`
 - `sendAllReports()` — runs all enabled reports
+
+### Actions (modify contacts)
+
+These scripts write changes back to your contacts. Use `dryRun = true` to preview first.
+
+- `runAutoLabeling()` — assign labels based on rules (email domain, city, name patterns)
+- `runNameFormatter()` — fix capitalization, trim spaces, swap "Last, First" format
+- `runPhoneNormalizer()` — convert local numbers to international format
+- `runInstagramSync()` — check if stored Instagram handles still exist
 
 ### Utility functions
 
@@ -280,6 +311,7 @@ pnpm test
 ```
 src/
 ├── _setup.js          # Schedule management (setupSchedules, removeSchedules)
+├── actions.js         # Contact actions (auto-label, name format, phone normalize, Instagram sync)
 ├── config.js          # Your config (not committed)
 ├── config.js.template # Config template with all options documented
 ├── contact.js         # Contact class
@@ -287,7 +319,7 @@ src/
 ├── email_manager.js   # Email formatting and sending
 ├── label_manager.js   # Label fetching and lookup
 ├── main.js            # Report entry points
-└── utils.js           # Utility functions
+└── utils.js           # Config validation and helper functions
 ```
 
 ## License
