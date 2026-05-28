@@ -3,33 +3,150 @@
  *
  * Each function here is a top-level report that can be:
  * - Run manually from the Apps Script editor dropdown
- * - Triggered on a schedule via setupSchedules()
- * - Called from sendAllReports() for batch execution
+ * - Called from batch functions (sendWeeklyReports, sendMonthlyReports)
+ * - Called from sendAllReports() for a full manual run
  *
- * Flow: fetch contacts → filter → prepare (exclude/sort/limit) → send email
+ * All report functions accept an optional `contacts` parameter.
+ * When provided, they skip fetching and use the pre-fetched data.
+ * This allows batch functions to fetch once and share the data.
  */
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Report functions
+// Batch triggers — fetch contacts once, run multiple reports
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Runs all reports scheduled as 'weekly'.
+ * Fetches contacts once and passes them to each report.
+ * This is the weekly trigger target.
+ */
+function sendWeeklyReports() {
+  try {
+    if (!isLabelFilterConfigured()) return;
+    Logger.log('📬 Running weekly reports...');
+
+    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
+    let successful = 0;
+    let failed = 0;
+
+    const weeklyReports = [
+      { key: 'upcomingBirthdays', fn: () => sendUpcomingBirthdaysReport(null, contacts) },
+      { key: 'autoLabeling',      fn: () => runAutoLabeling() },
+    ];
+
+    weeklyReports.forEach(({ key, fn }) => {
+      if (schedules[key] !== 'weekly') return;
+      try { fn(); successful++; }
+      catch (error) { failed++; Logger.log(`  ❌ ${key} failed: ${error.message}`); }
+    });
+
+    Logger.log(`📬 Weekly reports done: ${successful} successful, ${failed} failed`);
+  } catch (error) {
+    Logger.log(`Error in sendWeeklyReports: ${error.message}`);
+    throw error;
+  }
+}
+
+
+/**
+ * Runs all reports scheduled as 'monthly'.
+ * Fetches contacts once and passes them to each report.
+ * This is the monthly trigger target.
+ */
+function sendMonthlyReports() {
+  try {
+    if (!isLabelFilterConfigured()) return;
+    Logger.log('📬 Running monthly reports...');
+
+    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
+    const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
+    let successful = 0;
+    let failed = 0;
+
+    const monthlyReports = [
+      { key: 'upcomingBirthdays', fn: () => sendUpcomingBirthdaysReport(null, contacts) },
+      { key: 'duplicates',        fn: () => sendDuplicateContactsReport(contacts) },
+      { key: 'contactOverview',   fn: () => sendContactOverviewReport(contacts) },
+      { key: 'labelOverview',     fn: () => sendLabelOverviewReport(contacts) },
+      { key: 'missingInfo',       fn: () => { fields.forEach(f => sendMissingInfoReport(f, contacts)); } },
+      { key: 'dataQuality',       fn: () => sendDataQualityReport(contacts) },
+      { key: 'autoLabeling',      fn: () => runAutoLabeling() },
+    ];
+
+    monthlyReports.forEach(({ key, fn }) => {
+      if (schedules[key] !== 'monthly') return;
+      try { fn(); successful++; }
+      catch (error) { failed++; Logger.log(`  ❌ ${key} failed: ${error.message}`); }
+    });
+
+    Logger.log(`📬 Monthly reports done: ${successful} successful, ${failed} failed`);
+  } catch (error) {
+    Logger.log(`Error in sendMonthlyReports: ${error.message}`);
+    throw error;
+  }
+}
+
+
+/**
+ * Sends all enabled reports in one batch (manual convenience function).
+ * Fetches contacts once and runs everything.
+ */
+function sendAllReports() {
+  try {
+    if (!isLabelFilterConfigured()) return;
+    Logger.log('📬 Running all reports...');
+
+    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
+    let successful = 0;
+    let failed = 0;
+
+    const reports = [];
+    if (isReportEnabled('upcomingBirthdays')) reports.push(() => sendUpcomingBirthdaysReport(null, contacts));
+    if (isReportEnabled('duplicates'))        reports.push(() => sendDuplicateContactsReport(contacts));
+    if (isReportEnabled('contactOverview'))    reports.push(() => sendContactOverviewReport(contacts));
+    if (isReportEnabled('labelOverview'))      reports.push(() => sendLabelOverviewReport(contacts));
+    if (isReportEnabled('missingInfo')) {
+      fields.forEach(field => reports.push(() => sendMissingInfoReport(field, contacts)));
+    }
+    if (isReportEnabled('dataQuality'))        reports.push(() => sendDataQualityReport(contacts));
+
+    reports.forEach((reportFn, index) => {
+      try { reportFn(); successful++; }
+      catch (error) { failed++; Logger.log(`  Report ${index + 1} failed: ${error.message}`); }
+    });
+
+    Logger.log(`📬 All reports done: ${successful} successful, ${failed} failed`);
+  } catch (error) {
+    Logger.log(`Error in sendAllReports: ${error.message}`);
+    throw error;
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Individual report functions
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Sends the Upcoming Birthdays report.
- * Lists contacts with birthdays in the next N days.
- * @param {number} [days] Number of days to look ahead (defaults to config)
+ * @param {number} [days] Days to look ahead (defaults to config)
+ * @param {Contact[]} [prefetchedContacts] Pre-fetched contacts (skips API call if provided)
  */
-function sendUpcomingBirthdaysReport(days) {
+function sendUpcomingBirthdaysReport(days, prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
     const isDryRun = typeof dryRun !== 'undefined' && dryRun;
-    const lookAhead = days || (typeof upcomingBirthdaysDays !== 'undefined' ? upcomingBirthdaysDays : 7);
+    const lookAhead = days || (typeof upcomingBirthdaysDays !== 'undefined' ? upcomingBirthdaysDays : 14);
 
     if (typeof lookAhead !== 'number' || lookAhead < 1 || lookAhead > 365) {
       throw new Error('Days parameter must be a number between 1 and 365');
     }
 
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
     const upcoming = prepareContacts(findUpcomingBirthdays(contacts, lookAhead));
 
     if (upcoming.length === 0) {
@@ -54,11 +171,11 @@ function sendUpcomingBirthdaysReport(days) {
 
 /**
  * Sends the Duplicate Contacts report.
- * Finds groups of contacts that may be duplicates based on configured match fields.
+ * @param {Contact[]} [prefetchedContacts] Pre-fetched contacts (skips API call if provided)
  */
-function sendDuplicateContactsReport() {
+function sendDuplicateContactsReport(prefetchedContacts) {
   try {
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
     const matchFields = typeof duplicateMatchFields !== 'undefined' ? duplicateMatchFields : ['name', 'email', 'phone'];
     const duplicates = findDuplicates(contacts, matchFields);
 
@@ -79,14 +196,14 @@ function sendDuplicateContactsReport() {
 
 /**
  * Sends the Contact Overview report.
- * Shows general statistics about your contacts (completeness percentages).
+ * @param {Contact[]} [prefetchedContacts] Pre-fetched contacts (skips API call if provided)
  */
-function sendContactOverviewReport() {
+function sendContactOverviewReport(prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
     const isDryRun = typeof dryRun !== 'undefined' && dryRun;
 
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
     const stats = computeContactStats(contacts);
 
     if (isDryRun) {
@@ -106,14 +223,14 @@ function sendContactOverviewReport() {
 
 /**
  * Sends the Label Overview report.
- * Combines label usage stats, distribution, and unlabeled contacts in one email.
+ * @param {Contact[]} [prefetchedContacts] Pre-fetched contacts (skips API call if provided)
  */
-function sendLabelOverviewReport() {
+function sendLabelOverviewReport(prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
     const isDryRun = typeof dryRun !== 'undefined' && dryRun;
 
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
     const labelStats = computeLabelStats(contacts);
     const unlabeled = prepareContacts(findUnlabeled(contacts));
     const stats = computeContactStats(contacts);
@@ -135,17 +252,17 @@ function sendLabelOverviewReport() {
 
 /**
  * Sends the Missing Info report for a specific field.
- * Lists contacts that are missing email, phone, city, or birthday.
  * @param {string} field Field to check ('email', 'phone', 'city', 'birthday')
+ * @param {Contact[]} [prefetchedContacts] Pre-fetched contacts (skips API call if provided)
  */
-function sendMissingInfoReport(field) {
+function sendMissingInfoReport(field, prefetchedContacts) {
   try {
     const validFields = ['email', 'phone', 'city', 'birthday'];
     if (!validFields.includes(field)) {
       throw new Error(`Invalid field. Must be one of: ${validFields.join(', ')}`);
     }
 
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
     const missing = prepareContacts(findMissingField(contacts, field));
 
     if (missing.length === 0) {
@@ -165,11 +282,11 @@ function sendMissingInfoReport(field) {
 
 /**
  * Sends the Data Quality report.
- * Combines contacts without surnames and contacts with invalid phone numbers.
+ * @param {Contact[]} [prefetchedContacts] Pre-fetched contacts (skips API call if provided)
  */
-function sendDataQualityReport() {
+function sendDataQualityReport(prefetchedContacts) {
   try {
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
     const noSurname = prepareContacts(findMissingSurnames(contacts));
     const invalidPhones = prepareContacts(findInvalidPhones(contacts));
 
@@ -183,65 +300,6 @@ function sendDataQualityReport() {
     Logger.log(`✅ Sent Data Quality report (${noSurname.length} missing surnames, ${invalidPhones.length} invalid phones)`);
   } catch (error) {
     Logger.log(`Error in sendDataQualityReport: ${error.message}`);
-    throw error;
-  }
-}
-
-
-/**
- * Sends Missing Info reports for all configured fields.
- * Used as a trigger target since triggers can't pass parameters.
- */
-function sendMissingInfoReportAll() {
-  const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
-  fields.forEach(field => {
-    try {
-      sendMissingInfoReport(field);
-    } catch (error) {
-      Logger.log(`Missing Info (${field}) failed: ${error.message}`);
-    }
-  });
-}
-
-
-/**
- * Sends all enabled reports in one batch.
- * Useful for manual "run everything now" from the editor.
- * Respects enabledReports and missingInfoFields config.
- */
-function sendAllReports() {
-  try {
-    Logger.log('Starting all reports...');
-
-    const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
-
-    const reports = [];
-
-    if (isReportEnabled('upcomingBirthdays')) reports.push(() => sendUpcomingBirthdaysReport());
-    if (isReportEnabled('duplicates'))        reports.push(() => sendDuplicateContactsReport());
-    if (isReportEnabled('contactOverview'))    reports.push(() => sendContactOverviewReport());
-    if (isReportEnabled('labelOverview'))      reports.push(() => sendLabelOverviewReport());
-    if (isReportEnabled('missingInfo')) {
-      fields.forEach(field => reports.push(() => sendMissingInfoReport(field)));
-    }
-    if (isReportEnabled('dataQuality'))        reports.push(() => sendDataQualityReport());
-
-    let successful = 0;
-    let failed = 0;
-
-    reports.forEach((reportFn, index) => {
-      try {
-        reportFn();
-        successful++;
-      } catch (error) {
-        failed++;
-        Logger.log(`Report ${index + 1} failed: ${error.message}`);
-      }
-    });
-
-    Logger.log(`All reports completed: ${successful} successful, ${failed} failed`);
-  } catch (error) {
-    Logger.log(`Error in sendAllReports: ${error.message}`);
     throw error;
   }
 }
