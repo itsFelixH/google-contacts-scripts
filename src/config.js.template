@@ -124,6 +124,15 @@ const autoLabelRules = [
 
 const defaultCountryCode = '+49';
 
+// ─── Name formatter ───────────────────────────────────────────────────────────
+
+const nameSwapLastFirst = true;           // convert "Last, First" → "First Last"
+const nameLowercasePrefixes = ['von', 'van', 'de', 'del', 'der', 'di', 'la', 'le', 'el'];
+
+// ─── Instagram sync ───────────────────────────────────────────────────────────
+
+const instagramCheckDelay = 1000;         // ms between requests (avoid rate limiting)
+
 // ─── Action reports ───────────────────────────────────────────────────────────
 // Send a summary email after each action runs. Set to false to disable.
 const sendActionReports = true;
