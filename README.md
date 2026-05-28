@@ -186,34 +186,24 @@ All options live in `src/config.js`. Here's the full reference:
 
 ### Schedules
 
-Schedules are fully configurable as an array. Each entry specifies a function, frequency, and time:
-
 ```js
-const scheduleHour = 8; // default hour
+// What time of day to send reports (0–23)
+const scheduleHour = 8;
 
-const schedules = [
-  { fn: 'sendUpcomingBirthdaysReport', frequency: 'daily',   hour: scheduleHour },
-  { fn: 'sendAllReports',             frequency: 'weekly',  day: ScriptApp.WeekDay.MONDAY, hour: scheduleHour },
-  { fn: 'sendContactOverviewReport',  frequency: 'monthly', hour: scheduleHour },
-];
+// How often to check for birthdays: 'daily' or 'weekly'
+const birthdaySchedule = 'daily';
+
+// Which day to send the weekly batch
+const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
+
+// Monthly overview on the 1st (set to false to disable)
+const monthlyOverview = true;
 ```
 
-| Property | Required | Description |
-|----------|----------|-------------|
-| `fn` | yes | Function name to trigger |
-| `frequency` | yes | `'daily'`, `'weekly'`, or `'monthly'` |
-| `hour` | no | Hour to run (0–23, default 8) |
-| `day` | weekly only | `ScriptApp.WeekDay.MONDAY` through `SUNDAY` |
-
-You can add, remove, or rearrange entries. For example, to get a daily data quality check:
-
-```js
-const schedules = [
-  { fn: 'sendUpcomingBirthdaysReport', frequency: 'daily', hour: 7 },
-  { fn: 'sendDataQualityReport',      frequency: 'daily', hour: 7 },
-  { fn: 'sendAllReports',             frequency: 'weekly', day: ScriptApp.WeekDay.FRIDAY, hour: 9 },
-];
-```
+This creates three triggers:
+- **Upcoming Birthdays** — daily (or weekly) at the configured hour
+- **All Reports** — weekly on the configured day
+- **Contact Overview** — 1st of each month (optional)
 
 ### Email customization
 
