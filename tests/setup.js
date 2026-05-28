@@ -27,10 +27,15 @@ global.enabledReports = {
 global.missingInfoFields = ['email', 'phone', 'birthday'];
 global.duplicateMatchFields = ['name', 'email', 'phone'];
 global.birthdayShowAge = true;
-global.birthdaySchedule = 'daily';
 global.birthdayFormat = 'dd.MM.';
 global.sortContactsBy = 'name';
 global.excludeLabels = [];
+global.scheduleHour = 8;
+global.schedules = [
+  { fn: 'sendUpcomingBirthdaysReport', frequency: 'daily', hour: 8 },
+  { fn: 'sendAllReports', frequency: 'weekly', day: 2, hour: 8 },
+  { fn: 'sendContactOverviewReport', frequency: 'monthly', hour: 8 },
+];
 
 // Mock Logger
 global.Logger = {
