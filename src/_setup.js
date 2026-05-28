@@ -47,13 +47,16 @@ function setupSchedules() {
     .create();
   Logger.log(`✅ sendAllReports — weekly at ~${reportHour}:00`);
 
-  // Daily upcoming birthdays check
-  ScriptApp.newTrigger('sendUpcomingBirthdaysReport')
-    .timeBased()
-    .everyDays(1)
-    .atHour(reportHour)
-    .create();
-  Logger.log(`✅ sendUpcomingBirthdaysReport — daily at ~${reportHour}:00`);
+  // Daily or weekly upcoming birthdays check
+  const bSchedule = typeof birthdaySchedule !== 'undefined' ? birthdaySchedule : 'daily';
+  const birthdayTrigger = ScriptApp.newTrigger('sendUpcomingBirthdaysReport').timeBased();
+  if (bSchedule === 'weekly') {
+    birthdayTrigger.onWeekDay(reportDay).atHour(reportHour).create();
+    Logger.log(`✅ sendUpcomingBirthdaysReport — weekly at ~${reportHour}:00`);
+  } else {
+    birthdayTrigger.everyDays(1).atHour(reportHour).create();
+    Logger.log(`✅ sendUpcomingBirthdaysReport — daily at ~${reportHour}:00`);
+  }
 
   // Monthly overview
   ScriptApp.newTrigger('sendContactOverviewReport')
