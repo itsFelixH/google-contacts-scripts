@@ -174,7 +174,7 @@ All options live in `src/config.js`. Here's the full reference:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `enabledReports` | all `true` | Toggle individual reports on/off |
-| `upcomingBirthdaysDays` | `7` | Days to look ahead for birthdays (1–365) |
+| `upcomingBirthdaysDays` | `14` | Days to look ahead for birthdays (1–365) |
 | `birthdayShowAge` | `true` | Show "turns X" if birth year is known |
 | `birthdayFormat` | `'dd.MM.'` | Date format (see options below) |
 | `sortContactsBy` | `'name'` | How to sort contact lists in reports |
