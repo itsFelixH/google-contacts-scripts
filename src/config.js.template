@@ -120,7 +120,7 @@ const autoLabelRules = [
 
 // ─── Phone normalizer ─────────────────────────────────────────────────────────
 // Country code to prepend when converting local numbers (starting with 0)
-// to international format. E.g. "0176 123" → "+49 176 123"
+// to international format. E.g. "0176 1234567" → "+491761234567"
 
 const defaultCountryCode = '+49';
 
@@ -173,5 +173,4 @@ const emailSubjects = {
 // 7. ADVANCED
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const verboseLogging = false;
 const dryRun = false; // true = preview mode, no emails sent
