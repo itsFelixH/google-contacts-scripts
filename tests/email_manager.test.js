@@ -49,7 +49,7 @@ describe('EmailManager', () => {
     expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
   });
 
-  test('sendLabelHealthEmail sends email', () => {
+  test('sendLabelOverviewEmail sends email', () => {
     const labelStats = {
       totalLabels: 3,
       mostUsed: { label: 'Friends', count: 50 },
@@ -58,18 +58,18 @@ describe('EmailManager', () => {
     };
     const unlabeled = [new Contact('No Label', null)];
     const distribution = { Friends: 50, Family: 30, Work: 5 };
-    emailManager.sendLabelHealthEmail(labelStats, unlabeled, distribution, 100);
+    emailManager.sendLabelOverviewEmail(labelStats, unlabeled, distribution, 100);
     expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
   });
 
-  test('sendLabelHealthEmail works with no unlabeled contacts', () => {
+  test('sendLabelOverviewEmail works with no unlabeled contacts', () => {
     const labelStats = {
       totalLabels: 2,
       mostUsed: { label: 'Friends', count: 50 },
       leastUsed: { label: 'Work', count: 5 },
       unlabeledCount: 0
     };
-    emailManager.sendLabelHealthEmail(labelStats, [], { Friends: 50, Work: 5 }, 55);
+    emailManager.sendLabelOverviewEmail(labelStats, [], { Friends: 50, Work: 5 }, 55);
     expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
   });
 

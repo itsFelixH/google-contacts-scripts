@@ -151,19 +151,19 @@ class EmailManager {
 
 
   /**
-   * Sends the Label Health report (label stats + unlabeled contacts).
+   * Sends the Label Overview report (label stats + unlabeled contacts).
    * @param {Object} labelStats from getLabelUsageStats()
    * @param {Contact[]} unlabeledContacts
    * @param {Object} labelDistribution { labelName: count }
    * @param {number} totalContacts
    */
-  sendLabelHealthEmail(labelStats, unlabeledContacts, labelDistribution, totalContacts) {
+  sendLabelOverviewEmail(labelStats, unlabeledContacts, labelDistribution, totalContacts) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.labelHealth || '🏷️ Label Health';
+    const subject = this.subjects.labelOverview || '🏷️ Label Overview';
 
     // Text version
     const textLines = [
-      '🏷️ Label Health', '',
+      '🏷️ Label Overview', '',
       `Total Labels: ${labelStats.totalLabels}`,
       `👑 Most Used: ${labelStats.mostUsed?.label || 'N/A'} (${labelStats.mostUsed?.count || 0})`,
       `📉 Least Used: ${labelStats.leastUsed?.label || 'N/A'} (${labelStats.leastUsed?.count || 0})`,
@@ -207,7 +207,7 @@ class EmailManager {
     }
 
     const htmlBody = this.templates.wrapEmail(
-      this.templates.header('🏷️ Label Health', 'Labels overview and unlabeled contacts') +
+      this.templates.header('🏷️ Label Overview', 'Labels overview and unlabeled contacts') +
       summaryHtml +
       `<h3>📊 Label Distribution</h3>\n<ul>${distHtml}</ul>` +
       unlabeledHtml +

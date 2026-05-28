@@ -115,10 +115,10 @@ function sendContactOverviewReport() {
 
 
 /**
- * Sends the Label Health report.
+ * Sends the Label Overview report.
  * Combines label usage stats, distribution, and unlabeled contacts in one email.
  */
-function sendLabelHealthReport() {
+function sendLabelOverviewReport() {
   try {
     if (!isLabelFilterConfigured()) return;
     const isDryRun = typeof dryRun !== 'undefined' && dryRun;
@@ -129,15 +129,15 @@ function sendLabelHealthReport() {
     const stats = generateContactStats(contacts);
 
     if (isDryRun) {
-      Logger.log(`🧪 [DRY RUN] Would send Label Health report (${labelStats.totalLabels} labels, ${unlabeled.length} unlabeled)`);
+      Logger.log(`🧪 [DRY RUN] Would send Label Overview report (${labelStats.totalLabels} labels, ${unlabeled.length} unlabeled)`);
       return;
     }
 
     const emailManager = new EmailManager();
-    emailManager.sendLabelHealthEmail(labelStats, unlabeled, stats.labelDistribution, stats.totalContacts);
-    Logger.log(`✅ Sent Label Health report (${labelStats.totalLabels} labels, ${unlabeled.length} unlabeled)`);
+    emailManager.sendLabelOverviewEmail(labelStats, unlabeled, stats.labelDistribution, stats.totalContacts);
+    Logger.log(`✅ Sent Label Overview report (${labelStats.totalLabels} labels, ${unlabeled.length} unlabeled)`);
   } catch (error) {
-    Logger.log(`Error in sendLabelHealthReport: ${error.message}`);
+    Logger.log(`Error in sendLabelOverviewReport: ${error.message}`);
     throw error;
   }
 }
@@ -209,7 +209,7 @@ function sendAllReports() {
       () => sendUpcomingBirthdaysReport(),
       () => sendDuplicateContactsReport(),
       () => sendContactOverviewReport(),
-      () => sendLabelHealthReport(),
+      () => sendLabelOverviewReport(),
       () => sendMissingInfoReport('email'),
       () => sendMissingInfoReport('phone'),
       () => sendMissingInfoReport('birthday'),

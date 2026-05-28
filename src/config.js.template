@@ -76,7 +76,7 @@ const emailSubjects = {
   upcomingBirthdays: '🎂 Upcoming Birthdays',
   duplicates: '🔍 Duplicate Contacts',
   overview: '📊 Contact Overview',
-  labelHealth: '🏷️ Label Health',
+  labelOverview: '🏷️ Label Overview',
   missingInfo: '📋 Missing Info: {field}',
   dataQuality: '🔧 Data Quality',
 };
