@@ -97,6 +97,10 @@ const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
 // Sent once a month on the 1st. Set to false to disable.
 const monthlyOverview = true;
 
+// ─── Auto-labeling ───────────────────────────────────────────────────────────
+// Run auto-labeling rules weekly alongside reports. Set to false to disable.
+const scheduleAutoLabeling = false;
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 4. ACTIONS — Scripts that modify contacts
