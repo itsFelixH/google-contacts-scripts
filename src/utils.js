@@ -252,6 +252,3 @@ function extractInstagramNamesFromNotes(notes) {
 
   return instagramNames;
 }
-
-
-// (end of file)
