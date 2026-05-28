@@ -151,12 +151,12 @@ const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
 // Use {days} in upcomingBirthdays, {field} in missingInfo as placeholders.
 
 const emailSubjects = {
-  upcomingBirthdays: '🎂 Birthdays This Week',
+  upcomingBirthdays: '🎂 Upcoming Birthdays',
   duplicates: '🔍 Possible Duplicates',
   overview: '📊 Contacts Overview',
-  labelOverview: '🏷️ Labels Overview',
-  missingInfo: '📋 Missing {field}',
-  dataQuality: '🔧 Data Quality Issues',
+  labelOverview: '🏷️ Labels & Unlabeled Contacts',
+  missingInfo: '📋 Contacts Without Info',
+  dataQuality: '🔧 Contacts to Clean Up',
 };
 
 
