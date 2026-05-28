@@ -13,7 +13,7 @@
  * Function names managed by setupSchedules.
  * Only these triggers are touched — user-created triggers are left alone.
  */
-const MANAGED_FUNCTIONS = ['sendWeeklyReports', 'sendMonthlyReports'];
+const MANAGED_FUNCTIONS = ['weeklyRun', 'monthlyRun'];
 
 
 /**
@@ -21,8 +21,8 @@ const MANAGED_FUNCTIONS = ['sendWeeklyReports', 'sendMonthlyReports'];
  * Run this once after deploying. Safe to re-run — removes existing managed triggers first.
  *
  * Creates up to 2 triggers:
- * - sendWeeklyReports: if any report is set to 'weekly'
- * - sendMonthlyReports: if any report is set to 'monthly'
+ * - weeklyRun: if any report is set to 'weekly'
+ * - monthlyRun: if any report is set to 'monthly'
  *
  * Each batch function fetches contacts once and runs all reports for that frequency.
  */
@@ -57,7 +57,7 @@ function setupSchedules() {
 
   // Create weekly trigger if needed
   if (hasWeekly) {
-    ScriptApp.newTrigger('sendWeeklyReports')
+    ScriptApp.newTrigger('weeklyRun')
       .timeBased()
       .onWeekDay(weekDay)
       .atHour(hour)
@@ -68,7 +68,7 @@ function setupSchedules() {
 
   // Create monthly trigger if needed
   if (hasMonthly) {
-    ScriptApp.newTrigger('sendMonthlyReports')
+    ScriptApp.newTrigger('monthlyRun')
       .timeBased()
       .onMonthDay(monthDay)
       .atHour(hour)

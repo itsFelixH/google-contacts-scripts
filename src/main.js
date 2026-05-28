@@ -3,7 +3,7 @@
  *
  * Each function here is a top-level report that can be:
  * - Run manually from the Apps Script editor dropdown
- * - Called from batch functions (sendWeeklyReports, sendMonthlyReports)
+ * - Called from batch functions (weeklyRun, monthlyRun)
  * - Called from sendAllReports() for a full manual run
  *
  * All report functions accept an optional `contacts` parameter.
@@ -21,7 +21,7 @@
  * Fetches contacts once and passes them to each report.
  * This is the weekly trigger target.
  */
-function sendWeeklyReports() {
+function weeklyRun() {
   try {
     if (!isLabelFilterConfigured()) return;
     Logger.log('📬 Running weekly reports...');
@@ -44,7 +44,7 @@ function sendWeeklyReports() {
 
     Logger.log(`📬 Weekly reports done: ${successful} successful, ${failed} failed`);
   } catch (error) {
-    Logger.log(`Error in sendWeeklyReports: ${error.message}`);
+    Logger.log(`Error in weeklyRun: ${error.message}`);
     throw error;
   }
 }
@@ -55,7 +55,7 @@ function sendWeeklyReports() {
  * Fetches contacts once and passes them to each report.
  * This is the monthly trigger target.
  */
-function sendMonthlyReports() {
+function monthlyRun() {
   try {
     if (!isLabelFilterConfigured()) return;
     Logger.log('📬 Running monthly reports...');
@@ -84,7 +84,7 @@ function sendMonthlyReports() {
 
     Logger.log(`📬 Monthly reports done: ${successful} successful, ${failed} failed`);
   } catch (error) {
-    Logger.log(`Error in sendMonthlyReports: ${error.message}`);
+    Logger.log(`Error in monthlyRun: ${error.message}`);
     throw error;
   }
 }
