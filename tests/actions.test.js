@@ -96,7 +96,7 @@ describe('normalizePhoneNumber', () => {
 describe('runAutoLabeling', () => {
   test('returns zeros when no rules configured', () => {
     const result = runAutoLabeling();
-    expect(result).toEqual({ applied: 0, skipped: 0 });
+    expect(result).toEqual({ applied: 0, skipped: 0, changes: [] });
   });
 });
 
