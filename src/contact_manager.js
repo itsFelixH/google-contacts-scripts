@@ -282,11 +282,13 @@ function findContactsMissingField(contacts, field) {
 
 
 /**
- * Finds potential duplicate contacts based on name, email, or phone.
+ * Finds potential duplicate contacts based on configured match fields.
  * @param {Contact[]} contacts
+ * @param {string[]} [matchFields=['name', 'email', 'phone']] Fields to compare
  * @returns {Object[]} Array of duplicate groups
  */
-function findPotentialDuplicates(contacts) {
+function findPotentialDuplicates(contacts, matchFields) {
+  const fields = matchFields || ['name', 'email', 'phone'];
   const duplicateGroups = [];
   const processed = new Set();
 
@@ -299,10 +301,13 @@ function findPotentialDuplicates(contacts) {
     contacts.forEach((otherContact, j) => {
       if (i !== j && !processed.has(j)) {
         const name2 = otherContact.getName().toLowerCase().trim();
+        let isMatch = false;
 
-        if (name1 === name2 ||
-          (contact.email && contact.email === otherContact.email) ||
-          (contact.phoneNumber && contact.phoneNumber === otherContact.phoneNumber)) {
+        if (fields.includes('name') && name1 === name2) isMatch = true;
+        if (fields.includes('email') && contact.email && contact.email === otherContact.email) isMatch = true;
+        if (fields.includes('phone') && contact.phoneNumber && contact.phoneNumber === otherContact.phoneNumber) isMatch = true;
+
+        if (isMatch) {
           similarContacts.push(otherContact);
           processed.add(j);
         }
