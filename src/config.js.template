@@ -16,6 +16,9 @@
 const useLabel = false;
 const labelFilter = []; // e.g. ['Friends', 'Family']
 
+// Contacts with any of these labels are always excluded from all reports.
+const excludeLabels = []; // e.g. ['Blocked', 'Spam', 'Business']
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2. REPORT SETTINGS
@@ -37,6 +40,18 @@ const enabledReports = {
 
 const upcomingBirthdaysDays = 7;          // days to look ahead (1–365)
 const birthdayShowAge = true;             // show "turns X" if birth year is known
+
+// ─── Birthday date format ─────────────────────────────────────────────────────
+// Options: 'dd.MM.' | 'dd/MM' | 'MM/dd' | 'dd MMM' | 'MMM dd'
+// Examples: '15.06.' | '15/06' | '06/15' | '15 Jun' | 'Jun 15'
+
+const birthdayFormat = 'dd.MM.';
+
+// ─── Sorting ──────────────────────────────────────────────────────────────────
+// How contact lists are sorted in reports.
+// Options: 'name' | 'name-desc' | 'labels' | 'city'
+
+const sortContactsBy = 'name';
 
 // ─── Missing Info ─────────────────────────────────────────────────────────────
 // Which fields to check when running sendAllReports().
