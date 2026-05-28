@@ -1,81 +1,89 @@
 describe('validateConfig', () => {
+  // Save and restore all globals that tests mutate
+  let originals;
+
+  beforeEach(() => {
+    originals = {
+      upcomingBirthdaysDays: global.upcomingBirthdaysDays,
+      birthdayFormat: global.birthdayFormat,
+      sortContactsBy: global.sortContactsBy,
+      enabledReports: global.enabledReports,
+      missingInfoFields: global.missingInfoFields,
+      useLabel: global.useLabel,
+      labelFilter: global.labelFilter,
+    };
+  });
+
+  afterEach(() => {
+    Object.assign(global, originals);
+  });
+
   test('returns no errors for valid default config', () => {
     const errors = validateConfig();
     expect(errors).toHaveLength(0);
   });
 
   test('catches invalid upcomingBirthdaysDays', () => {
-    const original = global.upcomingBirthdaysDays;
     global.upcomingBirthdaysDays = 0;
-    expect(validateConfig()).toContain(expect.stringContaining('upcomingBirthdaysDays'));
+    expect(validateConfig()).toContainEqual(expect.stringContaining('upcomingBirthdaysDays'));
     global.upcomingBirthdaysDays = 400;
-    expect(validateConfig()).toContain(expect.stringContaining('upcomingBirthdaysDays'));
-    global.upcomingBirthdaysDays = original;
+    expect(validateConfig()).toContainEqual(expect.stringContaining('upcomingBirthdaysDays'));
   });
 
   test('catches invalid birthdayFormat', () => {
-    const original = global.birthdayFormat;
     global.birthdayFormat = 'YYYY-MM-DD';
-    expect(validateConfig()).toContain(expect.stringContaining('birthdayFormat'));
-    global.birthdayFormat = original;
+    expect(validateConfig()).toContainEqual(expect.stringContaining('birthdayFormat'));
   });
 
   test('catches invalid sortContactsBy', () => {
-    const original = global.sortContactsBy;
     global.sortContactsBy = 'invalid';
-    expect(validateConfig()).toContain(expect.stringContaining('sortContactsBy'));
-    global.sortContactsBy = original;
+    expect(validateConfig()).toContainEqual(expect.stringContaining('sortContactsBy'));
   });
 
   test('catches invalid enabledReports keys', () => {
-    const original = global.enabledReports;
     global.enabledReports = { unknownReport: true };
-    expect(validateConfig()).toContain(expect.stringContaining('unknownReport'));
-    global.enabledReports = original;
+    expect(validateConfig()).toContainEqual(expect.stringContaining('unknownReport'));
   });
 
   test('catches invalid missingInfoFields', () => {
-    const original = global.missingInfoFields;
     global.missingInfoFields = ['email', 'invalid'];
-    expect(validateConfig()).toContain(expect.stringContaining('invalid'));
-    global.missingInfoFields = original;
+    expect(validateConfig()).toContainEqual(expect.stringContaining('invalid'));
   });
 
   test('catches useLabel without labelFilter', () => {
-    const origUse = global.useLabel;
-    const origFilter = global.labelFilter;
     global.useLabel = true;
     global.labelFilter = [];
-    expect(validateConfig()).toContain(expect.stringContaining('labelFilter is empty'));
-    global.useLabel = origUse;
-    global.labelFilter = origFilter;
+    expect(validateConfig()).toContainEqual(expect.stringContaining('labelFilter is empty'));
   });
 });
 
 
 describe('isLabelFilterConfigured', () => {
+  let originals;
+
+  beforeEach(() => {
+    originals = { useLabel: global.useLabel, labelFilter: global.labelFilter };
+  });
+
+  afterEach(() => {
+    Object.assign(global, originals);
+  });
+
   test('returns true when useLabel is false', () => {
+    global.useLabel = false;
     expect(isLabelFilterConfigured()).toBe(true);
   });
 
   test('returns false when useLabel is true but filter is empty', () => {
-    const origUse = global.useLabel;
-    const origFilter = global.labelFilter;
     global.useLabel = true;
     global.labelFilter = [];
     expect(isLabelFilterConfigured()).toBe(false);
-    global.useLabel = origUse;
-    global.labelFilter = origFilter;
   });
 
   test('returns true when useLabel is true and filter has values', () => {
-    const origUse = global.useLabel;
-    const origFilter = global.labelFilter;
     global.useLabel = true;
     global.labelFilter = ['Friends'];
     expect(isLabelFilterConfigured()).toBe(true);
-    global.useLabel = origUse;
-    global.labelFilter = origFilter;
   });
 });
 
