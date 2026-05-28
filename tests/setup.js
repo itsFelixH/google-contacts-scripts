@@ -35,6 +35,7 @@ global.monthlyOverview = true;
 global.autoLabelRules = [];
 global.defaultCountryCode = '+49';
 global.scheduleAutoLabeling = false;
+global.sendActionReports = true;
 
 // Mock Logger
 global.Logger = {
