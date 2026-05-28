@@ -240,7 +240,6 @@ const emailSubjects = {
 | Option | Default | Description |
 |--------|---------|-------------|
 | `dryRun` | `false` | Preview mode — logs what would be sent/changed, no actual changes |
-| `verboseLogging` | `false` | Extra logging for debugging |
 | `phoneRegex` | see template | Regex for valid phone numbers |
 
 ### Actions config
