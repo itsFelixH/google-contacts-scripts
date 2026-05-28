@@ -30,7 +30,15 @@ global.excludeLabels = [];
 global.scheduleHour = 8;
 global.weeklyReportDay = 2; // MONDAY
 global.monthlyReportDay = 1;
-global.scheduleAutoLabeling = false;
+global.reportSchedules = {
+  upcomingBirthdays: 'off',
+  duplicates: 'off',
+  contactOverview: 'off',
+  labelOverview: 'off',
+  missingInfo: 'off',
+  dataQuality: 'off',
+  autoLabeling: 'off',
+};
 global.autoLabelRules = [];
 global.defaultCountryCode = '+49';
 global.sendActionReports = true;
