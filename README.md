@@ -118,8 +118,8 @@ const excludeLabels = []; // e.g. ['Blocked', 'Spam']
 const upcomingBirthdaysDays = 7;
 
 // When to send reports
-const scheduleReportDay = ScriptApp.WeekDay.MONDAY;
-const scheduleReportHour = 8;
+const scheduleHour = 8;
+const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
 ```
 
 ### 4. Set up schedules
@@ -227,7 +227,6 @@ const emailSubjects = {
 | `dryRun` | `false` | Preview mode — logs what would be sent, no emails |
 | `verboseLogging` | `false` | Extra logging for debugging |
 | `phoneRegex` | see template | Regex for valid phone numbers |
-| `maxNameLength` | `50` | Names longer than this are flagged |
 
 ## Running manually
 
