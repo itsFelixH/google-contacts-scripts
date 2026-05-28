@@ -135,10 +135,18 @@ const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
 
 ### 4. Set up schedules
 
-Run `setupSchedules()` once from the Apps Script editor. This creates triggers based on your `schedules` config. Default:
-- **Daily**: Upcoming Birthdays
-- **Weekly** (Monday): All reports batch
-- **Monthly** (1st): Contact Overview
+Run `setupSchedules()` once from the Apps Script editor. This creates individual triggers for each report:
+
+**Weekly** (Monday by default):
+- Upcoming Birthdays (covers next 14 days)
+- Auto-labeling (if enabled)
+
+**Monthly** (1st of each month):
+- Duplicate Contacts
+- Label Overview
+- Missing Info
+- Data Quality
+- Contact Overview
 
 Re-run `setupSchedules()` any time you change the schedule config. It cleanly replaces existing triggers.
 
@@ -201,24 +209,21 @@ All options live in `src/config.js`. Here's the full reference:
 // What time of day to send reports (0–23)
 const scheduleHour = 8;
 
-// How often to check for birthdays: 'daily' or 'weekly'
-const birthdaySchedule = 'daily';
-
-// Which day to send the weekly batch
+// Which day for weekly reports (birthdays + auto-labeling)
 const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
 
-// Monthly overview on the 1st (set to false to disable)
-const monthlyOverview = true;
+// Which day of the month for monthly reports (1–28)
+const monthlyReportDay = 1;
 
 // Run auto-labeling weekly (set to true to enable)
 const scheduleAutoLabeling = false;
 ```
 
-This creates triggers:
-- **Upcoming Birthdays** — daily (or weekly) at the configured hour
-- **All Reports** — weekly on the configured day
-- **Contact Overview** — 1st of each month (optional)
-- **Auto-labeling** — weekly on the configured day (optional, off by default)
+This creates individual triggers:
+- **Weekly**: Upcoming Birthdays + Auto-labeling (optional)
+- **Monthly**: Duplicates, Label Overview, Missing Info, Data Quality, Contact Overview
+
+You can also run `sendAllReports()` manually from the editor to fire everything at once.
 
 ### Email customization
 
