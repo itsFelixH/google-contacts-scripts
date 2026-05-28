@@ -189,7 +189,24 @@ function sendDataQualityReport() {
 
 
 /**
+ * Sends Missing Info reports for all configured fields.
+ * Used as a trigger target since triggers can't pass parameters.
+ */
+function sendMissingInfoReportAll() {
+  const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
+  fields.forEach(field => {
+    try {
+      sendMissingInfoReport(field);
+    } catch (error) {
+      Logger.log(`Missing Info (${field}) failed: ${error.message}`);
+    }
+  });
+}
+
+
+/**
  * Sends all enabled reports in one batch.
+ * Useful for manual "run everything now" from the editor.
  * Respects enabledReports and missingInfoFields config.
  */
 function sendAllReports() {
