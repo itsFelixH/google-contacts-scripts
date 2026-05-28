@@ -80,22 +80,22 @@ const includeWhatsAppLinks = true;        // add WhatsApp links next to phone nu
 // ═══════════════════════════════════════════════════════════════════════════════
 // Run setupSchedules() once after deploying. Safe to re-run after changes.
 // Hours are approximate — Apps Script triggers fire within a ±1 hour window.
+//
+// frequency: 'weekly' | 'monthly' | 'off'
 
-// What time of day to send reports (0–23)
 const scheduleHour = 8;
-
-// ─── Weekly reports ───────────────────────────────────────────────────────────
-// Which day for weekly reports (Upcoming Birthdays + Auto-labeling).
-// Options: MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
 const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
-
-// ─── Monthly reports ──────────────────────────────────────────────────────────
-// Which day of the month for monthly reports (1–28).
 const monthlyReportDay = 1;
 
-// ─── Auto-labeling ───────────────────────────────────────────────────────────
-// Run auto-labeling rules weekly alongside birthday report. Set to true to enable.
-const scheduleAutoLabeling = false;
+const reportSchedules = {
+  upcomingBirthdays: 'off',               // 'weekly' or 'off'
+  duplicates:        'off',               // 'monthly' or 'off'
+  contactOverview:   'off',               // 'monthly' or 'off'
+  labelOverview:     'off',               // 'monthly' or 'off'
+  missingInfo:       'off',               // 'monthly' or 'off'
+  dataQuality:       'off',               // 'monthly' or 'off'
+  autoLabeling:      'off',               // 'weekly' or 'off'
+};
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
