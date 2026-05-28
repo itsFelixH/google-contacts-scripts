@@ -37,7 +37,6 @@ const enabledReports = {
 
 const upcomingBirthdaysDays = 7;          // days to look ahead (1–365)
 const birthdayShowAge = true;             // show "turns X" if birth year is known
-const birthdaySkipIfEmpty = true;         // don't send if no upcoming birthdays
 
 // ─── Missing Info ─────────────────────────────────────────────────────────────
 // Which fields to check when running sendAllReports().
@@ -54,7 +53,6 @@ const duplicateMatchFields = ['name', 'email', 'phone'];
 // ─── General ──────────────────────────────────────────────────────────────────
 
 const maxContactsPerReport = 0;           // 0 = unlimited, otherwise caps the list
-const skipEmptyReports = true;            // don't send reports with 0 results
 
 // ─── Links ────────────────────────────────────────────────────────────────────
 

@@ -31,14 +31,6 @@ function isReportEnabled(reportName) {
 }
 
 /**
- * Returns whether empty reports should be skipped.
- * @returns {boolean}
- */
-function shouldSkipEmpty() {
-  return typeof skipEmptyReports !== 'undefined' ? skipEmptyReports : true;
-}
-
-/**
  * Returns the max contacts per report (0 = unlimited).
  * @returns {number}
  */
@@ -112,7 +104,7 @@ function sendDuplicateContactsReport() {
     const matchFields = typeof duplicateMatchFields !== 'undefined' ? duplicateMatchFields : ['name', 'email', 'phone'];
     const duplicates = findPotentialDuplicates(contacts, matchFields);
 
-    if (duplicates.length === 0 && shouldSkipEmpty()) {
+    if (duplicates.length === 0) {
       Logger.log('No potential duplicates found');
       return;
     }
@@ -198,7 +190,7 @@ function sendMissingInfoReport(field) {
     const contacts = fetchContacts(useLabel ? labelFilter : []);
     const missing = applyLimit(findContactsMissingField(contacts, field));
 
-    if (missing.length === 0 && shouldSkipEmpty()) {
+    if (missing.length === 0) {
       Logger.log(`No contacts missing ${field} found`);
       return;
     }
@@ -223,7 +215,7 @@ function sendDataQualityReport() {
     const noSurname = applyLimit(findContactsWithoutSurnames(contacts));
     const invalidPhones = applyLimit(findContactsWithInvalidPhones(contacts));
 
-    if (noSurname.length === 0 && invalidPhones.length === 0 && shouldSkipEmpty()) {
+    if (noSurname.length === 0 && invalidPhones.length === 0) {
       Logger.log('No data quality issues found');
       return;
     }

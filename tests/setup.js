@@ -24,11 +24,9 @@ global.enabledReports = {
   missingInfo: true,
   dataQuality: true,
 };
-global.skipEmptyReports = true;
 global.missingInfoFields = ['email', 'phone', 'birthday'];
 global.duplicateMatchFields = ['name', 'email', 'phone'];
 global.birthdayShowAge = true;
-global.birthdaySkipIfEmpty = true;
 global.birthdaySchedule = 'daily';
 
 // Mock Logger
