@@ -19,7 +19,16 @@ All reports can be enabled/disabled individually. Empty reports are never sent.
 
 ## Example emails
 
-Here's what the reports look like in your inbox:
+Open the HTML files in [`examples/`](examples/) to see how each report looks in an email client:
+
+- [`upcoming-birthdays.html`](examples/upcoming-birthdays.html) — Birthday countdown with age and contact details
+- [`duplicate-contacts.html`](examples/duplicate-contacts.html) — Grouped duplicates with match reason
+- [`contact-overview.html`](examples/contact-overview.html) — Stats dashboard
+- [`label-overview.html`](examples/label-overview.html) — Label distribution + unlabeled contacts
+- [`missing-info.html`](examples/missing-info.html) — Contacts missing a field (with edit links)
+- [`data-quality.html`](examples/data-quality.html) — Missing surnames + invalid phones
+
+Here's what the plain-text versions look like:
 
 **🎂 Upcoming Birthdays**
 ```
