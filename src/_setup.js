@@ -16,7 +16,8 @@
 const MANAGED_FUNCTIONS = [
   'sendUpcomingBirthdaysReport',
   'sendAllReports',
-  'sendContactOverviewReport'
+  'sendContactOverviewReport',
+  'runAutoLabeling'
 ];
 
 
@@ -70,6 +71,17 @@ function setupSchedules() {
       .atHour(hour)
       .create();
     Logger.log(`✅ Contact Overview — 1st of each month at ~${hour}:00`);
+  }
+
+  // 4. Auto-labeling — weekly (optional)
+  const doAutoLabel = typeof scheduleAutoLabeling !== 'undefined' ? scheduleAutoLabeling : false;
+  if (doAutoLabel) {
+    ScriptApp.newTrigger('runAutoLabeling')
+      .timeBased()
+      .onWeekDay(weekDay)
+      .atHour(hour)
+      .create();
+    Logger.log(`✅ Auto-labeling — weekly at ~${hour}:00`);
   }
 
   Logger.log('🎉 All schedules set up!');
