@@ -94,6 +94,18 @@ function validateConfig() {
     errors.push('birthdaySchedule must be "daily" or "weekly"');
   }
 
+  // Schedule hour
+  if (typeof scheduleHour !== 'undefined') {
+    if (typeof scheduleHour !== 'number' || scheduleHour < 0 || scheduleHour > 23) {
+      errors.push('scheduleHour must be a number between 0 and 23');
+    }
+  }
+
+  // Monthly overview
+  if (typeof monthlyOverview !== 'undefined' && typeof monthlyOverview !== 'boolean') {
+    errors.push('monthlyOverview must be true or false');
+  }
+
   // Log results
   if (errors.length > 0) {
     Logger.log('⚠️ Config validation issues:');
