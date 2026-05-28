@@ -89,11 +89,6 @@ function validateConfig() {
     }
   }
 
-  // Birthday schedule
-  if (typeof birthdaySchedule !== 'undefined' && !['daily', 'weekly'].includes(birthdaySchedule)) {
-    errors.push('birthdaySchedule must be "daily" or "weekly"');
-  }
-
   // Schedule hour
   if (typeof scheduleHour !== 'undefined') {
     if (typeof scheduleHour !== 'number' || scheduleHour < 0 || scheduleHour > 23) {
@@ -101,9 +96,11 @@ function validateConfig() {
     }
   }
 
-  // Monthly overview
-  if (typeof monthlyOverview !== 'undefined' && typeof monthlyOverview !== 'boolean') {
-    errors.push('monthlyOverview must be true or false');
+  // Monthly report day
+  if (typeof monthlyReportDay !== 'undefined') {
+    if (typeof monthlyReportDay !== 'number' || monthlyReportDay < 1 || monthlyReportDay > 28) {
+      errors.push('monthlyReportDay must be a number between 1 and 28');
+    }
   }
 
   // Log results
