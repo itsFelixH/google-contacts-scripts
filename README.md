@@ -135,18 +135,7 @@ const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
 
 ### 4. Set up schedules
 
-Run `setupSchedules()` once from the Apps Script editor. This creates individual triggers for each report:
-
-**Weekly** (Monday by default):
-- Upcoming Birthdays (covers next 14 days)
-- Auto-labeling (if enabled)
-
-**Monthly** (1st of each month):
-- Duplicate Contacts
-- Label Overview
-- Missing Info
-- Data Quality
-- Contact Overview
+Run `setupSchedules()` once from the Apps Script editor. It creates triggers for each report you've enabled in `reportSchedules`. All schedules are off by default — enable what you want, then run `setupSchedules()`.
 
 Re-run `setupSchedules()` any time you change the schedule config. It cleanly replaces existing triggers.
 
@@ -205,25 +194,39 @@ All options live in `src/config.js`. Here's the full reference:
 
 ### Schedules
 
+Each report has its own schedule — set to `'weekly'`, `'monthly'`, or `'off'`:
+
 ```js
-// What time of day to send reports (0–23)
 const scheduleHour = 8;
-
-// Which day for weekly reports (birthdays + auto-labeling)
 const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
-
-// Which day of the month for monthly reports (1–28)
 const monthlyReportDay = 1;
 
-// Run auto-labeling weekly (set to true to enable)
-const scheduleAutoLabeling = false;
+const reportSchedules = {
+  upcomingBirthdays: 'off',     // 'weekly' or 'off'
+  duplicates:        'off',     // 'monthly' or 'off'
+  contactOverview:   'off',     // 'monthly' or 'off'
+  labelOverview:     'off',     // 'monthly' or 'off'
+  missingInfo:       'off',     // 'monthly' or 'off'
+  dataQuality:       'off',     // 'monthly' or 'off'
+  autoLabeling:      'off',     // 'weekly' or 'off'
+};
 ```
 
-This creates individual triggers:
-- **Weekly**: Upcoming Birthdays + Auto-labeling (optional)
-- **Monthly**: Duplicates, Label Overview, Missing Info, Data Quality, Contact Overview
+All schedules are off by default — enable what you want. A typical setup:
 
-You can also run `sendAllReports()` manually from the editor to fire everything at once.
+```js
+const reportSchedules = {
+  upcomingBirthdays: 'weekly',
+  duplicates:        'monthly',
+  contactOverview:   'monthly',
+  labelOverview:     'monthly',
+  missingInfo:       'monthly',
+  dataQuality:       'monthly',
+  autoLabeling:      'weekly',
+};
+```
+
+Run `setupSchedules()` after changing. You can also run `sendAllReports()` manually from the editor at any time.
 
 ### Email customization
 
