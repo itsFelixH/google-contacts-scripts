@@ -144,69 +144,69 @@ describe('Contact query functions', () => {
     new Contact('Alice', new Date(new Date().getFullYear(), 0, 1), ['Work']),
   ];
 
-  test('findContactsWithoutLabels', () => {
-    const result = findContactsWithoutLabels(contacts);
+  test('findUnlabeled', () => {
+    const result = findUnlabeled(contacts);
     expect(result).toHaveLength(1);
     expect(result[0].getName()).toBe('Jane');
   });
 
-  test('findContactsWithoutLabels returns empty for all-labeled contacts', () => {
+  test('findUnlabeled returns empty for all-labeled contacts', () => {
     const labeled = [
       new Contact('A', null, ['X']),
       new Contact('B', null, ['Y']),
     ];
-    expect(findContactsWithoutLabels(labeled)).toHaveLength(0);
+    expect(findUnlabeled(labeled)).toHaveLength(0);
   });
 
-  test('findContactsWithoutSurnames', () => {
-    const result = findContactsWithoutSurnames(contacts);
+  test('findMissingSurnames', () => {
+    const result = findMissingSurnames(contacts);
     expect(result).toHaveLength(2);
     expect(result.map(c => c.getName())).toContain('Jane');
     expect(result.map(c => c.getName())).toContain('Alice');
   });
 
-  test('findContactsWithoutSurnames does not flag multi-word names', () => {
-    const result = findContactsWithoutSurnames([
+  test('findMissingSurnames does not flag multi-word names', () => {
+    const result = findMissingSurnames([
       new Contact('First Last', null),
       new Contact('One Two Three', null),
     ]);
     expect(result).toHaveLength(0);
   });
 
-  test('findContactsWithInvalidPhones', () => {
-    const result = findContactsWithInvalidPhones(contacts);
+  test('findInvalidPhones', () => {
+    const result = findInvalidPhones(contacts);
     expect(result).toHaveLength(1);
     expect(result[0].getName()).toBe('Bob Smith');
   });
 
-  test('findContactsWithInvalidPhones ignores contacts without phone', () => {
-    const result = findContactsWithInvalidPhones([
+  test('findInvalidPhones ignores contacts without phone', () => {
+    const result = findInvalidPhones([
       new Contact('No Phone', null),
     ]);
     expect(result).toHaveLength(0);
   });
 
-  test('findContactsMissingField checks all fields', () => {
-    expect(findContactsMissingField(contacts, 'email')).toHaveLength(2);
-    expect(findContactsMissingField(contacts, 'phone')).toHaveLength(2);
-    expect(findContactsMissingField(contacts, 'city')).toHaveLength(2);
-    expect(findContactsMissingField(contacts, 'birthday')).toHaveLength(1);
+  test('findMissingField checks all fields', () => {
+    expect(findMissingField(contacts, 'email')).toHaveLength(2);
+    expect(findMissingField(contacts, 'phone')).toHaveLength(2);
+    expect(findMissingField(contacts, 'city')).toHaveLength(2);
+    expect(findMissingField(contacts, 'birthday')).toHaveLength(1);
   });
 
-  test('findContactsMissingField returns empty for invalid field', () => {
-    expect(findContactsMissingField(contacts, 'invalid')).toHaveLength(0);
+  test('findMissingField returns empty for invalid field', () => {
+    expect(findMissingField(contacts, 'invalid')).toHaveLength(0);
   });
 });
 
 
-describe('findPotentialDuplicates', () => {
+describe('findDuplicates', () => {
   test('finds duplicates by name', () => {
     const dupes = [
       new Contact('Same Name', new Date()),
       new Contact('Same Name', new Date()),
       new Contact('Unique', new Date()),
     ];
-    const result = findPotentialDuplicates(dupes, ['name']);
+    const result = findDuplicates(dupes, ['name']);
     expect(result).toHaveLength(1);
     expect(result[0].count).toBe(2);
   });
@@ -217,7 +217,7 @@ describe('findPotentialDuplicates', () => {
       new Contact('Person B', null, [], 'same@test.com'),
       new Contact('Person C', null, [], 'different@test.com'),
     ];
-    const result = findPotentialDuplicates(dupes, ['email']);
+    const result = findDuplicates(dupes, ['email']);
     expect(result).toHaveLength(1);
     expect(result[0].count).toBe(2);
   });
@@ -228,7 +228,7 @@ describe('findPotentialDuplicates', () => {
       new Contact('Person B', null, [], '', '', '+123456789'),
       new Contact('Person C', null, [], '', '', '+999999999'),
     ];
-    const result = findPotentialDuplicates(dupes, ['phone']);
+    const result = findDuplicates(dupes, ['phone']);
     expect(result).toHaveLength(1);
     expect(result[0].count).toBe(2);
   });
@@ -240,7 +240,7 @@ describe('findPotentialDuplicates', () => {
       new Contact('Same', null, [], 'shared@test.com'),
       new Contact('Different', null, [], 'shared@test.com'),
     ];
-    const result = findPotentialDuplicates(dupes, ['name', 'email']);
+    const result = findDuplicates(dupes, ['name', 'email']);
     expect(result).toHaveLength(1);
     expect(result[0].count).toBe(3);
   });
@@ -250,7 +250,7 @@ describe('findPotentialDuplicates', () => {
       new Contact('Alice', null, [], 'a@test.com'),
       new Contact('Bob', null, [], 'b@test.com'),
     ];
-    expect(findPotentialDuplicates(unique)).toHaveLength(0);
+    expect(findDuplicates(unique)).toHaveLength(0);
   });
 
   test('is case-insensitive for names', () => {
@@ -258,7 +258,7 @@ describe('findPotentialDuplicates', () => {
       new Contact('John Doe', null),
       new Contact('john doe', null),
     ];
-    const result = findPotentialDuplicates(dupes, ['name']);
+    const result = findDuplicates(dupes, ['name']);
     expect(result).toHaveLength(1);
   });
 
@@ -267,20 +267,20 @@ describe('findPotentialDuplicates', () => {
       new Contact('Same', null),
       new Contact('Same', null),
     ];
-    const result = findPotentialDuplicates(dupes);
+    const result = findDuplicates(dupes);
     expect(result).toHaveLength(1);
   });
 });
 
 
-describe('getLabelUsageStats', () => {
+describe('computeLabelStats', () => {
   test('returns correct stats', () => {
     const contacts = [
       new Contact('A', null, ['Friends', 'Work']),
       new Contact('B', null, ['Friends']),
       new Contact('C', null, []),
     ];
-    const stats = getLabelUsageStats(contacts);
+    const stats = computeLabelStats(contacts);
     expect(stats.totalLabels).toBe(2);
     expect(stats.unlabeledCount).toBe(1);
     expect(stats.mostUsed.label).toBe('Friends');
@@ -290,7 +290,7 @@ describe('getLabelUsageStats', () => {
   });
 
   test('handles empty contacts', () => {
-    const stats = getLabelUsageStats([]);
+    const stats = computeLabelStats([]);
     expect(stats.totalLabels).toBe(0);
     expect(stats.unlabeledCount).toBe(0);
     expect(stats.mostUsed).toBeNull();
@@ -302,14 +302,14 @@ describe('getLabelUsageStats', () => {
       new Contact('A', null, []),
       new Contact('B', null, []),
     ];
-    const stats = getLabelUsageStats(contacts);
+    const stats = computeLabelStats(contacts);
     expect(stats.totalLabels).toBe(0);
     expect(stats.unlabeledCount).toBe(2);
   });
 });
 
 
-describe('generateContactStats', () => {
+describe('computeContactStats', () => {
   test('returns correct counts and percentages', () => {
     const contacts = [
       new Contact('John Doe', new Date('1990-01-15'), ['Friends'], 'john@test.com', 'Berlin', '+491234567890'),
@@ -317,7 +317,7 @@ describe('generateContactStats', () => {
       new Contact('Bob Smith', new Date('1985-06-20'), ['Work'], 'bob@test.com', '', '+123'),
       new Contact('Alice', new Date(new Date().getFullYear(), 0, 1), ['Work']),
     ];
-    const stats = generateContactStats(contacts);
+    const stats = computeContactStats(contacts);
 
     expect(stats.totalContacts).toBe(4);
     expect(stats.withBirthday).toBe(3);
@@ -333,7 +333,7 @@ describe('generateContactStats', () => {
   });
 
   test('handles empty contacts list', () => {
-    const stats = generateContactStats([]);
+    const stats = computeContactStats([]);
     expect(stats.totalContacts).toBe(0);
     expect(stats.birthdayPercentage).toBe('0.0');
     expect(stats.emailPercentage).toBe('0.0');
@@ -342,7 +342,7 @@ describe('generateContactStats', () => {
 });
 
 
-describe('findContactsWithUpcomingBirthdays', () => {
+describe('findUpcomingBirthdays', () => {
   test('finds birthdays within range', () => {
     const today = new Date();
     const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
@@ -355,8 +355,8 @@ describe('findContactsWithUpcomingBirthdays', () => {
       new Contact('Two Weeks', new Date(1990, twoWeeks.getMonth(), twoWeeks.getDate())),
     ];
 
-    expect(findContactsWithUpcomingBirthdays(contacts, 7)).toHaveLength(2);
-    expect(findContactsWithUpcomingBirthdays(contacts, 14)).toHaveLength(3);
+    expect(findUpcomingBirthdays(contacts, 7)).toHaveLength(2);
+    expect(findUpcomingBirthdays(contacts, 14)).toHaveLength(3);
   });
 
   test('returns sorted by date', () => {
@@ -369,7 +369,7 @@ describe('findContactsWithUpcomingBirthdays', () => {
       new Contact('Sooner', new Date(1990, d2.getMonth(), d2.getDate())),
     ];
 
-    const result = findContactsWithUpcomingBirthdays(contacts, 7);
+    const result = findUpcomingBirthdays(contacts, 7);
     expect(result[0].getName()).toBe('Sooner');
   });
 
@@ -382,7 +382,7 @@ describe('findContactsWithUpcomingBirthdays', () => {
       new Contact('No Birthday', null),
     ];
 
-    expect(findContactsWithUpcomingBirthdays(contacts, 7)).toHaveLength(1);
+    expect(findUpcomingBirthdays(contacts, 7)).toHaveLength(1);
   });
 
   test('returns empty for no upcoming birthdays', () => {
@@ -393,7 +393,7 @@ describe('findContactsWithUpcomingBirthdays', () => {
       new Contact('Far Away', new Date(1990, farAway.getMonth(), farAway.getDate())),
     ];
 
-    expect(findContactsWithUpcomingBirthdays(contacts, 7)).toHaveLength(0);
+    expect(findUpcomingBirthdays(contacts, 7)).toHaveLength(0);
   });
 });
 
