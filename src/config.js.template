@@ -109,8 +109,6 @@ const monthlyOverview = true;
 // 4. VALIDATION RULES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const minPhoneLength = 7;
-const maxNameLength = 50;
 const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
 
 
