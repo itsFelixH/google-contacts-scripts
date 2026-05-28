@@ -6,11 +6,8 @@ global.labelFilter = [];
 global.upcomingBirthdaysDays = 14;
 global.maxContactsPerReport = 0;
 global.includeEditLinks = true;
-global.includeWhatsAppLinks = true;
+global.includeWhatsAppLinks = false;
 global.phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
-global.apiPageSize = 100;
-global.apiMaxRetries = 3;
-global.apiPersonFields = 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies';
 global.dryRun = false;
 global.emailSubjects = {};
 global.enabledReports = {
@@ -41,8 +38,8 @@ global.reportSchedules = {
 };
 global.autoLabelRules = [];
 global.defaultCountryCode = '+49';
-global.sendActionReports = true;
-global.nameSwapLastFirst = true;
+global.sendActionReports = false;
+global.nameSwapLastFirst = false;
 
 // Mock Logger
 global.Logger = {

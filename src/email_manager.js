@@ -127,7 +127,7 @@ class EmailManager {
    */
   sendDuplicateContactsEmail(duplicateGroups) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.duplicates || '🔍 Duplicate Contacts';
+    const subject = this.subjects.duplicates || '🔍 Possible Duplicates';
 
     // Plain text
     const textBody = ['🔍 Duplicate Contacts', '',
@@ -157,7 +157,7 @@ class EmailManager {
    */
   sendContactOverviewEmail(stats) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.overview || '📊 Contact Overview';
+    const subject = this.subjects.overview || '📊 Contacts at a Glance';
 
     const lines = [
       `📇 Total Contacts: ${stats.totalContacts}`,
@@ -189,7 +189,7 @@ class EmailManager {
    */
   sendLabelOverviewEmail(labelStats, unlabeledContacts, labelDistribution, totalContacts) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.labelOverview || '🏷️ Label Overview';
+    const subject = this.subjects.labelOverview || '🏷️ Labels & Unlabeled Contacts';
 
     // ── Plain text ──
     const textLines = [
@@ -261,7 +261,7 @@ class EmailManager {
     const fieldEmojis = { email: '📧', phone: '📱', city: '🌆', birthday: '🎂' };
     const emoji = fieldEmojis[field] || '📋';
     const displayName = fieldNames[field] || field;
-    const subject = (this.subjects.missingInfo || `${emoji} Missing Info: {field}`).replace('{field}', displayName);
+    const subject = (this.subjects.missingInfo || `${emoji} Contacts Without {field}`).replace('{field}', displayName);
 
     // Plain text — show what info the contact does have for context
     const textBody = [`${emoji} Contacts Missing ${displayName}`, '',
@@ -332,7 +332,7 @@ class EmailManager {
    */
   sendDataQualityEmail(missingSurnames, invalidPhones) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.dataQuality || '🔧 Data Quality';
+    const subject = this.subjects.dataQuality || '🔧 Contacts to Clean Up';
     const totalIssues = missingSurnames.length + invalidPhones.length;
 
     // ── Plain text ──

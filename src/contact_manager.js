@@ -28,10 +28,10 @@ function fetchContacts(labelNames = [], maxRetries = 3) {
     let pageToken = null;
     let attempt = 0;
 
-    // Read API settings from config, with sensible defaults
-    const pageSize = typeof apiPageSize !== 'undefined' ? apiPageSize : 100;
-    const personFields = typeof apiPersonFields !== 'undefined' ? apiPersonFields : 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies';
-    const retries = typeof apiMaxRetries !== 'undefined' ? apiMaxRetries : maxRetries;
+    // API settings (hardcoded — no need to configure these)
+    const pageSize = 100;
+    const personFields = 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies';
+    const retries = maxRetries;
 
     if (labelNames.length === 0) {
       Logger.log('🔍 Fetching all contacts...');

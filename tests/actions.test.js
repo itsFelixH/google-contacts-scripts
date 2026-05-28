@@ -48,9 +48,16 @@ describe('formatName', () => {
     expect(formatName('  John  Doe  ')).toBe('John Doe');
   });
 
-  test('swaps "Last, First" to "First Last"', () => {
+  test('swaps "Last, First" to "First Last" when enabled', () => {
+    const original = global.nameSwapLastFirst;
+    global.nameSwapLastFirst = true;
     expect(formatName('Doe, John')).toBe('John Doe');
     expect(formatName('Schmidt, Anna')).toBe('Anna Schmidt');
+    global.nameSwapLastFirst = original;
+  });
+
+  test('does not swap "Last, First" when disabled', () => {
+    expect(formatName('Doe, John')).toBe('Doe, John');
   });
 
   test('preserves lowercase prefixes', () => {
