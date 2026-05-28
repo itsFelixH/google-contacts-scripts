@@ -264,6 +264,12 @@ Fields: `email`, `phone`, `city`, `name`.
 const defaultCountryCode = '+49';  // prepended when converting "0xxx" → "+49xxx"
 ```
 
+**Action reports:**
+
+```js
+const sendActionReports = true;  // send summary email after each action (default: true)
+```
+
 ## Running manually
 
 You can run any report individually from the Apps Script editor:
