@@ -16,6 +16,20 @@ global.apiPersonFields = 'names,birthdays,memberships,emailAddresses,phoneNumber
 global.verboseLogging = false;
 global.dryRun = false;
 global.emailSubjects = {};
+global.enabledReports = {
+  upcomingBirthdays: true,
+  duplicates: true,
+  contactOverview: true,
+  labelOverview: true,
+  missingInfo: true,
+  dataQuality: true,
+};
+global.skipEmptyReports = true;
+global.missingInfoFields = ['email', 'phone', 'birthday'];
+global.duplicateMatchFields = ['name', 'email', 'phone'];
+global.birthdayShowAge = true;
+global.birthdaySkipIfEmpty = true;
+global.birthdaySchedule = 'daily';
 
 // Mock Logger
 global.Logger = {
