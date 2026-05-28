@@ -31,11 +31,9 @@ global.birthdayFormat = 'dd.MM.';
 global.sortContactsBy = 'name';
 global.excludeLabels = [];
 global.scheduleHour = 8;
-global.schedules = [
-  { fn: 'sendUpcomingBirthdaysReport', frequency: 'daily', hour: 8 },
-  { fn: 'sendAllReports', frequency: 'weekly', day: 2, hour: 8 },
-  { fn: 'sendContactOverviewReport', frequency: 'monthly', hour: 8 },
-];
+global.birthdaySchedule = 'daily';
+global.weeklyReportDay = 2; // MONDAY
+global.monthlyOverview = true;
 
 // Mock Logger
 global.Logger = {
