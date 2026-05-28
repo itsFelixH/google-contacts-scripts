@@ -99,6 +99,29 @@ const monthlyOverview = true;
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// 4. ACTIONS — Scripts that modify contacts
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Auto-labeling rules ──────────────────────────────────────────────────────
+// Each rule assigns a label when a field matches a condition.
+// Conditions: contains, equals, startsWith, endsWith
+// Fields: 'email', 'phone', 'city', 'name'
+
+const autoLabelRules = [
+  // { field: 'email', contains: '@company.com', label: 'Work' },
+  // { field: 'city', equals: 'berlin', label: 'Berlin' },
+  // { field: 'email', endsWith: '.de', label: 'Germany' },
+  // { field: 'name', startsWith: 'dr.', label: 'Doctors' },
+];
+
+// ─── Phone normalizer ─────────────────────────────────────────────────────────
+// Country code to prepend when converting local numbers (starting with 0)
+// to international format. E.g. "0176 123" → "+49 176 123"
+
+const defaultCountryCode = '+49';
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //
 //   ✅ You can stop here. Everything below is optional customization.
 //
