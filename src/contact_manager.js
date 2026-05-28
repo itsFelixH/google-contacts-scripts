@@ -186,28 +186,6 @@ function findContactsWithoutLabels(contacts) {
 
 
 /**
- * Finds contacts without a birthday set.
- * @param {Contact[]} contacts
- * @returns {Contact[]}
- */
-function findContactsWithoutBirthday(contacts) {
-  return contacts.filter(contact => !contact.getBirthday());
-}
-
-
-/**
- * Finds contacts that have a specific label.
- * @param {Contact[]} contacts
- * @param {string} label Label to search for
- * @returns {Contact[]}
- */
-function findContactsWithLabel(contacts, label) {
-  if (!label || typeof label !== 'string') return [];
-  return contacts.filter(contact => contact.getLabels().includes(label.trim()));
-}
-
-
-/**
  * Finds contacts with upcoming birthdays within the specified number of days.
  * @param {Contact[]} contacts
  * @param {number} [days=7] Days to look ahead
@@ -400,21 +378,33 @@ function getLabelUsageStats(contacts) {
  */
 function generateContactStats(contacts) {
   const totalContacts = contacts.length;
-  const withBirthday = contacts.filter(c => c.getBirthday()).length;
-  const withEmail = contacts.filter(c => c.email).length;
-  const withPhone = contacts.filter(c => c.phoneNumber).length;
-  const withCity = contacts.filter(c => c.city).length;
-  const withLabels = contacts.filter(c => c.getLabels().length > 0).length;
-  const withInstagram = contacts.filter(c => c.instagramNames.length > 0).length;
-  const withoutSurnames = findContactsWithoutSurnames(contacts).length;
-  const longNames = findLongNames(contacts).length;
 
+  // Single pass for all field counts
+  let withBirthday = 0, withEmail = 0, withPhone = 0;
+  let withCity = 0, withLabels = 0, withInstagram = 0;
+  let withoutSurnames = 0;
   const labelCounts = {};
-  contacts.forEach(contact => {
-    contact.getLabels().forEach(label => {
-      labelCounts[label] = (labelCounts[label] || 0) + 1;
-    });
+
+  contacts.forEach(c => {
+    if (c.getBirthday()) withBirthday++;
+    if (c.email) withEmail++;
+    if (c.phoneNumber) withPhone++;
+    if (c.city) withCity++;
+    if (c.instagramNames.length > 0) withInstagram++;
+
+    const labels = c.getLabels();
+    if (labels.length > 0) {
+      withLabels++;
+      labels.forEach(label => {
+        labelCounts[label] = (labelCounts[label] || 0) + 1;
+      });
+    }
+
+    const name = c.getName().trim();
+    if (name && !name.includes(' ')) withoutSurnames++;
   });
+
+  const pct = (n) => totalContacts ? (n / totalContacts * 100).toFixed(1) : '0.0';
 
   return {
     totalContacts,
@@ -425,14 +415,12 @@ function generateContactStats(contacts) {
     withLabels,
     withInstagram,
     withoutSurnames,
-    longNames,
-    birthdayPercentage: totalContacts ? (withBirthday / totalContacts * 100).toFixed(1) : '0.0',
-    emailPercentage: totalContacts ? (withEmail / totalContacts * 100).toFixed(1) : '0.0',
-    phonePercentage: totalContacts ? (withPhone / totalContacts * 100).toFixed(1) : '0.0',
-    cityPercentage: totalContacts ? (withCity / totalContacts * 100).toFixed(1) : '0.0',
-    labelPercentage: totalContacts ? (withLabels / totalContacts * 100).toFixed(1) : '0.0',
-    instagramPercentage: totalContacts ? (withInstagram / totalContacts * 100).toFixed(1) : '0.0',
-    surnamePercentage: totalContacts ? ((totalContacts - withoutSurnames) / totalContacts * 100).toFixed(1) : '0.0',
+    birthdayPercentage: pct(withBirthday),
+    emailPercentage: pct(withEmail),
+    phonePercentage: pct(withPhone),
+    cityPercentage: pct(withCity),
+    labelPercentage: pct(withLabels),
+    instagramPercentage: pct(withInstagram),
     labelDistribution: labelCounts
   };
 }
