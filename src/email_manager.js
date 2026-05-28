@@ -67,8 +67,10 @@ class EmailManager {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
     const subject = (this.subjects.upcomingBirthdays || '🎂 Upcoming Birthdays').replace('{days}', days);
 
+    const showAge = typeof birthdayShowAge !== 'undefined' ? birthdayShowAge : true;
+
     const lines = contacts.map(contact => {
-      const age = contact.hasKnownBirthYear() ? ` (turns ${contact.calculateAge() + 1})` : '';
+      const age = (showAge && contact.hasKnownBirthYear()) ? ` (turns ${contact.calculateAge() + 1})` : '';
       const daysUntil = contact.daysToNextBirthday();
       const daysLabel = daysUntil === 0 ? '🎂 TODAY!' : daysUntil === 1 ? 'tomorrow' : `in ${daysUntil} days`;
       return { name: contact.getName(), age, daysLabel, contact };
