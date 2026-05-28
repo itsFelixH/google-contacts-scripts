@@ -17,6 +17,8 @@ Reports are sent to yourself — think of it as a personal contacts health check
 
 All reports can be enabled/disabled individually. Empty reports are never sent.
 
+> 💡 Looking for automatic birthday calendar events? Check out [birthday-calendar-sync](https://github.com/itsFelixH/birthday-calendar-sync).
+
 ## Example emails
 
 Open the HTML files in [`examples/`](examples/) to see how each report looks in an email client:
