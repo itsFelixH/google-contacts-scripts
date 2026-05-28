@@ -13,9 +13,9 @@
  * Only triggers for these functions are touched — user-created triggers are left alone.
  */
 const MANAGED_FUNCTIONS = [
-  'sendAllQuickReports',
+  'sendAllReports',
   'sendUpcomingBirthdaysReport',
-  'sendStatisticsReport'
+  'sendContactOverviewReport'
 ];
 
 /**
@@ -40,12 +40,12 @@ function setupSchedules() {
   const reportHour = typeof scheduleReportHour !== 'undefined' ? scheduleReportHour : 8;
 
   // Weekly reports
-  ScriptApp.newTrigger('sendAllQuickReports')
+  ScriptApp.newTrigger('sendAllReports')
     .timeBased()
     .onWeekDay(reportDay)
     .atHour(reportHour)
     .create();
-  Logger.log(`✅ sendAllQuickReports — weekly at ~${reportHour}:00`);
+  Logger.log(`✅ sendAllReports — weekly at ~${reportHour}:00`);
 
   // Daily upcoming birthdays check
   ScriptApp.newTrigger('sendUpcomingBirthdaysReport')
@@ -55,13 +55,13 @@ function setupSchedules() {
     .create();
   Logger.log(`✅ sendUpcomingBirthdaysReport — daily at ~${reportHour}:00`);
 
-  // Monthly statistics
-  ScriptApp.newTrigger('sendStatisticsReport')
+  // Monthly overview
+  ScriptApp.newTrigger('sendContactOverviewReport')
     .timeBased()
     .onMonthDay(1)
     .atHour(reportHour)
     .create();
-  Logger.log(`✅ sendStatisticsReport — 1st of each month at ~${reportHour}:00`);
+  Logger.log(`✅ sendContactOverviewReport — 1st of each month at ~${reportHour}:00`);
 
   Logger.log('🎉 All schedules set up!');
 }
