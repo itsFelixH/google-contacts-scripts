@@ -3,6 +3,7 @@
  *
  * Unlike reports (which only read and email), these functions write back
  * to Google Contacts. They all support dryRun mode for safe previewing.
+ * Each action sends a summary email after running (configurable).
  *
  * Actions:
  * - Auto-labeling: assign labels based on configurable rules
@@ -10,6 +11,19 @@
  * - Phone normalizer: convert phone numbers to international format
  * - Instagram sync: validate Instagram handles in contact notes
  */
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Checks if action reports are enabled.
+ * @returns {boolean}
+ */
+function shouldSendActionReports() {
+  return typeof sendActionReports !== 'undefined' ? sendActionReports : true;
+}
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -27,7 +41,7 @@
  * { field: 'name', contains: 'Dr.', label: 'Doctors' }
  * ```
  *
- * @returns {{applied: number, skipped: number}} Count of labels applied/skipped
+ * @returns {{applied: number, skipped: number, changes: Object[]}} Results
  */
 function runAutoLabeling() {
   const rules = typeof autoLabelRules !== 'undefined' ? autoLabelRules : [];
@@ -35,7 +49,7 @@ function runAutoLabeling() {
 
   if (rules.length === 0) {
     Logger.log('⚠️ No auto-label rules configured. Add autoLabelRules to config.js.');
-    return { applied: 0, skipped: 0 };
+    return { applied: 0, skipped: 0, changes: [] };
   }
 
   Logger.log(`🏷️ Running auto-labeling with ${rules.length} rule(s)...`);
@@ -43,6 +57,7 @@ function runAutoLabeling() {
   const labelManager = new LabelManager();
   let applied = 0;
   let skipped = 0;
+  const changes = []; // { name, label }
 
   // Fetch all contacts (unfiltered — rules apply globally)
   const contacts = fetchContacts([]);
@@ -57,6 +72,8 @@ function runAutoLabeling() {
 
       // Check if the rule matches
       if (!matchesAutoLabelRule(contact, rule)) return;
+
+      changes.push({ name: contact.getName(), label: rule.label });
 
       if (isDryRun) {
         Logger.log(`🧪 [DRY RUN] Would add "${rule.label}" to ${contact.getName()}`);
@@ -86,8 +103,13 @@ function runAutoLabeling() {
     });
   });
 
+  // Send summary report
+  if (changes.length > 0 && !isDryRun && shouldSendActionReports()) {
+    sendAutoLabelingReport(changes);
+  }
+
   Logger.log(`🏷️ Auto-labeling done: ${applied} applied, ${skipped} already had label`);
-  return { applied, skipped };
+  return { applied, skipped, changes };
 }
 
 
@@ -125,6 +147,36 @@ function matchesAutoLabelRule(contact, rule) {
 }
 
 
+/**
+ * Sends a summary email of auto-labeling changes.
+ * @param {Object[]} changes Array of { name, label }
+ * @private
+ */
+function sendAutoLabelingReport(changes) {
+  const emailManager = new EmailManager();
+  const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
+  const subject = '🏷️ Auto-Labeling Summary';
+
+  const textBody = ['🏷️ Auto-Labeling Summary', '',
+    `${changes.length} labels applied:`, '',
+    ...changes.map(c => `  • ${c.name} → "${c.label}"`)
+  ].join('\n');
+
+  const listHtml = changes.map(c =>
+    `<li><strong>${c.name}</strong> → 🏷️ ${c.label}</li>`
+  ).join('\n');
+
+  const htmlBody = EmailTemplates.wrapEmail(
+    EmailTemplates.header('🏷️ Auto-Labeling Summary', `${changes.length} labels applied`) +
+    `<ul>${listHtml}</ul>` +
+    EmailTemplates.footer()
+  );
+
+  emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  Logger.log(`✅ Sent auto-labeling report (${changes.length} changes)`);
+}
+
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Name formatter
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -134,10 +186,11 @@ function matchesAutoLabelRule(contact, rule) {
  * - Capitalizes first letter of each word ("john doe" → "John Doe")
  * - Trims extra whitespace ("John   Doe" → "John Doe")
  * - Swaps "Last, First" to "First Last" format
+ * - Preserves lowercase prefixes (von, van, de, etc.)
  *
  * Only modifies contacts that actually need fixing.
  *
- * @returns {{fixed: number, unchanged: number}} Counts
+ * @returns {{fixed: number, unchanged: number, changes: Object[]}} Results
  */
 function runNameFormatter() {
   const isDryRun = typeof dryRun !== 'undefined' && dryRun;
@@ -146,6 +199,7 @@ function runNameFormatter() {
   const contacts = fetchContacts([]);
   let fixed = 0;
   let unchanged = 0;
+  const changes = []; // { before, after }
 
   contacts.forEach(contact => {
     const original = contact.getName();
@@ -155,6 +209,8 @@ function runNameFormatter() {
       unchanged++;
       return;
     }
+
+    changes.push({ before: original, after: formatted });
 
     if (isDryRun) {
       Logger.log(`🧪 [DRY RUN] "${original}" → "${formatted}"`);
@@ -174,8 +230,13 @@ function runNameFormatter() {
     }
   });
 
+  // Send summary report
+  if (changes.length > 0 && !isDryRun && shouldSendActionReports()) {
+    sendNameFormatterReport(changes);
+  }
+
   Logger.log(`✏️ Name formatter done: ${fixed} fixed, ${unchanged} unchanged`);
-  return { fixed, unchanged };
+  return { fixed, unchanged, changes };
 }
 
 
@@ -216,6 +277,36 @@ function formatName(name) {
 }
 
 
+/**
+ * Sends a summary email of name formatting changes.
+ * @param {Object[]} changes Array of { before, after }
+ * @private
+ */
+function sendNameFormatterReport(changes) {
+  const emailManager = new EmailManager();
+  const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
+  const subject = '✏️ Name Formatter Summary';
+
+  const textBody = ['✏️ Name Formatter Summary', '',
+    `${changes.length} names fixed:`, '',
+    ...changes.map(c => `  • "${c.before}" → "${c.after}"`)
+  ].join('\n');
+
+  const listHtml = changes.map(c =>
+    `<li>"${c.before}" → <strong>${c.after}</strong></li>`
+  ).join('\n');
+
+  const htmlBody = EmailTemplates.wrapEmail(
+    EmailTemplates.header('✏️ Name Formatter Summary', `${changes.length} names fixed`) +
+    `<ul>${listHtml}</ul>` +
+    EmailTemplates.footer()
+  );
+
+  emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  Logger.log(`✅ Sent name formatter report (${changes.length} changes)`);
+}
+
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Phone number normalizer
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -223,13 +314,13 @@ function formatName(name) {
 /**
  * Normalizes phone numbers to international format.
  * Converts local numbers (e.g. "0176 1234567") to international format
- * (e.g. "+49 176 1234567") using the configured default country code.
+ * (e.g. "+491761234567") using the configured default country code.
  *
  * Only modifies numbers that:
- * - Start with "0" (local format)
- * - Don't already start with "+" (already international)
+ * - Start with "0" (local format) — converted to international
+ * - Start with "+" (already international) — separators stripped
  *
- * @returns {{normalized: number, unchanged: number, failed: number}} Counts
+ * @returns {{normalized: number, unchanged: number, failed: number, changes: Object[]}} Results
  */
 function runPhoneNormalizer() {
   const countryCode = typeof defaultCountryCode !== 'undefined' ? defaultCountryCode : '+49';
@@ -241,6 +332,7 @@ function runPhoneNormalizer() {
   let normalized = 0;
   let unchanged = 0;
   let failed = 0;
+  const changes = []; // { name, before, after }
 
   contacts.forEach(contact => {
     const original = contact.phoneNumber;
@@ -252,6 +344,8 @@ function runPhoneNormalizer() {
       unchanged++;
       return;
     }
+
+    changes.push({ name: contact.getName(), before: original.trim(), after: formatted });
 
     if (isDryRun) {
       Logger.log(`🧪 [DRY RUN] ${contact.getName()}: "${original}" → "${formatted}"`);
@@ -272,8 +366,13 @@ function runPhoneNormalizer() {
     }
   });
 
+  // Send summary report
+  if (changes.length > 0 && !isDryRun && shouldSendActionReports()) {
+    sendPhoneNormalizerReport(changes);
+  }
+
   Logger.log(`📱 Phone normalizer done: ${normalized} normalized, ${unchanged} unchanged, ${failed} failed`);
-  return { normalized, unchanged, failed };
+  return { normalized, unchanged, failed, changes };
 }
 
 
@@ -303,6 +402,36 @@ function normalizePhoneNumber(phone, countryCode) {
 }
 
 
+/**
+ * Sends a summary email of phone normalization changes.
+ * @param {Object[]} changes Array of { name, before, after }
+ * @private
+ */
+function sendPhoneNormalizerReport(changes) {
+  const emailManager = new EmailManager();
+  const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
+  const subject = '📱 Phone Normalizer Summary';
+
+  const textBody = ['📱 Phone Normalizer Summary', '',
+    `${changes.length} numbers normalized:`, '',
+    ...changes.map(c => `  • ${c.name}: "${c.before}" → "${c.after}"`)
+  ].join('\n');
+
+  const listHtml = changes.map(c =>
+    `<li><strong>${c.name}</strong>: ${c.before} → <strong>${c.after}</strong></li>`
+  ).join('\n');
+
+  const htmlBody = EmailTemplates.wrapEmail(
+    EmailTemplates.header('📱 Phone Normalizer Summary', `${changes.length} numbers normalized`) +
+    `<ul>${listHtml}</ul>` +
+    EmailTemplates.footer()
+  );
+
+  emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  Logger.log(`✅ Sent phone normalizer report (${changes.length} changes)`);
+}
+
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Instagram sync
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -314,7 +443,7 @@ function normalizePhoneNumber(phone, countryCode) {
  *
  * Contacts with broken handles are collected and reported via email.
  *
- * @returns {{valid: number, broken: number, checked: number}} Counts
+ * @returns {{valid: number, broken: number, checked: number}} Results
  */
 function runInstagramSync() {
   const isDryRun = typeof dryRun !== 'undefined' && dryRun;
@@ -332,7 +461,7 @@ function runInstagramSync() {
 
   let valid = 0;
   let broken = 0;
-  const brokenContacts = []; // { contact, handle, status }
+  const brokenContacts = []; // { contact, handle }
 
   contactsWithInstagram.forEach(contact => {
     contact.instagramNames.forEach(handle => {
@@ -352,8 +481,8 @@ function runInstagramSync() {
     Utilities.sleep(1000);
   });
 
-  // Send report if there are broken handles
-  if (brokenContacts.length > 0 && !isDryRun) {
+  // Send report if there are broken handles (Instagram sync always reports broken ones)
+  if (brokenContacts.length > 0 && !isDryRun && shouldSendActionReports()) {
     sendInstagramSyncReport(brokenContacts);
   }
 
@@ -390,7 +519,6 @@ function checkInstagramHandle(handle) {
 
 /**
  * Sends an email report of contacts with broken Instagram handles.
- *
  * @param {Object[]} brokenContacts Array of { contact, handle }
  * @private
  */
