@@ -124,6 +124,10 @@ const autoLabelRules = [
 
 const defaultCountryCode = '+49';
 
+// ─── Action reports ───────────────────────────────────────────────────────────
+// Send a summary email after each action runs. Set to false to disable.
+const sendActionReports = true;
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //
