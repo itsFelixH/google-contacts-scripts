@@ -411,19 +411,3 @@ function logContactNames(contacts) {
   const names = contacts.map(contact => contact.getName());
   Logger.log(names);
 }
-
-
-/**
- * Logs detailed information for a list of contacts.
- * @param {Contact[]} contacts
- */
-function logDetailedContactsList(contacts) {
-  if (contacts.length === 0) {
-    Logger.log('No contacts to display');
-    return;
-  }
-  contacts.forEach(contact => {
-    contact.logContactDetails();
-    Logger.log('------------------------');
-  });
-}
