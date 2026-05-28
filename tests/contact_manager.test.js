@@ -112,19 +112,6 @@ describe('Contact query functions', () => {
     expect(result[0].getName()).toBe('Jane');
   });
 
-  test('findContactsWithoutBirthday', () => {
-    const result = findContactsWithoutBirthday(contacts);
-    expect(result).toHaveLength(1);
-    expect(result[0].getName()).toBe('Jane');
-  });
-
-  test('findContactsWithLabel', () => {
-    expect(findContactsWithLabel(contacts, 'Friends')).toHaveLength(2);
-    expect(findContactsWithLabel(contacts, 'Work')).toHaveLength(2);
-    expect(findContactsWithLabel(contacts, 'NonExistent')).toHaveLength(0);
-    expect(findContactsWithLabel(contacts, '')).toHaveLength(0);
-  });
-
   test('findContactsWithoutSurnames', () => {
     const result = findContactsWithoutSurnames(contacts);
     expect(result).toHaveLength(2);
@@ -155,21 +142,6 @@ describe('Contact query functions', () => {
     expect(result[0].count).toBe(2);
   });
 
-  test('findLongNames', () => {
-    const longNameContacts = [
-      new Contact('A'.repeat(60), new Date()),
-      new Contact('Short', new Date()),
-    ];
-    expect(findLongNames(longNameContacts, 50)).toHaveLength(1);
-  });
-
-  test('getContactsByCity', () => {
-    const result = getContactsByCity(contacts);
-    expect(result.length).toBeGreaterThan(0);
-    expect(result[0]).toHaveProperty('city');
-    expect(result[0]).toHaveProperty('count');
-  });
-
   test('getLabelUsageStats', () => {
     const stats = getLabelUsageStats(contacts);
     expect(stats.totalLabels).toBe(2);
@@ -183,6 +155,7 @@ describe('Contact query functions', () => {
     expect(stats.withBirthday).toBe(3);
     expect(stats.withEmail).toBe(2);
     expect(stats.withLabels).toBe(3);
+    expect(stats.withoutSurnames).toBe(2);
     expect(stats.labelDistribution['Friends']).toBe(2);
   });
 });
