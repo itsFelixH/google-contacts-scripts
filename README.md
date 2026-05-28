@@ -209,12 +209,16 @@ const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
 
 // Monthly overview on the 1st (set to false to disable)
 const monthlyOverview = true;
+
+// Run auto-labeling weekly (set to true to enable)
+const scheduleAutoLabeling = false;
 ```
 
-This creates three triggers:
+This creates triggers:
 - **Upcoming Birthdays** — daily (or weekly) at the configured hour
 - **All Reports** — weekly on the configured day
 - **Contact Overview** — 1st of each month (optional)
+- **Auto-labeling** — weekly on the configured day (optional, off by default)
 
 ### Email customization
 
