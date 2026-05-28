@@ -1,58 +1,73 @@
 /**
+ * @fileoverview Contact fetching, filtering, and analysis.
+ *
+ * This file handles:
+ * - Fetching contacts from the Google People API (with pagination and retries)
+ * - Filtering contacts by various criteria (labels, fields, duplicates)
+ * - Computing statistics about a contact collection
+ */
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// API — Fetching contacts from Google
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
  * Fetches all contacts from Google Contacts, optionally filtering by labels.
- * @param {string[]} [labelFilter=[]] Array of label names to filter
- * @param {number} [maxRetries=3] Max API retry attempts
+ * Handles pagination automatically and retries on transient API errors.
+ *
+ * @param {string[]} [labelNames=[]] Only include contacts with these labels (empty = all)
+ * @param {number} [maxRetries=3] Max API retry attempts per page
  * @returns {Contact[]} Array of Contact objects
  */
-function fetchContacts(labelFilter = [], maxRetries = 3) {
+function fetchContacts(labelNames = [], maxRetries = 3) {
   try {
-    validateLabelFilter(labelFilter);
-    const peopleService = People.People;
+    validateLabelFilter(labelNames);
     const labelManager = new LabelManager();
-    let contacts = [];
+    const contacts = [];
     let pageToken = null;
     let attempt = 0;
 
+    // Read API settings from config, with sensible defaults
     const pageSize = typeof apiPageSize !== 'undefined' ? apiPageSize : 100;
     const personFields = typeof apiPersonFields !== 'undefined' ? apiPersonFields : 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies';
     const retries = typeof apiMaxRetries !== 'undefined' ? apiMaxRetries : maxRetries;
 
-    if (labelFilter.length < 1) {
-      Logger.log('🔍 Fetching all contacts from Google Contacts...');
+    if (labelNames.length === 0) {
+      Logger.log('🔍 Fetching all contacts...');
     } else {
-      Logger.log(`🔍 Fetching contacts with label(s): '${labelFilter.join(', ')}'...`);
+      Logger.log(`🔍 Fetching contacts with label(s): '${labelNames.join(', ')}'...`);
     }
 
+    // Paginate through all contacts
     do {
       attempt++;
       try {
-        const response = peopleService.Connections.list('people/me', {
-          pageSize: pageSize,
-          personFields: personFields,
-          pageToken: pageToken
+        const response = People.People.Connections.list('people/me', {
+          pageSize,
+          personFields,
+          pageToken
         });
 
         const connections = response.connections || [];
-        connections.forEach(person => {
-          const contactLabels = getContactLabels(person, labelManager);
-          const labelMatch = contactMatchesLabelFilter(labelFilter, contactLabels);
+        for (const person of connections) {
+          const labels = resolveLabelsForPerson(person, labelManager);
 
-          if (labelMatch) {
-            const contact = createContact(person, contactLabels);
-            if (contact) {
-              contacts.push(contact);
-            }
-          }
-        });
+          // Skip contacts that don't match the label filter
+          if (!matchesLabelFilter(labelNames, labels)) continue;
+
+          const contact = parseContactFromPerson(person, labels);
+          if (contact) contacts.push(contact);
+        }
 
         pageToken = response.nextPageToken;
-        attempt = 0; // Reset retry counter on success
+        attempt = 0; // Reset on success
       } catch (error) {
-        handleApiError(error, attempt, retries);
+        retryOrThrow(error, attempt, retries);
       }
     } while (pageToken || (attempt > 0 && attempt <= retries));
 
-    Logger.log(`📇 Fetched ${contacts.length} contacts!`);
+    Logger.log(`📇 Fetched ${contacts.length} contacts`);
     return contacts;
   } catch (error) {
     Logger.log(`💥 Critical error fetching contacts: ${error.message}`);
@@ -62,103 +77,119 @@ function fetchContacts(labelFilter = [], maxRetries = 3) {
 
 
 /**
- * Creates a Contact object from a People API person response.
- * @param {Object} person People API person object
- * @param {string[]} labelNames Array of label names
- * @returns {Contact|null} Contact instance or null on error
+ * Parses a People API person object into a Contact instance.
+ *
+ * @param {Object} person Raw person object from the People API
+ * @param {string[]} labels Resolved label names for this person
+ * @returns {Contact|null} A Contact instance, or null if parsing fails
+ * @private
  */
-function createContact(person, labelNames) {
+function parseContactFromPerson(person, labels) {
   try {
+    // Parse birthday: use current year as placeholder if year is missing
     let birthday = null;
     if (person.birthdays?.[0]) {
-      const birthdayData = person.birthdays[0].date;
-      const year = birthdayData.year || new Date().getFullYear();
-      birthday = new Date(year, birthdayData.month - 1, birthdayData.day);
+      const { year, month, day } = person.birthdays[0].date;
+      birthday = new Date(year || new Date().getFullYear(), month - 1, day);
     }
+
+    // Combine all city values from addresses
+    const city = (person.addresses || [])
+      .map(addr => addr.city)
+      .filter(Boolean)
+      .join(', ');
+
+    // Extract Instagram usernames from biography/notes
+    const notes = (person.biographies || []).map(bio => bio.value).join('. ');
+    const instagram = extractInstagramNamesFromNotes(notes);
 
     return new Contact(
       person.names?.[0]?.displayName || 'Unnamed Contact',
       birthday,
-      labelNames,
+      labels,
       person.emailAddresses?.[0]?.value,
-      (person.addresses || []).map(address => address.city).filter(Boolean).join(', '),
+      city,
       person.phoneNumbers?.[0]?.value || '',
-      extractInstagramNamesFromNotes((person.biographies || []).map(bio => bio.value).join('. ')),
+      instagram,
       person.resourceName || ''
     );
   } catch (error) {
-    Logger.log(`⚠️ Error creating contact: ${error.message}`);
+    Logger.log(`⚠️ Error parsing contact: ${error.message}`);
     return null;
   }
 }
 
 
 /**
- * Retrieves all contact labels for a person.
- * @param {Object} person People API response object
- * @param {LabelManager} labelManager Label management instance
- * @returns {string[]} Array of label names
+ * Resolves label names for a person by looking up their group memberships.
+ *
+ * @param {Object} person People API person object
+ * @param {LabelManager} labelManager Label lookup instance
+ * @returns {string[]} Array of human-readable label names
+ * @private
  */
-function getContactLabels(person, labelManager) {
+function resolveLabelsForPerson(person, labelManager) {
   try {
     const memberships = person.memberships || [];
     const labelIds = memberships
       .filter(m => m.contactGroupMembership)
       .map(m => m.contactGroupMembership.contactGroupId);
-    const labelNames = labelManager.getLabelNamesByIds(labelIds);
 
-    if (!Array.isArray(labelNames)) return [];
-    return labelNames;
+    const names = labelManager.getLabelNamesByIds(labelIds);
+    return Array.isArray(names) ? names : [];
   } catch (error) {
-    Logger.log(`❌ Error getting labels: ${error.message}`);
+    Logger.log(`❌ Error resolving labels: ${error.message}`);
     return [];
   }
 }
 
 
 /**
- * Determines if a contact matches the label filter criteria.
- * @param {string[]} labelFilter Configured label filter
- * @param {string[]} contactLabels Contact's assigned labels
- * @returns {boolean}
+ * Checks if a contact's labels satisfy the label filter.
+ * An empty filter means "include all contacts".
+ *
+ * @param {string[]} filter Required labels (empty = no filter)
+ * @param {string[]} contactLabels The contact's actual labels
+ * @returns {boolean} True if the contact should be included
+ * @private
  */
-function contactMatchesLabelFilter(labelFilter, contactLabels) {
-  try {
-    if (labelFilter.length === 0) return true;
-    return contactLabels.some(label => labelFilter.includes(label.trim()));
-  } catch (error) {
-    Logger.log(`❌ Label matching failed: ${error.message}`);
-    return false;
-  }
+function matchesLabelFilter(filter, contactLabels) {
+  if (filter.length === 0) return true;
+  return contactLabels.some(label => filter.includes(label.trim()));
 }
 
 
 /**
- * Handles API errors with exponential backoff retry logic.
- * @param {Error} error Original error object
- * @param {number} attempt Current attempt number
+ * Handles an API error with exponential backoff.
+ * Throws if max retries are exhausted.
+ *
+ * @param {Error} error The error that occurred
+ * @param {number} attempt Current attempt number (1-based)
  * @param {number} maxRetries Maximum allowed retries
- * @throws {Error} If retries exhausted
+ * @throws {Error} If all retries are exhausted
+ * @private
  */
-function handleApiError(error, attempt, maxRetries) {
-  const retryDelay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+function retryOrThrow(error, attempt, maxRetries) {
+  // Exponential backoff with jitter
+  const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
 
   Logger.log(`❌ API Error (attempt ${attempt}/${maxRetries}): ${error.message}`);
-  Logger.log(`⏳ Retrying in ${(retryDelay / 1000).toFixed(1)} seconds...`);
+  Logger.log(`⏳ Retrying in ${(delay / 1000).toFixed(1)}s...`);
 
   if (attempt >= maxRetries) {
     Logger.log('💥 Maximum retries exceeded');
     throw error;
   }
 
-  Utilities.sleep(retryDelay);
+  Utilities.sleep(delay);
 }
 
 
 /**
- * Validates label filter configuration.
- * @param {Array} labelFilter Labels to validate
- * @throws {Error} If invalid label format
+ * Validates that a label filter is a valid array of strings.
+ *
+ * @param {*} labelFilter Value to validate
+ * @throws {Error} If the filter is not a valid string array
  */
 function validateLabelFilter(labelFilter) {
   if (!Array.isArray(labelFilter)) {
@@ -171,70 +202,72 @@ function validateLabelFilter(labelFilter) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Contact query/filter functions
+// Filters — Finding contacts that match specific criteria
 // ═══════════════════════════════════════════════════════════════════════════════
 
-
 /**
- * Finds contacts without any labels assigned.
- * @param {Contact[]} contacts
- * @returns {Contact[]}
+ * Finds contacts that have no labels assigned.
+ *
+ * @param {Contact[]} contacts Contacts to search
+ * @returns {Contact[]} Contacts with zero labels
  */
-function findContactsWithoutLabels(contacts) {
-  return contacts.filter(contact => contact.getLabels().length === 0);
+function findUnlabeled(contacts) {
+  return contacts.filter(c => c.getLabels().length === 0);
 }
 
 
 /**
- * Finds contacts with upcoming birthdays within the specified number of days.
- * @param {Contact[]} contacts
- * @param {number} [days=7] Days to look ahead
- * @returns {Contact[]} Sorted by upcoming birthday date
+ * Finds contacts with a birthday in the next N days.
+ * Results are sorted by soonest birthday first.
+ *
+ * @param {Contact[]} contacts Contacts to search
+ * @param {number} [days=7] Number of days to look ahead
+ * @returns {Contact[]} Contacts with upcoming birthdays, sorted by date
  */
-function findContactsWithUpcomingBirthdays(contacts, days = 7) {
+function findUpcomingBirthdays(contacts, days = 7) {
   const today = new Date();
-  const futureDate = new Date();
-  futureDate.setDate(today.getDate() + days);
+  const cutoff = new Date();
+  cutoff.setDate(today.getDate() + days);
 
-  const upcoming = contacts
-    .filter(contact => contact.getBirthday())
-    .map(contact => {
-      const birthday = contact.getBirthday();
-      const nextBirthday = new Date(today.getFullYear(), birthday.getMonth(), birthday.getDate());
-      if (nextBirthday < today) {
-        nextBirthday.setFullYear(today.getFullYear() + 1);
-      }
-      return { contact, nextBirthday };
+  return contacts
+    .filter(c => c.getBirthday()) // Only contacts with a birthday
+    .map(c => {
+      // Calculate next occurrence of this birthday
+      const bday = c.getBirthday();
+      const next = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
+      if (next < today) next.setFullYear(today.getFullYear() + 1);
+      return { contact: c, nextBirthday: next };
     })
-    .filter(item => item.nextBirthday >= today && item.nextBirthday <= futureDate)
-    .sort((a, b) => a.nextBirthday - b.nextBirthday);
-
-  return upcoming.map(item => item.contact);
+    .filter(item => item.nextBirthday >= today && item.nextBirthday <= cutoff)
+    .sort((a, b) => a.nextBirthday - b.nextBirthday)
+    .map(item => item.contact);
 }
 
 
 /**
- * Finds contacts with potentially invalid phone numbers.
- * @param {Contact[]} contacts
- * @returns {Contact[]}
+ * Finds contacts with phone numbers that don't match the configured regex.
+ *
+ * @param {Contact[]} contacts Contacts to search
+ * @returns {Contact[]} Contacts with invalid-looking phone numbers
  */
-function findContactsWithInvalidPhones(contacts) {
+function findInvalidPhones(contacts) {
   const regex = typeof phoneRegex !== 'undefined' ? phoneRegex : /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
-  return contacts.filter(contact => {
-    const phone = contact.phoneNumber;
+  return contacts.filter(c => {
+    const phone = c.phoneNumber;
     return phone && phone.trim() && !regex.test(phone.trim());
   });
 }
 
 
 /**
- * Finds contacts without surnames (only first name, no space in name).
- * @param {Contact[]} contacts
- * @returns {Contact[]}
+ * Finds contacts whose name has no space (likely missing a surname).
+ *
+ * @param {Contact[]} contacts Contacts to search
+ * @returns {Contact[]} Contacts with single-word names
  */
-function findContactsWithoutSurnames(contacts) {
-  return contacts.filter(contact => {
-    const name = contact.getName().trim();
+function findMissingSurnames(contacts) {
+  return contacts.filter(c => {
+    const name = c.getName().trim();
     return name && !name.includes(' ');
   });
 }
@@ -242,124 +275,136 @@ function findContactsWithoutSurnames(contacts) {
 
 /**
  * Finds contacts missing a specific field.
- * @param {Contact[]} contacts
- * @param {string} field Field to check ('email', 'phone', 'city', 'birthday')
- * @returns {Contact[]}
+ *
+ * @param {Contact[]} contacts Contacts to search
+ * @param {string} field Field to check: 'email', 'phone', 'city', or 'birthday'
+ * @returns {Contact[]} Contacts where the field is empty/missing
  */
-function findContactsMissingField(contacts, field) {
-  return contacts.filter(contact => {
+function findMissingField(contacts, field) {
+  return contacts.filter(c => {
     switch (field) {
-      case 'email': return !contact.email || !contact.email.trim();
-      case 'phone': return !contact.phoneNumber || !contact.phoneNumber.trim();
-      case 'city': return !contact.city || !contact.city.trim();
-      case 'birthday': return !contact.getBirthday();
-      default: return false;
+      case 'email':    return !c.email || !c.email.trim();
+      case 'phone':    return !c.phoneNumber || !c.phoneNumber.trim();
+      case 'city':     return !c.city || !c.city.trim();
+      case 'birthday': return !c.getBirthday();
+      default:         return false;
     }
   });
 }
 
 
 /**
- * Finds potential duplicate contacts based on configured match fields.
- * Uses index maps for efficient lookup instead of nested iteration.
- * @param {Contact[]} contacts
+ * Finds groups of contacts that appear to be duplicates.
+ * Uses index maps for O(n) performance instead of O(n²) comparison.
+ *
+ * Contacts are grouped if they share any of the configured match fields
+ * (name, email, or phone). Groups connected by shared fields are merged.
+ *
+ * @param {Contact[]} contacts Contacts to search
  * @param {string[]} [matchFields=['name', 'email', 'phone']] Fields to compare
- * @returns {Object[]} Array of duplicate groups
+ * @returns {Object[]} Array of { contacts, count, reason }
  */
-function findPotentialDuplicates(contacts, matchFields) {
+function findDuplicates(contacts, matchFields) {
   const fields = matchFields || ['name', 'email', 'phone'];
-  const groups = []; // Array of Sets (indices)
-  const assignedGroup = new Array(contacts.length).fill(-1);
+  const groups = [];  // Array of Sets containing contact indices
+  const groupOf = new Array(contacts.length).fill(-1); // index → group ID
 
-  // Build index maps for each field
-  const nameMap = new Map();   // lowercase name → [indices]
-  const emailMap = new Map();  // email → [indices]
-  const phoneMap = new Map();  // phone → [indices]
+  // Build lookup maps: field value → [contact indices]
+  const nameIndex = new Map();
+  const emailIndex = new Map();
+  const phoneIndex = new Map();
 
   contacts.forEach((contact, i) => {
     if (fields.includes('name')) {
       const key = contact.getName().toLowerCase().trim();
-      if (!nameMap.has(key)) nameMap.set(key, []);
-      nameMap.get(key).push(i);
+      if (!nameIndex.has(key)) nameIndex.set(key, []);
+      nameIndex.get(key).push(i);
     }
     if (fields.includes('email') && contact.email) {
       const key = contact.email.trim().toLowerCase();
-      if (!emailMap.has(key)) emailMap.set(key, []);
-      emailMap.get(key).push(i);
+      if (!emailIndex.has(key)) emailIndex.set(key, []);
+      emailIndex.get(key).push(i);
     }
     if (fields.includes('phone') && contact.phoneNumber) {
       const key = contact.phoneNumber.trim();
-      if (!phoneMap.has(key)) phoneMap.set(key, []);
-      phoneMap.get(key).push(i);
+      if (!phoneIndex.has(key)) phoneIndex.set(key, []);
+      phoneIndex.get(key).push(i);
     }
   });
 
-  // Merge indices that share a key into groups
+  /**
+   * Merges a set of contact indices into a single group.
+   * If any index already belongs to a group, all are merged into that group.
+   * @param {number[]} indices Contact indices that should be in the same group
+   */
   function mergeIntoGroup(indices) {
     if (indices.length < 2) return;
 
-    // Find if any index already belongs to a group
-    let targetGroup = -1;
+    // Find existing group for any of these indices
+    let target = -1;
     for (const idx of indices) {
-      if (assignedGroup[idx] !== -1) {
-        targetGroup = assignedGroup[idx];
-        break;
-      }
+      if (groupOf[idx] !== -1) { target = groupOf[idx]; break; }
     }
 
-    if (targetGroup === -1) {
-      targetGroup = groups.length;
+    // Create new group if none exists
+    if (target === -1) {
+      target = groups.length;
       groups.push(new Set());
     }
 
+    // Add all indices to the target group, merging if needed
     for (const idx of indices) {
-      if (assignedGroup[idx] === -1) {
-        groups[targetGroup].add(idx);
-        assignedGroup[idx] = targetGroup;
-      } else if (assignedGroup[idx] !== targetGroup) {
-        // Merge two groups
-        const otherGroup = assignedGroup[idx];
-        for (const otherIdx of groups[otherGroup]) {
-          groups[targetGroup].add(otherIdx);
-          assignedGroup[otherIdx] = targetGroup;
+      if (groupOf[idx] === -1) {
+        groups[target].add(idx);
+        groupOf[idx] = target;
+      } else if (groupOf[idx] !== target) {
+        // Merge the other group into target
+        const other = groupOf[idx];
+        for (const otherIdx of groups[other]) {
+          groups[target].add(otherIdx);
+          groupOf[otherIdx] = target;
         }
-        groups[otherGroup] = new Set();
+        groups[other] = new Set(); // Empty the merged group
       }
     }
   }
 
-  for (const indices of nameMap.values()) mergeIntoGroup(indices);
-  for (const indices of emailMap.values()) mergeIntoGroup(indices);
-  for (const indices of phoneMap.values()) mergeIntoGroup(indices);
+  // Process each index map — entries with 2+ indices are potential duplicates
+  for (const indices of nameIndex.values()) mergeIntoGroup(indices);
+  for (const indices of emailIndex.values()) mergeIntoGroup(indices);
+  for (const indices of phoneIndex.values()) mergeIntoGroup(indices);
 
-  // Convert groups to output format
+  // Convert non-empty groups to output format
   return groups
     .filter(group => group.size >= 2)
     .map(group => {
-      const groupContacts = [...group].map(i => contacts[i]);
-      return {
-        contacts: groupContacts,
-        count: groupContacts.length,
-        reason: 'name/email/phone match'
-      };
+      const members = [...group].map(i => contacts[i]);
+      return { contacts: members, count: members.length, reason: 'name/email/phone match' };
     });
 }
 
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Statistics — Aggregating data about contacts
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /**
- * Gets label usage statistics.
- * @param {Contact[]} contacts
- * @returns {Object} Label usage stats
+ * Computes label usage statistics across all contacts.
+ *
+ * @param {Contact[]} contacts Contacts to analyze
+ * @returns {{totalLabels: number, mostUsed: Object|null, leastUsed: Object|null, allLabels: Object[], unlabeledCount: number}}
  */
-function getLabelUsageStats(contacts) {
-  const labelCounts = {};
-  contacts.forEach(contact => {
-    contact.getLabels().forEach(label => {
-      labelCounts[label] = (labelCounts[label] || 0) + 1;
+function computeLabelStats(contacts) {
+  // Count how many contacts use each label
+  const counts = {};
+  contacts.forEach(c => {
+    c.getLabels().forEach(label => {
+      counts[label] = (counts[label] || 0) + 1;
     });
   });
 
-  const labelStats = Object.entries(labelCounts)
+  // Sort labels by usage (most used first)
+  const sorted = Object.entries(counts)
     .map(([label, count]) => ({
       label,
       count,
@@ -370,28 +415,30 @@ function getLabelUsageStats(contacts) {
   const unlabeledCount = contacts.filter(c => c.getLabels().length === 0).length;
 
   return {
-    totalLabels: labelStats.length,
-    mostUsed: labelStats[0] || null,
-    leastUsed: labelStats[labelStats.length - 1] || null,
-    allLabels: labelStats,
+    totalLabels: sorted.length,
+    mostUsed: sorted[0] || null,
+    leastUsed: sorted[sorted.length - 1] || null,
+    allLabels: sorted,
     unlabeledCount
   };
 }
 
 
 /**
- * Generates comprehensive statistics about a contacts collection.
- * @param {Contact[]} contacts
- * @returns {Object} Statistics object
+ * Computes comprehensive statistics about a contact collection.
+ * Runs in a single pass for efficiency.
+ *
+ * @param {Contact[]} contacts Contacts to analyze
+ * @returns {Object} Statistics with counts, percentages, and label distribution
  */
-function generateContactStats(contacts) {
-  const totalContacts = contacts.length;
+function computeContactStats(contacts) {
+  const total = contacts.length;
 
-  // Single pass for all field counts
+  // Single-pass counters
   let withBirthday = 0, withEmail = 0, withPhone = 0;
   let withCity = 0, withLabels = 0, withInstagram = 0;
   let withoutSurnames = 0;
-  const labelCounts = {};
+  const labelDistribution = {};
 
   contacts.forEach(c => {
     if (c.getBirthday()) withBirthday++;
@@ -403,19 +450,18 @@ function generateContactStats(contacts) {
     const labels = c.getLabels();
     if (labels.length > 0) {
       withLabels++;
-      labels.forEach(label => {
-        labelCounts[label] = (labelCounts[label] || 0) + 1;
-      });
+      labels.forEach(label => { labelDistribution[label] = (labelDistribution[label] || 0) + 1; });
     }
 
-    const name = c.getName().trim();
-    if (name && !name.includes(' ')) withoutSurnames++;
+    // Single-word name = likely missing surname
+    if (c.getName().trim() && !c.getName().includes(' ')) withoutSurnames++;
   });
 
-  const pct = (n) => totalContacts ? (n / totalContacts * 100).toFixed(1) : '0.0';
+  /** Calculates percentage, safe for zero total */
+  const pct = (n) => total ? (n / total * 100).toFixed(1) : '0.0';
 
   return {
-    totalContacts,
+    totalContacts: total,
     withBirthday,
     withEmail,
     withPhone,
@@ -429,25 +475,23 @@ function generateContactStats(contacts) {
     cityPercentage: pct(withCity),
     labelPercentage: pct(withLabels),
     instagramPercentage: pct(withInstagram),
-    labelDistribution: labelCounts
+    labelDistribution
   };
 }
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Logging helpers
+// Debug helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-
 /**
- * Logs the names of a list of contacts.
- * @param {Contact[]} contacts
+ * Logs all contact names to the Apps Script log.
+ * @param {Contact[]} contacts Contacts to log
  */
 function logContactNames(contacts) {
   if (contacts.length === 0) {
     Logger.log('No contacts to display');
     return;
   }
-  const names = contacts.map(contact => contact.getName());
-  Logger.log(names);
+  Logger.log(contacts.map(c => c.getName()));
 }
