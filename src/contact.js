@@ -71,7 +71,8 @@ class Contact {
   getBirthdayShortFormat() {
     try {
       if (this.birthday && this.birthday instanceof Date && !isNaN(this.birthday)) {
-        return Utilities.formatDate(this.birthday, Session.getScriptTimeZone(), 'dd.MM.');
+        const format = typeof birthdayFormat !== 'undefined' ? birthdayFormat : 'dd.MM.';
+        return Contact.formatBirthday(this.birthday, format);
       }
       return '';
     } catch (error) {
@@ -81,7 +82,30 @@ class Contact {
   }
 
   /**
-   * Gets the birthday formatted as "dd.MM.yyyy", or "dd.MM." if year is unknown.
+   * Formats a birthday date according to the given format string.
+   * Supported formats: 'dd.MM.', 'dd/MM', 'MM/dd', 'dd MMM', 'MMM dd'
+   * @param {Date} date
+   * @param {string} format
+   * @returns {string}
+   */
+  static formatBirthday(date, format) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthShort = monthNames[date.getMonth()];
+
+    switch (format) {
+      case 'dd/MM':    return `${day}/${month}`;
+      case 'MM/dd':    return `${month}/${day}`;
+      case 'dd MMM':   return `${day} ${monthShort}`;
+      case 'MMM dd':   return `${monthShort} ${day}`;
+      case 'dd.MM.':
+      default:         return `${day}.${month}.`;
+    }
+  }
+
+  /**
+   * Gets the birthday formatted with year (if known), or short format otherwise.
    * @returns {string}
    */
   getBirthdayLongFormat() {
@@ -89,7 +113,8 @@ class Contact {
     if (!this.hasKnownBirthYear()) {
       return this.getBirthdayShortFormat();
     }
-    return Utilities.formatDate(this.birthday, Session.getScriptTimeZone(), 'dd.MM.yyyy');
+    const short = this.getBirthdayShortFormat();
+    return `${short}${this.birthday.getFullYear()}`;
   }
 
   /**
