@@ -265,10 +265,8 @@ function formatName(name) {
   // Title case: lowercase everything, then capitalize first char of each word
   result = result.toLowerCase().replace(/(^|\s)\S/g, char => char.toUpperCase());
 
-  // Handle lowercase prefixes (configurable list)
-  const prefixes = typeof nameLowercasePrefixes !== 'undefined'
-    ? nameLowercasePrefixes
-    : ['von', 'van', 'de', 'del', 'der', 'di', 'la', 'le', 'el'];
+  // Handle lowercase prefixes (hardcoded — these are universal)
+  const prefixes = ['von', 'van', 'de', 'del', 'der', 'di', 'la', 'le', 'el'];
 
   result = result.split(' ').map((word, i) => {
     if (i === 0) return word; // Never lowercase the first word
@@ -480,9 +478,8 @@ function runInstagramSync() {
       }
     });
 
-    // Rate limiting — configurable delay between requests
-    const delay = typeof instagramCheckDelay !== 'undefined' ? instagramCheckDelay : 1000;
-    Utilities.sleep(delay);
+    // Rate limiting — 1s between requests to avoid Instagram blocking
+    Utilities.sleep(1000);
   });
 
   // Send report if there are broken handles (Instagram sync always reports broken ones)
