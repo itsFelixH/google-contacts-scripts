@@ -48,10 +48,11 @@ describe('EmailManager', () => {
 
     test('includes age when birthdayShowAge is true', () => {
       const today = new Date();
-      const nextDay = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate() + 1);
-      const contacts = [new Contact('Test Person', nextDay)];
+      // Create a birthday 2 days from now, 25 years ago
+      const bday = new Date(today.getFullYear() - 25, today.getMonth(), today.getDate() + 2);
+      const contacts = [new Contact('Test Person', bday)];
       emailManager.sendUpcomingBirthdaysEmail(contacts, 7);
-      expect(lastRawMessage).toContain('turns 31');
+      expect(lastRawMessage).toContain('turns 26');
     });
   });
 
