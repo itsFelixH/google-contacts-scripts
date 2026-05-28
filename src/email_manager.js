@@ -263,16 +263,20 @@ class EmailManager {
     const displayName = fieldNames[field] || field;
     const subject = (this.subjects.missingInfo || `${emoji} Missing Info: {field}`).replace('{field}', displayName);
 
-    // Plain text
+    // Plain text — show what info the contact does have for context
     const textBody = [`${emoji} Contacts Missing ${displayName}`, '',
-      ...contacts.map(c => `  • ${c.getName()}`)
+      ...contacts.map(c => {
+        const has = this._summarizeExistingFields(c, field);
+        return `  • ${c.getName()}${has ? `  (has: ${has})` : ''}`;
+      })
     ].join('\n');
 
-    // HTML — include edit links if configured
+    // HTML — show existing info + edit links
     const listHtml = contacts.map(c => {
       const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
-        ? ` — <a href="${c.getContactLink()}">edit</a>` : '';
-      return `<li>${c.getName()}${editLink}</li>`;
+        ? ` <a href="${c.getContactLink()}">edit</a>` : '';
+      const has = this._summarizeExistingFieldsHtml(c, field);
+      return `<li><strong>${c.getName()}</strong>${editLink}${has}</li>`;
     }).join('\n');
 
     const htmlBody = this.templates.wrapEmail(
@@ -282,6 +286,42 @@ class EmailManager {
     );
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+  /**
+   * Summarizes what fields a contact does have (excluding the missing one).
+   * Used for plain text version.
+   * @param {Contact} contact
+   * @param {string} missingField The field that's missing (excluded from summary)
+   * @returns {string} Comma-separated list of existing fields, or ''
+   * @private
+   */
+  _summarizeExistingFields(contact, missingField) {
+    const parts = [];
+    if (missingField !== 'email' && contact.email) parts.push(`📧 ${contact.email}`);
+    if (missingField !== 'phone' && contact.phoneNumber) parts.push(`📱 ${contact.phoneNumber}`);
+    if (missingField !== 'city' && contact.city) parts.push(`🌆 ${contact.city}`);
+    if (missingField !== 'birthday' && contact.getBirthday()) parts.push(`🎂 ${contact.getBirthdayShortFormat()}`);
+    if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().join(', ')}`);
+    return parts.join(', ');
+  }
+
+  /**
+   * Summarizes what fields a contact does have as HTML.
+   * @param {Contact} contact
+   * @param {string} missingField The field that's missing (excluded from summary)
+   * @returns {string} HTML snippet or ''
+   * @private
+   */
+  _summarizeExistingFieldsHtml(contact, missingField) {
+    const parts = [];
+    if (missingField !== 'email' && contact.email) parts.push(`📧 ${contact.email}`);
+    if (missingField !== 'phone' && contact.phoneNumber) parts.push(`📱 ${contact.phoneNumber}`);
+    if (missingField !== 'city' && contact.city) parts.push(`🌆 ${contact.city}`);
+    if (missingField !== 'birthday' && contact.getBirthday()) parts.push(`🎂 ${contact.getBirthdayShortFormat()}`);
+    if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().join(', ')}`);
+    if (parts.length === 0) return '';
+    return `<br><small>${parts.join(' · ')}</small>`;
   }
 
   /**
