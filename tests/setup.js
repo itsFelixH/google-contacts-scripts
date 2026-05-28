@@ -11,7 +11,6 @@ global.phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
 global.apiPageSize = 100;
 global.apiMaxRetries = 3;
 global.apiPersonFields = 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies';
-global.verboseLogging = false;
 global.dryRun = false;
 global.emailSubjects = {};
 global.enabledReports = {
