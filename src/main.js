@@ -1,5 +1,12 @@
 /**
- * @fileoverview Google Contacts Scripts — Main entry points for contact reports.
+ * @fileoverview Report entry points.
+ *
+ * Each function here is a top-level report that can be:
+ * - Run manually from the Apps Script editor dropdown
+ * - Triggered on a schedule via setupSchedules()
+ * - Called from sendAllReports() for batch execution
+ *
+ * Flow: fetch contacts → filter → prepare (exclude/sort/limit) → send email
  */
 
 
@@ -23,7 +30,7 @@ function sendUpcomingBirthdaysReport(days) {
     }
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const upcoming = prepareContacts(findContactsWithUpcomingBirthdays(contacts, lookAhead));
+    const upcoming = prepareContacts(findUpcomingBirthdays(contacts, lookAhead));
 
     if (upcoming.length === 0) {
       Logger.log(`No upcoming birthdays in the next ${lookAhead} days`);
@@ -53,7 +60,7 @@ function sendDuplicateContactsReport() {
   try {
     const contacts = fetchContacts(useLabel ? labelFilter : []);
     const matchFields = typeof duplicateMatchFields !== 'undefined' ? duplicateMatchFields : ['name', 'email', 'phone'];
-    const duplicates = findPotentialDuplicates(contacts, matchFields);
+    const duplicates = findDuplicates(contacts, matchFields);
 
     if (duplicates.length === 0) {
       Logger.log('No potential duplicates found');
@@ -80,7 +87,7 @@ function sendContactOverviewReport() {
     const isDryRun = typeof dryRun !== 'undefined' && dryRun;
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const stats = generateContactStats(contacts);
+    const stats = computeContactStats(contacts);
 
     if (isDryRun) {
       Logger.log(`🧪 [DRY RUN] Would send Contact Overview report (${stats.totalContacts} contacts)`);
@@ -107,9 +114,9 @@ function sendLabelOverviewReport() {
     const isDryRun = typeof dryRun !== 'undefined' && dryRun;
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const labelStats = getLabelUsageStats(contacts);
-    const unlabeled = prepareContacts(findContactsWithoutLabels(contacts));
-    const stats = generateContactStats(contacts);
+    const labelStats = computeLabelStats(contacts);
+    const unlabeled = prepareContacts(findUnlabeled(contacts));
+    const stats = computeContactStats(contacts);
 
     if (isDryRun) {
       Logger.log(`🧪 [DRY RUN] Would send Label Overview report (${labelStats.totalLabels} labels, ${unlabeled.length} unlabeled)`);
@@ -139,7 +146,7 @@ function sendMissingInfoReport(field) {
     }
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const missing = prepareContacts(findContactsMissingField(contacts, field));
+    const missing = prepareContacts(findMissingField(contacts, field));
 
     if (missing.length === 0) {
       Logger.log(`No contacts missing ${field} found`);
@@ -163,8 +170,8 @@ function sendMissingInfoReport(field) {
 function sendDataQualityReport() {
   try {
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const noSurname = prepareContacts(findContactsWithoutSurnames(contacts));
-    const invalidPhones = prepareContacts(findContactsWithInvalidPhones(contacts));
+    const noSurname = prepareContacts(findMissingSurnames(contacts));
+    const invalidPhones = prepareContacts(findInvalidPhones(contacts));
 
     if (noSurname.length === 0 && invalidPhones.length === 0) {
       Logger.log('No data quality issues found');
