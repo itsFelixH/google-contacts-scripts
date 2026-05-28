@@ -26,97 +26,8 @@ function isLabelFilterConfigured() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Sends an email report of all contacts that don't have any labels assigned.
- */
-function sendUnlabeledContactsReport() {
-  try {
-    if (!isLabelFilterConfigured()) return;
-    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
-
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const unlabeled = findContactsWithoutLabels(contacts);
-
-    if (unlabeled.length === 0) {
-      Logger.log('No unlabeled contacts found');
-      return;
-    }
-
-    if (isDryRun) {
-      Logger.log(`🧪 [DRY RUN] Would send unlabeled contacts report (${unlabeled.length} contacts)`);
-      return;
-    }
-
-    const emailManager = new EmailManager();
-    emailManager.sendUnlabeledContactsEmail(unlabeled);
-    Logger.log(`Sent unlabeled contacts report (${unlabeled.length} contacts)`);
-  } catch (error) {
-    Logger.log(`Error in sendUnlabeledContactsReport: ${error.message}`);
-    throw error;
-  }
-}
-
-
-/**
- * Sends an email report of all contacts that don't have a birthday set.
- */
-function sendContactsWithoutBirthdayReport() {
-  try {
-    if (!isLabelFilterConfigured()) return;
-    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
-
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const missing = findContactsWithoutBirthday(contacts);
-
-    if (missing.length === 0) {
-      Logger.log('No contacts without birthday found');
-      return;
-    }
-
-    if (isDryRun) {
-      Logger.log(`🧪 [DRY RUN] Would send contacts without birthday report (${missing.length} contacts)`);
-      return;
-    }
-
-    const emailManager = new EmailManager();
-    emailManager.sendContactsWithoutBirthdayEmail(missing);
-    Logger.log(`Sent contacts without birthday report (${missing.length} contacts)`);
-  } catch (error) {
-    Logger.log(`Error in sendContactsWithoutBirthdayReport: ${error.message}`);
-    throw error;
-  }
-}
-
-
-/**
- * Sends an email report of all contacts that have a specific label.
- * @param {string} label The label to filter contacts by
- */
-function sendContactsWithLabelReport(label) {
-  try {
-    if (!label || typeof label !== 'string' || !label.trim()) {
-      throw new Error('Label parameter is required and must be a non-empty string');
-    }
-
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const labeled = findContactsWithLabel(contacts, label.trim());
-
-    if (labeled.length === 0) {
-      Logger.log(`No contacts found with label "${label}"`);
-      return;
-    }
-
-    const emailManager = new EmailManager();
-    emailManager.sendContactsWithLabelEmail(label, labeled);
-    Logger.log(`Sent contacts with label "${label}" report (${labeled.length} contacts)`);
-  } catch (error) {
-    Logger.log(`Error in sendContactsWithLabelReport: ${error.message}`);
-    throw error;
-  }
-}
-
-
-/**
- * Sends an email report of contacts with upcoming birthdays.
+ * Sends the Upcoming Birthdays report.
+ * Lists contacts with birthdays in the next N days.
  * @param {number} [days] Number of days to look ahead (defaults to config)
  */
 function sendUpcomingBirthdaysReport(days) {
@@ -138,13 +49,13 @@ function sendUpcomingBirthdaysReport(days) {
     }
 
     if (isDryRun) {
-      Logger.log(`🧪 [DRY RUN] Would send upcoming birthdays report (${upcoming.length} contacts, ${lookAhead} days)`);
+      Logger.log(`🧪 [DRY RUN] Would send Upcoming Birthdays report (${upcoming.length} contacts, ${lookAhead} days)`);
       return;
     }
 
     const emailManager = new EmailManager();
     emailManager.sendUpcomingBirthdaysEmail(upcoming, lookAhead);
-    Logger.log(`Sent upcoming birthdays report (${upcoming.length} contacts)`);
+    Logger.log(`✅ Sent Upcoming Birthdays report (${upcoming.length} contacts)`);
   } catch (error) {
     Logger.log(`Error in sendUpcomingBirthdaysReport: ${error.message}`);
     throw error;
@@ -153,85 +64,91 @@ function sendUpcomingBirthdaysReport(days) {
 
 
 /**
- * Sends an email report of contacts without surnames.
+ * Sends the Duplicate Contacts report.
+ * Finds groups of contacts that may be duplicates based on name/email/phone.
  */
-function sendContactsWithoutSurnamesReport() {
+function sendDuplicateContactsReport() {
   try {
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const missing = findContactsWithoutSurnames(contacts);
+    const duplicates = findPotentialDuplicates(contacts);
 
-    if (missing.length === 0) {
-      Logger.log('No contacts without surnames found');
+    if (duplicates.length === 0) {
+      Logger.log('No potential duplicates found');
       return;
     }
 
     const emailManager = new EmailManager();
-    emailManager.sendContactsWithoutSurnamesEmail(missing);
-    Logger.log(`Sent contacts without surnames report (${missing.length} contacts)`);
+    emailManager.sendDuplicateContactsEmail(duplicates);
+    Logger.log(`✅ Sent Duplicate Contacts report (${duplicates.length} groups)`);
   } catch (error) {
-    Logger.log(`Error in sendContactsWithoutSurnamesReport: ${error.message}`);
+    Logger.log(`Error in sendDuplicateContactsReport: ${error.message}`);
     throw error;
   }
 }
 
 
 /**
- * Sends an email report of contacts with potentially invalid phone numbers.
+ * Sends the Contact Overview report.
+ * Shows general statistics about your contacts (completeness percentages).
  */
-function sendInvalidPhonesReport() {
-  try {
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const invalid = findContactsWithInvalidPhones(contacts);
-
-    if (invalid.length === 0) {
-      Logger.log('No contacts with invalid phone numbers found');
-      return;
-    }
-
-    const emailManager = new EmailManager();
-    emailManager.sendInvalidPhonesEmail(invalid);
-    Logger.log(`Sent invalid phone numbers report (${invalid.length} contacts)`);
-  } catch (error) {
-    Logger.log(`Error in sendInvalidPhonesReport: ${error.message}`);
-    throw error;
-  }
-}
-
-
-/**
- * Sends a comprehensive statistics report.
- */
-function sendStatisticsReport() {
+function sendContactOverviewReport() {
   try {
     if (!isLabelFilterConfigured()) return;
     const isDryRun = typeof dryRun !== 'undefined' && dryRun;
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const labelManager = new LabelManager();
     const stats = generateContactStats(contacts);
-    const allLabels = labelManager.fetchLabels();
 
     if (isDryRun) {
-      Logger.log(`🧪 [DRY RUN] Would send statistics report (${stats.totalContacts} contacts)`);
+      Logger.log(`🧪 [DRY RUN] Would send Contact Overview report (${stats.totalContacts} contacts)`);
       return;
     }
 
     const emailManager = new EmailManager();
-    emailManager.sendContactStatsEmail(stats);
-    emailManager.sendLabelStatsEmail(stats, allLabels);
-    Logger.log('Sent comprehensive statistics report');
+    emailManager.sendContactOverviewEmail(stats);
+    Logger.log(`✅ Sent Contact Overview report (${stats.totalContacts} contacts)`);
   } catch (error) {
-    Logger.log(`Error in sendStatisticsReport: ${error.message}`);
+    Logger.log(`Error in sendContactOverviewReport: ${error.message}`);
     throw error;
   }
 }
 
 
 /**
- * Sends email report of contacts missing a specific field.
+ * Sends the Label Health report.
+ * Combines label usage stats, distribution, and unlabeled contacts in one email.
+ */
+function sendLabelHealthReport() {
+  try {
+    if (!isLabelFilterConfigured()) return;
+    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+
+    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const labelStats = getLabelUsageStats(contacts);
+    const unlabeled = findContactsWithoutLabels(contacts);
+    const stats = generateContactStats(contacts);
+
+    if (isDryRun) {
+      Logger.log(`🧪 [DRY RUN] Would send Label Health report (${labelStats.totalLabels} labels, ${unlabeled.length} unlabeled)`);
+      return;
+    }
+
+    const emailManager = new EmailManager();
+    emailManager.sendLabelHealthEmail(labelStats, unlabeled, stats.labelDistribution, stats.totalContacts);
+    Logger.log(`✅ Sent Label Health report (${labelStats.totalLabels} labels, ${unlabeled.length} unlabeled)`);
+  } catch (error) {
+    Logger.log(`Error in sendLabelHealthReport: ${error.message}`);
+    throw error;
+  }
+}
+
+
+/**
+ * Sends the Missing Info report for a specific field.
+ * Lists contacts that are missing email, phone, city, or birthday.
  * @param {string} field Field to check ('email', 'phone', 'city', 'birthday')
  */
-function sendMissingFieldReport(field) {
+function sendMissingInfoReport(field) {
   try {
     const validFields = ['email', 'phone', 'city', 'birthday'];
     if (!validFields.includes(field)) {
@@ -247,93 +164,56 @@ function sendMissingFieldReport(field) {
     }
 
     const emailManager = new EmailManager();
-    emailManager.sendMissingFieldEmail(field, missing);
-    Logger.log(`Sent missing ${field} report (${missing.length} contacts)`);
+    emailManager.sendMissingInfoEmail(field, missing);
+    Logger.log(`✅ Sent Missing Info report for ${field} (${missing.length} contacts)`);
   } catch (error) {
-    Logger.log(`Error in sendMissingFieldReport: ${error.message}`);
+    Logger.log(`Error in sendMissingInfoReport: ${error.message}`);
     throw error;
   }
 }
 
 
 /**
- * Sends label usage statistics report.
+ * Sends the Data Quality report.
+ * Combines contacts without surnames and contacts with invalid phone numbers.
  */
-function sendLabelUsageReport() {
+function sendDataQualityReport() {
   try {
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const labelStats = getLabelUsageStats(contacts);
+    const noSurname = findContactsWithoutSurnames(contacts);
+    const invalidPhones = findContactsWithInvalidPhones(contacts);
 
-    const emailManager = new EmailManager();
-    emailManager.sendLabelUsageStatsEmail(labelStats);
-    Logger.log('Sent label usage statistics report');
-  } catch (error) {
-    Logger.log(`Error in sendLabelUsageReport: ${error.message}`);
-    throw error;
-  }
-}
-
-
-/**
- * Sends contacts grouped by city report.
- */
-function sendContactsByCityReport() {
-  try {
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const cityGroups = getContactsByCity(contacts);
-
-    if (cityGroups.length === 0) {
-      Logger.log('No city data found');
+    if (noSurname.length === 0 && invalidPhones.length === 0) {
+      Logger.log('No data quality issues found');
       return;
     }
 
     const emailManager = new EmailManager();
-    emailManager.sendContactsByCityEmail(cityGroups);
-    Logger.log(`Sent contacts by city report (${cityGroups.length} cities)`);
+    emailManager.sendDataQualityEmail(noSurname, invalidPhones);
+    Logger.log(`✅ Sent Data Quality report (${noSurname.length} missing surnames, ${invalidPhones.length} invalid phones)`);
   } catch (error) {
-    Logger.log(`Error in sendContactsByCityReport: ${error.message}`);
+    Logger.log(`Error in sendDataQualityReport: ${error.message}`);
     throw error;
   }
 }
 
 
 /**
- * Sends potential duplicate contacts report.
+ * Sends all reports in one batch.
  */
-function sendDuplicateContactsReport() {
+function sendAllReports() {
   try {
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const duplicates = findPotentialDuplicates(contacts);
-
-    if (duplicates.length === 0) {
-      Logger.log('No potential duplicates found');
-      return;
-    }
-
-    const emailManager = new EmailManager();
-    emailManager.sendDuplicatesEmail(duplicates);
-    Logger.log(`Sent duplicate contacts report (${duplicates.length} groups)`);
-  } catch (error) {
-    Logger.log(`Error in sendDuplicateContactsReport: ${error.message}`);
-    throw error;
-  }
-}
-
-
-/**
- * Sends all quick reports in one batch.
- */
-function sendAllQuickReports() {
-  try {
-    Logger.log('Starting all quick reports...');
+    Logger.log('Starting all reports...');
 
     const reports = [
-      () => sendMissingFieldReport('email'),
-      () => sendMissingFieldReport('phone'),
-      () => sendContactsWithoutSurnamesReport(),
-      () => sendLabelUsageReport(),
-      () => sendContactsByCityReport(),
-      () => sendDuplicateContactsReport()
+      () => sendUpcomingBirthdaysReport(),
+      () => sendDuplicateContactsReport(),
+      () => sendContactOverviewReport(),
+      () => sendLabelHealthReport(),
+      () => sendMissingInfoReport('email'),
+      () => sendMissingInfoReport('phone'),
+      () => sendMissingInfoReport('birthday'),
+      () => sendDataQualityReport()
     ];
 
     let successful = 0;
@@ -349,9 +229,9 @@ function sendAllQuickReports() {
       }
     });
 
-    Logger.log(`Quick reports completed: ${successful} successful, ${failed} failed`);
+    Logger.log(`All reports completed: ${successful} successful, ${failed} failed`);
   } catch (error) {
-    Logger.log(`Error in sendAllQuickReports: ${error.message}`);
+    Logger.log(`Error in sendAllReports: ${error.message}`);
     throw error;
   }
 }
