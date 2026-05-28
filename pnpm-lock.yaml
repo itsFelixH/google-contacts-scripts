@@ -12,8 +12,8 @@ importers:
         specifier: ^3.3.0
         version: 3.3.0(@types/node@25.9.1)
       '@types/google-apps-script':
-        specifier: ^1.0.83
-        version: 1.0.100
+        specifier: ^2.0.0
+        version: 2.0.9
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@25.9.1)
@@ -482,8 +482,8 @@ packages:
   '@types/babel__traverse@7.28.0':
     resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
 
-  '@types/google-apps-script@1.0.100':
-    resolution: {integrity: sha512-POgcjcDbrjYJYf3Av6j5n+z9/z/WulCNh9Gj199HgrcgRLzcQLg5ALw6jdWcgBkzgTLNYZSe7/01aOfiNzzn9g==}
+  '@types/google-apps-script@2.0.9':
+    resolution: {integrity: sha512-HPkV46KuI4y/s7UsaPva9B2jljKGro9rPDuWSMQrOu6vW3ImRpRXrlBDi1m5ON/5gTqOGaFx1vXNfOHdw6j0OA==}
 
   '@types/graceful-fs@4.1.9':
     resolution: {integrity: sha512-olP3sd1qOEe5dXTSaFvQG+02VdRXcdytWLAZsAq1PecU8uqQAhkrnbli7DagjtXKW/Bl7YJbUsa8MPcuc8LHEQ==}
@@ -2691,7 +2691,7 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.7
 
-  '@types/google-apps-script@1.0.100': {}
+  '@types/google-apps-script@2.0.9': {}
 
   '@types/graceful-fs@4.1.9':
     dependencies:
