@@ -261,48 +261,88 @@ function findContactsMissingField(contacts, field) {
 
 /**
  * Finds potential duplicate contacts based on configured match fields.
+ * Uses index maps for efficient lookup instead of nested iteration.
  * @param {Contact[]} contacts
  * @param {string[]} [matchFields=['name', 'email', 'phone']] Fields to compare
  * @returns {Object[]} Array of duplicate groups
  */
 function findPotentialDuplicates(contacts, matchFields) {
   const fields = matchFields || ['name', 'email', 'phone'];
-  const duplicateGroups = [];
-  const processed = new Set();
+  const groups = []; // Array of Sets (indices)
+  const assignedGroup = new Array(contacts.length).fill(-1);
+
+  // Build index maps for each field
+  const nameMap = new Map();   // lowercase name → [indices]
+  const emailMap = new Map();  // email → [indices]
+  const phoneMap = new Map();  // phone → [indices]
 
   contacts.forEach((contact, i) => {
-    if (processed.has(i)) return;
-
-    const similarContacts = [contact];
-    const name1 = contact.getName().toLowerCase().trim();
-
-    contacts.forEach((otherContact, j) => {
-      if (i !== j && !processed.has(j)) {
-        const name2 = otherContact.getName().toLowerCase().trim();
-        let isMatch = false;
-
-        if (fields.includes('name') && name1 === name2) isMatch = true;
-        if (fields.includes('email') && contact.email && contact.email === otherContact.email) isMatch = true;
-        if (fields.includes('phone') && contact.phoneNumber && contact.phoneNumber === otherContact.phoneNumber) isMatch = true;
-
-        if (isMatch) {
-          similarContacts.push(otherContact);
-          processed.add(j);
-        }
-      }
-    });
-
-    if (similarContacts.length > 1) {
-      duplicateGroups.push({
-        contacts: similarContacts,
-        count: similarContacts.length,
-        reason: 'name/email/phone match'
-      });
+    if (fields.includes('name')) {
+      const key = contact.getName().toLowerCase().trim();
+      if (!nameMap.has(key)) nameMap.set(key, []);
+      nameMap.get(key).push(i);
     }
-    processed.add(i);
+    if (fields.includes('email') && contact.email) {
+      const key = contact.email.trim().toLowerCase();
+      if (!emailMap.has(key)) emailMap.set(key, []);
+      emailMap.get(key).push(i);
+    }
+    if (fields.includes('phone') && contact.phoneNumber) {
+      const key = contact.phoneNumber.trim();
+      if (!phoneMap.has(key)) phoneMap.set(key, []);
+      phoneMap.get(key).push(i);
+    }
   });
 
-  return duplicateGroups;
+  // Merge indices that share a key into groups
+  function mergeIntoGroup(indices) {
+    if (indices.length < 2) return;
+
+    // Find if any index already belongs to a group
+    let targetGroup = -1;
+    for (const idx of indices) {
+      if (assignedGroup[idx] !== -1) {
+        targetGroup = assignedGroup[idx];
+        break;
+      }
+    }
+
+    if (targetGroup === -1) {
+      targetGroup = groups.length;
+      groups.push(new Set());
+    }
+
+    for (const idx of indices) {
+      if (assignedGroup[idx] === -1) {
+        groups[targetGroup].add(idx);
+        assignedGroup[idx] = targetGroup;
+      } else if (assignedGroup[idx] !== targetGroup) {
+        // Merge two groups
+        const otherGroup = assignedGroup[idx];
+        for (const otherIdx of groups[otherGroup]) {
+          groups[targetGroup].add(otherIdx);
+          assignedGroup[otherIdx] = targetGroup;
+        }
+        groups[otherGroup] = new Set();
+      }
+    }
+  }
+
+  for (const indices of nameMap.values()) mergeIntoGroup(indices);
+  for (const indices of emailMap.values()) mergeIntoGroup(indices);
+  for (const indices of phoneMap.values()) mergeIntoGroup(indices);
+
+  // Convert groups to output format
+  return groups
+    .filter(group => group.size >= 2)
+    .map(group => {
+      const groupContacts = [...group].map(i => contacts[i]);
+      return {
+        contacts: groupContacts,
+        count: groupContacts.length,
+        reason: 'name/email/phone match'
+      };
+    });
 }
 
 
