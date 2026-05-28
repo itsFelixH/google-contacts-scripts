@@ -308,6 +308,7 @@ function findDuplicates(contacts, matchFields) {
   const fields = matchFields || ['name', 'email', 'phone'];
   const groups = [];  // Array of Sets containing contact indices
   const groupOf = new Array(contacts.length).fill(-1); // index → group ID
+  const groupReasons = []; // Array of Sets of reason strings, parallel to groups
 
   // Build lookup maps: field value → [contact indices]
   const nameIndex = new Map();
@@ -333,11 +334,11 @@ function findDuplicates(contacts, matchFields) {
   });
 
   /**
-   * Merges a set of contact indices into a single group.
-   * If any index already belongs to a group, all are merged into that group.
+   * Merges a set of contact indices into a single group and records the reason.
    * @param {number[]} indices Contact indices that should be in the same group
+   * @param {string} reason Why these contacts match
    */
-  function mergeIntoGroup(indices) {
+  function mergeIntoGroup(indices, reason) {
     if (indices.length < 2) return;
 
     // Find existing group for any of these indices
@@ -350,7 +351,11 @@ function findDuplicates(contacts, matchFields) {
     if (target === -1) {
       target = groups.length;
       groups.push(new Set());
+      groupReasons.push(new Set());
     }
+
+    // Record the match reason
+    groupReasons[target].add(reason);
 
     // Add all indices to the target group, merging if needed
     for (const idx of indices) {
@@ -364,22 +369,36 @@ function findDuplicates(contacts, matchFields) {
           groups[target].add(otherIdx);
           groupOf[otherIdx] = target;
         }
-        groups[other] = new Set(); // Empty the merged group
+        // Merge reasons too
+        for (const r of groupReasons[other]) {
+          groupReasons[target].add(r);
+        }
+        groups[other] = new Set();
+        groupReasons[other] = new Set();
       }
     }
   }
 
-  // Process each index map — entries with 2+ indices are potential duplicates
-  for (const indices of nameIndex.values()) mergeIntoGroup(indices);
-  for (const indices of emailIndex.values()) mergeIntoGroup(indices);
-  for (const indices of phoneIndex.values()) mergeIntoGroup(indices);
+  // Process each index map with specific reasons
+  for (const [key, indices] of nameIndex.entries()) {
+    mergeIntoGroup(indices, `same name: "${key}"`);
+  }
+  for (const [key, indices] of emailIndex.entries()) {
+    mergeIntoGroup(indices, `same email: ${key}`);
+  }
+  for (const [key, indices] of phoneIndex.entries()) {
+    mergeIntoGroup(indices, `same phone: ${key}`);
+  }
 
   // Convert non-empty groups to output format
   return groups
-    .filter(group => group.size >= 2)
-    .map(group => {
-      const members = [...group].map(i => contacts[i]);
-      return { contacts: members, count: members.length, reason: 'name/email/phone match' };
+    .filter((group, i) => group.size >= 2)
+    .map((group, i) => {
+      // Find the original index to get the right reasons
+      const originalIdx = groups.indexOf(group);
+      const members = [...group].map(idx => contacts[idx]);
+      const reasons = [...groupReasons[originalIdx]].join(', ');
+      return { contacts: members, count: members.length, reason: reasons };
     });
 }
 
