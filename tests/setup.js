@@ -35,6 +35,9 @@ global.autoLabelRules = [];
 global.defaultCountryCode = '+49';
 global.scheduleAutoLabeling = false;
 global.sendActionReports = true;
+global.nameSwapLastFirst = true;
+global.nameLowercasePrefixes = ['von', 'van', 'de', 'del', 'der', 'di', 'la', 'le', 'el'];
+global.instagramCheckDelay = 1000;
 
 // Mock Logger
 global.Logger = {
