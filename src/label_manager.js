@@ -1,5 +1,5 @@
 /**
- * Class to manage contact labels.
+ * Manages contact labels (groups) via the People API.
  */
 class LabelManager {
   constructor() {
@@ -8,113 +8,98 @@ class LabelManager {
 
 
   /**
-   * Retrieves and initializes all contact labels (groups) along with their IDs.
-   *
-   * @returns {Object[]} An array of objects, each containing the contact label name and its ID.
+   * Fetches all contact labels (groups) with their IDs.
+   * @returns {Object[]} Array of { id, name } objects
    */
   fetchLabels() {
     try {
-      var groupsResponse = People.ContactGroups.list();
-      var groupResourceNames = groupsResponse.contactGroups.map(group => group.resourceName);
+      const groupsResponse = People.ContactGroups.list();
+      const groupResourceNames = groupsResponse.contactGroups.map(group => group.resourceName);
 
-      var batchGetResponse = People.ContactGroups.batchGet({
+      const batchGetResponse = People.ContactGroups.batchGet({
         resourceNames: groupResourceNames
       });
 
-      var labels = batchGetResponse.responses.map(response => {
-        return {
-          id: response.contactGroup.resourceName,
-          name: response.contactGroup.name
-        };
-      });
-
-      return labels;
+      return batchGetResponse.responses.map(response => ({
+        id: response.contactGroup.resourceName,
+        name: response.contactGroup.name
+      }));
     } catch (error) {
-      Logger.log("Error fetching contact labels: " + error.toString());
+      Logger.log(`Error fetching contact labels: ${error.message}`);
       return [];
     }
   }
 
 
   /**
-   * Gets the contact label name by the provided label ID.
-   *
-   * @param {string} labelId - The ID of the contact label.
-   * @returns {string|null} The contact label name if found, or null if not found.
+   * Gets a label name by its ID.
+   * Returns null for system labels (myContacts, starred).
+   * @param {string} labelId
+   * @returns {string|null}
    */
   getLabelNameById(labelId) {
-    if (labelId == 'myContacts') {
-      return null
-    } else if (labelId == 'starred') {
-      return null
+    if (labelId === 'myContacts' || labelId === 'starred') {
+      return null;
     }
-    for (var i = 0; i < this.labels.length; i++) {
-      if (this.labels[i].id === labelId || this.labels[i].id === ('contactGroups/' + labelId)) {
-        return this.labels[i].name;
-      }
-    }
-    return null;
+
+    const label = this.labels.find(
+      l => l.id === labelId || l.id === `contactGroups/${labelId}`
+    );
+
+    return label ? label.name : null;
   }
 
 
   /**
-   * Retrieves label names given their IDs, omitting any unknown label IDs.
-   *
-   * @param {string[]} labelIds - An array of label IDs to get names for.
-   * @returns {string[]} An array of label names corresponding to the provided label IDs.
+   * Gets label names for an array of IDs, omitting unknown/system labels.
+   * @param {string[]} labelIds
+   * @returns {string[]}
    */
   getLabelNamesByIds(labelIds) {
     return labelIds
-      .map(labelId => {
-        const labelName = this.getLabelNameById(labelId);
-        return labelName !== null ? labelName : null;
-      })
-      .filter(labelName => labelName !== null);
+      .map(id => this.getLabelNameById(id))
+      .filter(name => name !== null);
   }
+
 
   /**
    * Checks if a label exists by its ID.
-   *
-   * @param {string} labelId - The ID of the contact label.
-   * @returns {boolean} True if the label exists, false otherwise.
+   * @param {string} labelId
+   * @returns {boolean}
    */
   labelExistsById(labelId) {
-    return this.labels.some(label => label.id === labelId || label.id === ('contactGroups/' + labelId));
+    return this.labels.some(
+      l => l.id === labelId || l.id === `contactGroups/${labelId}`
+    );
   }
+
 
   /**
    * Checks if a label exists by its name.
-   *
-   * @param {string} labelName - The name of the contact label.
-   * @returns {boolean} True if the label exists, false otherwise.
+   * @param {string} labelName
+   * @returns {boolean}
    */
   labelExistsByName(labelName) {
-    return this.labels.some(label => label.name === labelName);
+    return this.labels.some(l => l.name === labelName);
   }
 
+
   /**
-   * Adds a new contact label (group).
-   *
-   * @param {string} name - The name of the new contact label.
-   * @returns {Object|null} The added label object if successful, or null if an error occurs.
+   * Creates a new contact label (group).
+   * @param {string} name
+   * @returns {Object|null} The created { id, name } or null on error
    */
   addLabel(name) {
     try {
-      var newLabel = People.ContactGroups.create({
-        contactGroup: {
-          name: name
-        }
+      const newLabel = People.ContactGroups.create({
+        contactGroup: { name }
       });
 
-      // Update the local labels array
-      this.labels.push({
-        id: newLabel.resourceName,
-        name: newLabel.name
-      });
-
-      return { id: newLabel.resourceName, name: newLabel.name };
+      const label = { id: newLabel.resourceName, name: newLabel.name };
+      this.labels.push(label);
+      return label;
     } catch (error) {
-      Logger.log("Error adding contact label: " + error.toString());
+      Logger.log(`Error adding contact label: ${error.message}`);
       return null;
     }
   }
@@ -124,11 +109,6 @@ class LabelManager {
    * Logs all label names.
    */
   logAllLabels() {
-    this.labels.forEach(label => {
-      Logger.log(label.name);
-    });
+    this.labels.forEach(label => Logger.log(label.name));
   }
 }
-
-
-
