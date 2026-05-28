@@ -3,7 +3,7 @@
 // Mock config constants
 global.useLabel = false;
 global.labelFilter = [];
-global.upcomingBirthdaysDays = 7;
+global.upcomingBirthdaysDays = 14;
 global.maxContactsPerReport = 0;
 global.includeEditLinks = true;
 global.includeWhatsAppLinks = true;
@@ -28,12 +28,11 @@ global.birthdayFormat = 'dd.MM.';
 global.sortContactsBy = 'name';
 global.excludeLabels = [];
 global.scheduleHour = 8;
-global.birthdaySchedule = 'daily';
 global.weeklyReportDay = 2; // MONDAY
-global.monthlyOverview = true;
+global.monthlyReportDay = 1;
+global.scheduleAutoLabeling = false;
 global.autoLabelRules = [];
 global.defaultCountryCode = '+49';
-global.scheduleAutoLabeling = false;
 global.sendActionReports = true;
 global.nameSwapLastFirst = true;
 
