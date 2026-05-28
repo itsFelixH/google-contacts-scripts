@@ -307,38 +307,6 @@ function findPotentialDuplicates(contacts, matchFields) {
 
 
 /**
- * Finds contacts with unusually long names.
- * @param {Contact[]} contacts
- * @param {number} [maxLength] Maximum reasonable name length
- * @returns {Contact[]}
- */
-function findLongNames(contacts, maxLength) {
-  const limit = maxLength || (typeof maxNameLength !== 'undefined' ? maxNameLength : 50);
-  return contacts.filter(contact => contact.getName().length > limit);
-}
-
-
-/**
- * Groups contacts by city.
- * @param {Contact[]} contacts
- * @returns {Object[]} Array of { city, contacts, count } sorted by count descending
- */
-function getContactsByCity(contacts) {
-  const cityGroups = {};
-
-  contacts.forEach(contact => {
-    const city = contact.city?.trim() || 'No City';
-    if (!cityGroups[city]) cityGroups[city] = [];
-    cityGroups[city].push(contact);
-  });
-
-  return Object.entries(cityGroups)
-    .map(([city, cityContacts]) => ({ city, contacts: cityContacts, count: cityContacts.length }))
-    .sort((a, b) => b.count - a.count);
-}
-
-
-/**
  * Gets label usage statistics.
  * @param {Contact[]} contacts
  * @returns {Object} Label usage stats
