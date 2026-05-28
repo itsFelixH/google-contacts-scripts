@@ -45,8 +45,9 @@ Here's what the plain-text versions look like:
 ```
 🔍 Duplicate Contacts
 
-  Group 1 (2): Max Müller, Max Mueller (name/email/phone match)
-  Group 2 (3): Lisa W, Lisa Weber, Lisa W. (name/email/phone match)
+  Group 1: Max Müller, Max Mueller (same name: "max müller")
+  Group 2: Lisa W, Lisa Weber, Lisa W. (same email: lisa.w@gmail.com)
+  Group 3: Tom Fischer, Thomas Fischer (same phone: +491701234567)
 ```
 
 **📊 Contact Overview**
