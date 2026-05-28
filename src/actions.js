@@ -253,8 +253,9 @@ function formatName(name) {
   // Collapse multiple spaces
   result = result.replace(/\s+/g, ' ');
 
-  // Swap "Last, First" → "First Last"
-  if (result.includes(',') && result.split(',').length === 2) {
+  // Swap "Last, First" → "First Last" (configurable)
+  const doSwap = typeof nameSwapLastFirst !== 'undefined' ? nameSwapLastFirst : true;
+  if (doSwap && result.includes(',') && result.split(',').length === 2) {
     const [last, first] = result.split(',').map(s => s.trim());
     if (first && last) {
       result = `${first} ${last}`;
@@ -264,12 +265,14 @@ function formatName(name) {
   // Title case: lowercase everything, then capitalize first char of each word
   result = result.toLowerCase().replace(/(^|\s)\S/g, char => char.toUpperCase());
 
-  // Handle common lowercase prefixes that should stay lowercase
-  const lowercasePrefixes = ['von', 'van', 'de', 'del', 'der', 'di', 'la', 'le', 'el'];
+  // Handle lowercase prefixes (configurable list)
+  const prefixes = typeof nameLowercasePrefixes !== 'undefined'
+    ? nameLowercasePrefixes
+    : ['von', 'van', 'de', 'del', 'der', 'di', 'la', 'le', 'el'];
+
   result = result.split(' ').map((word, i) => {
-    // Don't lowercase the first word
-    if (i === 0) return word;
-    if (lowercasePrefixes.includes(word.toLowerCase())) return word.toLowerCase();
+    if (i === 0) return word; // Never lowercase the first word
+    if (prefixes.includes(word.toLowerCase())) return word.toLowerCase();
     return word;
   }).join(' ');
 
@@ -477,8 +480,9 @@ function runInstagramSync() {
       }
     });
 
-    // Rate limiting — Instagram will block rapid requests
-    Utilities.sleep(1000);
+    // Rate limiting — configurable delay between requests
+    const delay = typeof instagramCheckDelay !== 'undefined' ? instagramCheckDelay : 1000;
+    Utilities.sleep(delay);
   });
 
   // Send report if there are broken handles (Instagram sync always reports broken ones)
