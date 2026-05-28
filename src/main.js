@@ -4,7 +4,7 @@
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Config validation
+// Config helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -18,6 +18,45 @@ function isLabelFilterConfigured() {
     return false;
   }
   return true;
+}
+
+/**
+ * Checks if a specific report is enabled in config.
+ * @param {string} reportName Key in enabledReports
+ * @returns {boolean}
+ */
+function isReportEnabled(reportName) {
+  if (typeof enabledReports === 'undefined') return true;
+  return enabledReports[reportName] !== false;
+}
+
+/**
+ * Returns whether empty reports should be skipped.
+ * @returns {boolean}
+ */
+function shouldSkipEmpty() {
+  return typeof skipEmptyReports !== 'undefined' ? skipEmptyReports : true;
+}
+
+/**
+ * Returns the max contacts per report (0 = unlimited).
+ * @returns {number}
+ */
+function getMaxContacts() {
+  return typeof maxContactsPerReport !== 'undefined' ? maxContactsPerReport : 0;
+}
+
+/**
+ * Trims a contact list to the configured max, if set.
+ * @param {Contact[]} contacts
+ * @returns {Contact[]}
+ */
+function applyLimit(contacts) {
+  const max = getMaxContacts();
+  if (max > 0 && contacts.length > max) {
+    return contacts.slice(0, max);
+  }
+  return contacts;
 }
 
 
@@ -41,7 +80,7 @@ function sendUpcomingBirthdaysReport(days) {
     }
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const upcoming = findContactsWithUpcomingBirthdays(contacts, lookAhead);
+    const upcoming = applyLimit(findContactsWithUpcomingBirthdays(contacts, lookAhead));
 
     if (upcoming.length === 0) {
       Logger.log(`No upcoming birthdays in the next ${lookAhead} days`);
@@ -65,14 +104,15 @@ function sendUpcomingBirthdaysReport(days) {
 
 /**
  * Sends the Duplicate Contacts report.
- * Finds groups of contacts that may be duplicates based on name/email/phone.
+ * Finds groups of contacts that may be duplicates based on configured match fields.
  */
 function sendDuplicateContactsReport() {
   try {
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const duplicates = findPotentialDuplicates(contacts);
+    const matchFields = typeof duplicateMatchFields !== 'undefined' ? duplicateMatchFields : ['name', 'email', 'phone'];
+    const duplicates = findPotentialDuplicates(contacts, matchFields);
 
-    if (duplicates.length === 0) {
+    if (duplicates.length === 0 && shouldSkipEmpty()) {
       Logger.log('No potential duplicates found');
       return;
     }
@@ -125,7 +165,7 @@ function sendLabelOverviewReport() {
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
     const labelStats = getLabelUsageStats(contacts);
-    const unlabeled = findContactsWithoutLabels(contacts);
+    const unlabeled = applyLimit(findContactsWithoutLabels(contacts));
     const stats = generateContactStats(contacts);
 
     if (isDryRun) {
@@ -156,9 +196,9 @@ function sendMissingInfoReport(field) {
     }
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const missing = findContactsMissingField(contacts, field);
+    const missing = applyLimit(findContactsMissingField(contacts, field));
 
-    if (missing.length === 0) {
+    if (missing.length === 0 && shouldSkipEmpty()) {
       Logger.log(`No contacts missing ${field} found`);
       return;
     }
@@ -180,10 +220,10 @@ function sendMissingInfoReport(field) {
 function sendDataQualityReport() {
   try {
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const noSurname = findContactsWithoutSurnames(contacts);
-    const invalidPhones = findContactsWithInvalidPhones(contacts);
+    const noSurname = applyLimit(findContactsWithoutSurnames(contacts));
+    const invalidPhones = applyLimit(findContactsWithInvalidPhones(contacts));
 
-    if (noSurname.length === 0 && invalidPhones.length === 0) {
+    if (noSurname.length === 0 && invalidPhones.length === 0 && shouldSkipEmpty()) {
       Logger.log('No data quality issues found');
       return;
     }
@@ -199,22 +239,25 @@ function sendDataQualityReport() {
 
 
 /**
- * Sends all reports in one batch.
+ * Sends all enabled reports in one batch.
+ * Respects enabledReports and missingInfoFields config.
  */
 function sendAllReports() {
   try {
     Logger.log('Starting all reports...');
 
-    const reports = [
-      () => sendUpcomingBirthdaysReport(),
-      () => sendDuplicateContactsReport(),
-      () => sendContactOverviewReport(),
-      () => sendLabelOverviewReport(),
-      () => sendMissingInfoReport('email'),
-      () => sendMissingInfoReport('phone'),
-      () => sendMissingInfoReport('birthday'),
-      () => sendDataQualityReport()
-    ];
+    const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
+
+    const reports = [];
+
+    if (isReportEnabled('upcomingBirthdays')) reports.push(() => sendUpcomingBirthdaysReport());
+    if (isReportEnabled('duplicates'))        reports.push(() => sendDuplicateContactsReport());
+    if (isReportEnabled('contactOverview'))    reports.push(() => sendContactOverviewReport());
+    if (isReportEnabled('labelOverview'))      reports.push(() => sendLabelOverviewReport());
+    if (isReportEnabled('missingInfo')) {
+      fields.forEach(field => reports.push(() => sendMissingInfoReport(field)));
+    }
+    if (isReportEnabled('dataQuality'))        reports.push(() => sendDataQualityReport());
 
     let successful = 0;
     let failed = 0;
