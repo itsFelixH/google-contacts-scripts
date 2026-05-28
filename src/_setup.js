@@ -10,28 +10,21 @@
 
 
 /**
- * Maps report config keys to their trigger function names.
+ * Function names managed by setupSchedules.
+ * Only these triggers are touched — user-created triggers are left alone.
  */
-const REPORT_FUNCTIONS = {
-  upcomingBirthdays: 'sendUpcomingBirthdaysReport',
-  duplicates:        'sendDuplicateContactsReport',
-  contactOverview:   'sendContactOverviewReport',
-  labelOverview:     'sendLabelOverviewReport',
-  missingInfo:       'sendMissingInfoReportAll',
-  dataQuality:       'sendDataQualityReport',
-  autoLabeling:      'runAutoLabeling',
-};
-
-
-/**
- * All function names that setupSchedules manages.
- */
-const MANAGED_FUNCTIONS = Object.values(REPORT_FUNCTIONS);
+const MANAGED_FUNCTIONS = ['sendWeeklyReports', 'sendMonthlyReports'];
 
 
 /**
  * Creates time-based triggers based on your reportSchedules config.
  * Run this once after deploying. Safe to re-run — removes existing managed triggers first.
+ *
+ * Creates up to 2 triggers:
+ * - sendWeeklyReports: if any report is set to 'weekly'
+ * - sendMonthlyReports: if any report is set to 'monthly'
+ *
+ * Each batch function fetches contacts once and runs all reports for that frequency.
  */
 function setupSchedules() {
   // Remove existing managed triggers
@@ -53,33 +46,38 @@ function setupSchedules() {
   const monthDay = typeof monthlyReportDay !== 'undefined' ? monthlyReportDay : 1;
   const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
 
-  let created = 0;
+  // Check if any reports are scheduled for each frequency
+  const hasWeekly = Object.values(schedules).includes('weekly');
+  const hasMonthly = Object.values(schedules).includes('monthly');
 
-  // Create a trigger for each enabled report
-  Object.entries(REPORT_FUNCTIONS).forEach(([key, fn]) => {
-    const frequency = schedules[key] || 'off';
-    if (frequency === 'off') return;
-
-    const trigger = ScriptApp.newTrigger(fn).timeBased();
-
-    if (frequency === 'weekly') {
-      trigger.onWeekDay(weekDay).atHour(hour).create();
-      Logger.log(`✅ ${key} — weekly at ~${hour}:00`);
-      created++;
-    } else if (frequency === 'monthly') {
-      trigger.onMonthDay(monthDay).atHour(hour).create();
-      Logger.log(`✅ ${key} — monthly on day ${monthDay} at ~${hour}:00`);
-      created++;
-    } else {
-      Logger.log(`⚠️ ${key} — unknown frequency "${frequency}", skipping`);
-    }
-  });
-
-  if (created === 0) {
+  if (!hasWeekly && !hasMonthly) {
     Logger.log('ℹ️ No schedules enabled. Set frequencies in reportSchedules config.');
-  } else {
-    Logger.log(`🎉 ${created} schedule(s) set up!`);
+    return;
   }
+
+  // Create weekly trigger if needed
+  if (hasWeekly) {
+    ScriptApp.newTrigger('sendWeeklyReports')
+      .timeBased()
+      .onWeekDay(weekDay)
+      .atHour(hour)
+      .create();
+    const weeklyKeys = Object.entries(schedules).filter(([_, v]) => v === 'weekly').map(([k]) => k);
+    Logger.log(`✅ Weekly (${weekDay === 2 ? 'Monday' : 'day ' + weekDay}) at ~${hour}:00 → ${weeklyKeys.join(', ')}`);
+  }
+
+  // Create monthly trigger if needed
+  if (hasMonthly) {
+    ScriptApp.newTrigger('sendMonthlyReports')
+      .timeBased()
+      .onMonthDay(monthDay)
+      .atHour(hour)
+      .create();
+    const monthlyKeys = Object.entries(schedules).filter(([_, v]) => v === 'monthly').map(([k]) => k);
+    Logger.log(`✅ Monthly (day ${monthDay}) at ~${hour}:00 → ${monthlyKeys.join(', ')}`);
+  }
+
+  Logger.log('🎉 Schedules set up!');
 }
 
 
