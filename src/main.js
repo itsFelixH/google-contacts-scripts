@@ -8,6 +8,104 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+ * Validates the configuration and logs warnings for invalid values.
+ * Call this once at setup or before running reports.
+ * @returns {string[]} Array of validation error messages (empty = all good)
+ */
+function validateConfig() {
+  const errors = [];
+
+  // Label filter
+  if (typeof useLabel !== 'boolean') {
+    errors.push('useLabel must be a boolean (true/false)');
+  }
+  if (useLabel && (!Array.isArray(labelFilter) || labelFilter.length === 0)) {
+    errors.push('useLabel is true but labelFilter is empty — no contacts will match');
+  }
+  if (Array.isArray(labelFilter) && labelFilter.some(l => typeof l !== 'string')) {
+    errors.push('labelFilter must only contain strings');
+  }
+
+  // Exclude labels
+  if (typeof excludeLabels !== 'undefined' && !Array.isArray(excludeLabels)) {
+    errors.push('excludeLabels must be an array of strings');
+  }
+
+  // Upcoming birthdays
+  if (typeof upcomingBirthdaysDays !== 'undefined') {
+    if (typeof upcomingBirthdaysDays !== 'number' || upcomingBirthdaysDays < 1 || upcomingBirthdaysDays > 365) {
+      errors.push('upcomingBirthdaysDays must be a number between 1 and 365');
+    }
+  }
+
+  // Birthday format
+  const validFormats = ['dd.MM.', 'dd/MM', 'MM/dd', 'dd MMM', 'MMM dd'];
+  if (typeof birthdayFormat !== 'undefined' && !validFormats.includes(birthdayFormat)) {
+    errors.push(`birthdayFormat must be one of: ${validFormats.join(', ')}`);
+  }
+
+  // Sort
+  const validSorts = ['name', 'name-desc', 'labels', 'city'];
+  if (typeof sortContactsBy !== 'undefined' && !validSorts.includes(sortContactsBy)) {
+    errors.push(`sortContactsBy must be one of: ${validSorts.join(', ')}`);
+  }
+
+  // Max contacts
+  if (typeof maxContactsPerReport !== 'undefined') {
+    if (typeof maxContactsPerReport !== 'number' || maxContactsPerReport < 0) {
+      errors.push('maxContactsPerReport must be a number >= 0');
+    }
+  }
+
+  // Enabled reports
+  if (typeof enabledReports !== 'undefined') {
+    const validKeys = ['upcomingBirthdays', 'duplicates', 'contactOverview', 'labelOverview', 'missingInfo', 'dataQuality'];
+    Object.keys(enabledReports).forEach(key => {
+      if (!validKeys.includes(key)) errors.push(`enabledReports: unknown report "${key}"`);
+    });
+  }
+
+  // Missing info fields
+  if (typeof missingInfoFields !== 'undefined') {
+    const validFields = ['email', 'phone', 'city', 'birthday'];
+    if (!Array.isArray(missingInfoFields)) {
+      errors.push('missingInfoFields must be an array');
+    } else {
+      missingInfoFields.forEach(f => {
+        if (!validFields.includes(f)) errors.push(`missingInfoFields: invalid field "${f}"`);
+      });
+    }
+  }
+
+  // Duplicate match fields
+  if (typeof duplicateMatchFields !== 'undefined') {
+    const validDupFields = ['name', 'email', 'phone'];
+    if (!Array.isArray(duplicateMatchFields)) {
+      errors.push('duplicateMatchFields must be an array');
+    } else {
+      duplicateMatchFields.forEach(f => {
+        if (!validDupFields.includes(f)) errors.push(`duplicateMatchFields: invalid field "${f}"`);
+      });
+    }
+  }
+
+  // Birthday schedule
+  if (typeof birthdaySchedule !== 'undefined' && !['daily', 'weekly'].includes(birthdaySchedule)) {
+    errors.push('birthdaySchedule must be "daily" or "weekly"');
+  }
+
+  // Log results
+  if (errors.length > 0) {
+    Logger.log('⚠️ Config validation issues:');
+    errors.forEach(e => Logger.log(`   • ${e}`));
+  } else {
+    Logger.log('✅ Config is valid');
+  }
+
+  return errors;
+}
+
+/**
  * Checks whether label filtering is correctly configured.
  * @returns {boolean} true if valid, false if misconfigured
  */
@@ -51,6 +149,55 @@ function applyLimit(contacts) {
   return contacts;
 }
 
+/**
+ * Sorts a contact list based on the sortContactsBy config.
+ * @param {Contact[]} contacts
+ * @returns {Contact[]}
+ */
+function applySorting(contacts) {
+  const sortBy = typeof sortContactsBy !== 'undefined' ? sortContactsBy : 'name';
+  const sorted = [...contacts];
+
+  switch (sortBy) {
+    case 'name':
+      sorted.sort((a, b) => a.getName().localeCompare(b.getName()));
+      break;
+    case 'name-desc':
+      sorted.sort((a, b) => b.getName().localeCompare(a.getName()));
+      break;
+    case 'labels':
+      sorted.sort((a, b) => b.getLabels().length - a.getLabels().length);
+      break;
+    case 'city':
+      sorted.sort((a, b) => (a.city || '').localeCompare(b.city || ''));
+      break;
+    default:
+      sorted.sort((a, b) => a.getName().localeCompare(b.getName()));
+  }
+
+  return sorted;
+}
+
+/**
+ * Filters out contacts that have any of the excluded labels.
+ * @param {Contact[]} contacts
+ * @returns {Contact[]}
+ */
+function applyExcludeLabels(contacts) {
+  const excluded = typeof excludeLabels !== 'undefined' ? excludeLabels : [];
+  if (!Array.isArray(excluded) || excluded.length === 0) return contacts;
+  return contacts.filter(c => !c.getLabels().some(l => excluded.includes(l)));
+}
+
+/**
+ * Applies standard post-processing: exclude labels, sort, limit.
+ * @param {Contact[]} contacts
+ * @returns {Contact[]}
+ */
+function prepareContacts(contacts) {
+  return applyLimit(applySorting(applyExcludeLabels(contacts)));
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Report functions
@@ -72,7 +219,7 @@ function sendUpcomingBirthdaysReport(days) {
     }
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const upcoming = applyLimit(findContactsWithUpcomingBirthdays(contacts, lookAhead));
+    const upcoming = prepareContacts(findContactsWithUpcomingBirthdays(contacts, lookAhead));
 
     if (upcoming.length === 0) {
       Logger.log(`No upcoming birthdays in the next ${lookAhead} days`);
@@ -157,7 +304,7 @@ function sendLabelOverviewReport() {
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
     const labelStats = getLabelUsageStats(contacts);
-    const unlabeled = applyLimit(findContactsWithoutLabels(contacts));
+    const unlabeled = prepareContacts(findContactsWithoutLabels(contacts));
     const stats = generateContactStats(contacts);
 
     if (isDryRun) {
@@ -188,7 +335,7 @@ function sendMissingInfoReport(field) {
     }
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const missing = applyLimit(findContactsMissingField(contacts, field));
+    const missing = prepareContacts(findContactsMissingField(contacts, field));
 
     if (missing.length === 0) {
       Logger.log(`No contacts missing ${field} found`);
@@ -212,8 +359,8 @@ function sendMissingInfoReport(field) {
 function sendDataQualityReport() {
   try {
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const noSurname = applyLimit(findContactsWithoutSurnames(contacts));
-    const invalidPhones = applyLimit(findContactsWithInvalidPhones(contacts));
+    const noSurname = prepareContacts(findContactsWithoutSurnames(contacts));
+    const invalidPhones = prepareContacts(findContactsWithInvalidPhones(contacts));
 
     if (noSurname.length === 0 && invalidPhones.length === 0) {
       Logger.log('No data quality issues found');
