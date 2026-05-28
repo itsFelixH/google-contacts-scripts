@@ -153,9 +153,9 @@ const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
 const emailSubjects = {
   upcomingBirthdays: '🎂 Upcoming Birthdays',
   duplicates: '🔍 Possible Duplicates',
-  overview: '📊 Contacts Overview',
+  overview: '📊 Contacts at a Glance',
   labelOverview: '🏷️ Labels & Unlabeled Contacts',
-  missingInfo: '📋 Contacts Without Info',
+  missingInfo: '📋 Contacts Without {field}',
   dataQuality: '🔧 Contacts to Clean Up',
 };
 
