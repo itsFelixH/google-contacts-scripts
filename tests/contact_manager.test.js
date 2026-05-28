@@ -200,7 +200,7 @@ describe('Contact query functions', () => {
 
 
 describe('findDuplicates', () => {
-  test('finds duplicates by name', () => {
+  test('finds duplicates by name with specific reason', () => {
     const dupes = [
       new Contact('Same Name', new Date()),
       new Contact('Same Name', new Date()),
@@ -209,9 +209,10 @@ describe('findDuplicates', () => {
     const result = findDuplicates(dupes, ['name']);
     expect(result).toHaveLength(1);
     expect(result[0].count).toBe(2);
+    expect(result[0].reason).toContain('same name: "same name"');
   });
 
-  test('finds duplicates by email', () => {
+  test('finds duplicates by email with specific reason', () => {
     const dupes = [
       new Contact('Person A', null, [], 'same@test.com'),
       new Contact('Person B', null, [], 'same@test.com'),
@@ -220,9 +221,10 @@ describe('findDuplicates', () => {
     const result = findDuplicates(dupes, ['email']);
     expect(result).toHaveLength(1);
     expect(result[0].count).toBe(2);
+    expect(result[0].reason).toContain('same email: same@test.com');
   });
 
-  test('finds duplicates by phone', () => {
+  test('finds duplicates by phone with specific reason', () => {
     const dupes = [
       new Contact('Person A', null, [], '', '', '+123456789'),
       new Contact('Person B', null, [], '', '', '+123456789'),
@@ -231,10 +233,11 @@ describe('findDuplicates', () => {
     const result = findDuplicates(dupes, ['phone']);
     expect(result).toHaveLength(1);
     expect(result[0].count).toBe(2);
+    expect(result[0].reason).toContain('same phone: +123456789');
   });
 
-  test('merges groups when contacts share different fields', () => {
-    // A and B share name, B and C share email → all in one group
+  test('merges groups and combines reasons', () => {
+    // A and B share name, B and C share email → all in one group with both reasons
     const dupes = [
       new Contact('Same', null, [], 'a@test.com'),
       new Contact('Same', null, [], 'shared@test.com'),
@@ -243,6 +246,8 @@ describe('findDuplicates', () => {
     const result = findDuplicates(dupes, ['name', 'email']);
     expect(result).toHaveLength(1);
     expect(result[0].count).toBe(3);
+    expect(result[0].reason).toContain('same name');
+    expect(result[0].reason).toContain('same email');
   });
 
   test('returns empty for no duplicates', () => {
