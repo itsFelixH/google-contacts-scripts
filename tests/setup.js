@@ -28,6 +28,9 @@ global.missingInfoFields = ['email', 'phone', 'birthday'];
 global.duplicateMatchFields = ['name', 'email', 'phone'];
 global.birthdayShowAge = true;
 global.birthdaySchedule = 'daily';
+global.birthdayFormat = 'dd.MM.';
+global.sortContactsBy = 'name';
+global.excludeLabels = [];
 
 // Mock Logger
 global.Logger = {
