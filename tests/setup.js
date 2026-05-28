@@ -32,6 +32,8 @@ global.scheduleHour = 8;
 global.birthdaySchedule = 'daily';
 global.weeklyReportDay = 2; // MONDAY
 global.monthlyOverview = true;
+global.autoLabelRules = [];
+global.defaultCountryCode = '+49';
 
 // Mock Logger
 global.Logger = {
@@ -93,12 +95,14 @@ global.ScriptApp = {
 global.People = {
   People: {
     Connections: { list: jest.fn() },
-    getBatchGet: jest.fn()
+    getBatchGet: jest.fn(),
+    updateContact: jest.fn()
   },
   ContactGroups: {
     list: jest.fn(),
     batchGet: jest.fn(),
-    create: jest.fn()
+    create: jest.fn(),
+    Members: { modify: jest.fn() }
   }
 };
 
@@ -107,6 +111,13 @@ global.Gmail = {
   Users: {
     Messages: { send: jest.fn() }
   }
+};
+
+// Mock UrlFetchApp
+global.UrlFetchApp = {
+  fetch: jest.fn().mockReturnValue({
+    getResponseCode: jest.fn().mockReturnValue(200)
+  })
 };
 
 // Load source files into global scope (mimics Google Apps Script runtime)
@@ -122,6 +133,7 @@ const loadOrder = [
   'label_manager.js',
   'contact_manager.js',
   'email_manager.js',
+  'actions.js',
   'main.js'
 ];
 
