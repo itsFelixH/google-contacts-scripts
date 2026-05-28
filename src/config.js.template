@@ -8,20 +8,8 @@
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 1. FEATURES — Which reports should be available?
+// 1. CONTACT FILTERING
 // ═══════════════════════════════════════════════════════════════════════════════
-
-// ─── Email notifications ──────────────────────────────────────────────────────
-
-const sendUnlabeledReport = true;
-const sendMissingBirthdayReport = true;
-const sendUpcomingBirthdaysReport = true;
-const sendInvalidPhonesReport = true;
-const sendMissingSurnamesReport = true;
-const sendDuplicatesReport = true;
-const sendStatisticsReport = true;
-
-// ─── Contact filtering ────────────────────────────────────────────────────────
 
 // Set useLabel to true and add label names to only report on specific contacts.
 // When false, all contacts are included.
@@ -36,10 +24,6 @@ const labelFilter = []; // e.g. ['Friends', 'Family']
 // ─── Upcoming birthdays ───────────────────────────────────────────────────────
 
 const upcomingBirthdaysDays = 7; // days to look ahead
-
-// ─── Limits ───────────────────────────────────────────────────────────────────
-
-const maxContactsPerReport = 0; // 0 = unlimited
 
 // ─── Links ────────────────────────────────────────────────────────────────────
 
@@ -86,19 +70,15 @@ const apiPersonFields = 'names,birthdays,memberships,emailAddresses,phoneNumbers
 // 6. EMAIL CUSTOMIZATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── Email subjects ───────────────────────────────────────────────────────────
+// ─── Email subjects (override defaults) ───────────────────────────────────────
 
 const emailSubjects = {
-  unlabeled: '🏷️ Contacts Without Labels 🏷️',
-  missingBirthday: '🎂 Contacts Without Birthday 🎂',
-  upcomingBirthdays: '🎂 Upcoming Birthdays 🎂',
-  invalidPhones: '📱 Invalid Phone Numbers 📱',
-  missingSurnames: '👤 Contacts Without Surnames 👤',
-  duplicates: '🔍 Potential Duplicate Contacts 🔍',
-  statistics: '📊 Contact Statistics 📊',
-  missingField: '📋 Contacts Missing {field} 📋',
-  labelUsage: '📊 Label Usage Statistics 📊',
-  contactsByCity: '🌆 Contacts by City 🌆',
+  upcomingBirthdays: '🎂 Upcoming Birthdays',
+  duplicates: '🔍 Duplicate Contacts',
+  overview: '📊 Contact Overview',
+  labelHealth: '🏷️ Label Health',
+  missingInfo: '📋 Missing Info: {field}',
+  dataQuality: '🔧 Data Quality',
 };
 
 
