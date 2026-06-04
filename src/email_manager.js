@@ -178,28 +178,63 @@ class EmailManager {
 
     const statLines = [
       { emoji: '📇', label: 'Total Contacts', value: stats.totalContacts },
-      { emoji: '🎂', label: 'With Birthday', value: stats.withBirthday, pct: stats.birthdayPercentage },
       { emoji: '📧', label: 'With Email', value: stats.withEmail, pct: stats.emailPercentage },
       { emoji: '📱', label: 'With Phone', value: stats.withPhone, pct: stats.phonePercentage },
+      { emoji: '🎂', label: 'With Birthday', value: stats.withBirthday, pct: stats.birthdayPercentage },
       { emoji: '🌆', label: 'With City', value: stats.withCity, pct: stats.cityPercentage },
       { emoji: '🏷️', label: 'With Labels', value: stats.withLabels, pct: stats.labelPercentage },
       { emoji: '📸', label: 'With Instagram', value: stats.withInstagram, pct: stats.instagramPercentage },
     ];
 
-    // Plain text
-    const textBody = ['📊 Contact Overview', '',
-      ...statLines.map(s => `  ${s.emoji} ${s.label}: ${s.value}${s.pct ? ` (${s.pct}%)` : ''}`)
-    ].join('\n');
+    // ── Plain text ──
+    const textLines = ['📊 Contact Overview', '',
+      ...statLines.map(s => `  ${s.emoji} ${s.label}: ${s.value}${s.pct ? ` (${s.pct}%)` : ''}`),
+      '',
+      `✅ Completeness: ${stats.completeCount} contacts have all 4 fields (${stats.completenessPercentage}%)`,
+      `   4/4: ${stats.completeness[4]} · 3/4: ${stats.completeness[3]} · 2/4: ${stats.completeness[2]} · 1/4: ${stats.completeness[1]} · 0/4: ${stats.completeness[0]}`,
+    ];
 
-    // HTML — stats as a clean table-like layout
+    if (stats.topCities.length > 0) {
+      textLines.push('', '🌆 Top Cities:');
+      textLines.push(...stats.topCities.map(c => `  ${c.city}: ${c.count}`));
+    }
+
+    const textBody = textLines.join('\n');
+
+    // ── HTML ──
     const statsHtml = statLines.map(s => {
       const pct = s.pct ? ` <span style="color: #666;">(${s.pct}%)</span>` : '';
       return `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">${s.emoji} ${s.label}: <strong>${s.value}</strong>${pct}</div>`;
     }).join('\n');
 
+    // Completeness section
+    const completenessHtml = [
+      `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">✅ Complete (all 4 fields): <strong>${stats.completeCount}</strong> <span style="color: #666;">(${stats.completenessPercentage}%)</span></div>`,
+      `<div style="padding: 8px 0;">` +
+        `<span style="margin-right: 12px;">4/4: <strong>${stats.completeness[4]}</strong></span>` +
+        `<span style="margin-right: 12px;">3/4: <strong>${stats.completeness[3]}</strong></span>` +
+        `<span style="margin-right: 12px;">2/4: <strong>${stats.completeness[2]}</strong></span>` +
+        `<span style="margin-right: 12px;">1/4: <strong>${stats.completeness[1]}</strong></span>` +
+        `<span>0/4: <strong>${stats.completeness[0]}</strong></span>` +
+      `</div>`,
+    ].join('\n');
+
+    // Top cities section
+    let citiesHtml = '';
+    if (stats.topCities.length > 0) {
+      const cityItems = stats.topCities.map(c =>
+        this.templates.listItem(`<strong>${c.city}</strong>: ${c.count}`)
+      ).join('\n');
+      citiesHtml = this.templates.section('🌆 Top Cities') +
+        this.templates.card(this.templates.list(cityItems));
+    }
+
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('📊 Contact Overview', `${stats.totalContacts} contacts`) +
       this.templates.card(statsHtml) +
+      this.templates.section('📋 Completeness (email + phone + birthday + city)') +
+      this.templates.card(completenessHtml) +
+      citiesHtml +
       this.templates.footer(this.scriptId)
     );
 

@@ -536,13 +536,34 @@ function computeContactStats(contacts) {
   let withCity = 0, withLabels = 0, withInstagram = 0;
   let withoutSurnames = 0;
   const labelDistribution = {};
+  const cityDistribution = {};
+
+  // Completeness: count how many of the 4 key fields each contact has
+  const completeness = [0, 0, 0, 0, 0]; // index = number of fields filled (0-4)
+  let completeCount = 0; // contacts with all 4 key fields
 
   contacts.forEach(c => {
-    if (c.getBirthday()) withBirthday++;
-    if (c.email) withEmail++;
-    if (c.phoneNumber) withPhone++;
-    if (c.city) withCity++;
+    const hasEmail = !!c.email;
+    const hasPhone = !!c.phoneNumber;
+    const hasBirthday = !!c.getBirthday();
+    const hasCity = !!c.city;
+
+    if (hasEmail) withEmail++;
+    if (hasPhone) withPhone++;
+    if (hasBirthday) withBirthday++;
+    if (hasCity) withCity++;
     if (c.instagramNames.length > 0) withInstagram++;
+
+    // Completeness score (4 key fields: email, phone, birthday, city)
+    const fieldCount = [hasEmail, hasPhone, hasBirthday, hasCity].filter(Boolean).length;
+    completeness[fieldCount]++;
+    if (fieldCount === 4) completeCount++;
+
+    // City distribution
+    if (c.city) {
+      const city = c.city.trim();
+      cityDistribution[city] = (cityDistribution[city] || 0) + 1;
+    }
 
     const labels = c.getLabels();
     if (labels.length > 0) {
@@ -553,6 +574,12 @@ function computeContactStats(contacts) {
     // Single-word name = likely missing surname
     if (c.getName().trim() && !c.getName().includes(' ')) withoutSurnames++;
   });
+
+  // Top cities (sorted by count, top 5)
+  const topCities = Object.entries(cityDistribution)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([city, count]) => ({ city, count }));
 
   /** Calculates percentage, safe for zero total */
   const pct = (n) => total ? (n / total * 100).toFixed(1) : '0.0';
@@ -572,7 +599,12 @@ function computeContactStats(contacts) {
     cityPercentage: pct(withCity),
     labelPercentage: pct(withLabels),
     instagramPercentage: pct(withInstagram),
-    labelDistribution
+    labelDistribution,
+    // New stats
+    completeness,
+    completeCount,
+    completenessPercentage: pct(completeCount),
+    topCities,
   };
 }
 
