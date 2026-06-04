@@ -151,3 +151,105 @@ describe('runPhoneNormalizer', () => {
     global.dryRun = false;
   });
 });
+
+
+describe('matchesAutoLabelRule with regex', () => {
+  test('matches regex pattern', () => {
+    const contact = new Contact('Anna (Swing Barcelona) Castellví', null);
+    expect(matchesAutoLabelRule(contact, { field: 'name', matches: '\\(swing .+\\)', label: 'Swing Festivals' })).toBe(true);
+  });
+
+  test('matches simple regex', () => {
+    const contact = new Contact('Florian (Swing)', null);
+    expect(matchesAutoLabelRule(contact, { field: 'name', matches: '\\(swing\\)', label: 'Swing' })).toBe(true);
+  });
+
+  test('does not match when pattern is absent', () => {
+    const contact = new Contact('Normal Name', null);
+    expect(matchesAutoLabelRule(contact, { field: 'name', matches: '\\(swing\\)', label: 'Swing' })).toBe(false);
+  });
+
+  test('handles invalid regex gracefully', () => {
+    const contact = new Contact('Test', null);
+    expect(matchesAutoLabelRule(contact, { field: 'name', matches: '[invalid', label: 'X' })).toBe(false);
+  });
+
+  test('is case-insensitive', () => {
+    const contact = new Contact('Anna (VEGAN)', null);
+    expect(matchesAutoLabelRule(contact, { field: 'name', matches: '\\(vegan\\)', label: 'Vegan' })).toBe(true);
+  });
+});
+
+
+describe('detectCountryCodeLength', () => {
+  test('detects 1-digit codes', () => {
+    expect(detectCountryCodeLength('16171234567')).toBe(1);  // +1 US
+    expect(detectCountryCodeLength('79161234567')).toBe(1);  // +7 Russia
+  });
+
+  test('detects 2-digit codes', () => {
+    expect(detectCountryCodeLength('491761234567')).toBe(2);  // +49 Germany
+    expect(detectCountryCodeLength('447911123456')).toBe(2);  // +44 UK
+    expect(detectCountryCodeLength('905551234567')).toBe(2);  // +90 Turkey
+    expect(detectCountryCodeLength('34612345678')).toBe(2);   // +34 Spain
+    expect(detectCountryCodeLength('20123456789')).toBe(2);   // +20 Egypt
+  });
+
+  test('detects 3-digit codes', () => {
+    expect(detectCountryCodeLength('972501234567')).toBe(3);  // +972 Israel
+    expect(detectCountryCodeLength('3531234567')).toBe(3);    // +353 Ireland
+    expect(detectCountryCodeLength('3561234567')).toBe(3);    // +356 Malta
+  });
+});
+
+
+describe('runInstagramToWebsite', () => {
+  test('runs without errors in dry run', () => {
+    global.dryRun = true;
+    const origFetch = global.fetchContacts;
+    global.fetchContacts = () => [
+      new Contact('Test User', null, [], 'test@example.com', '', '', ['@testuser'], 'people/c123', '@testuser', [])
+    ];
+
+    const result = runInstagramToWebsite();
+    expect(result.converted).toBe(1);
+    expect(result.changes).toHaveLength(1);
+    expect(result.changes[0].name).toBe('Test User');
+    expect(result.changes[0].urls[0]).toContain('instagram.com/testuser');
+
+    global.fetchContacts = origFetch;
+    global.dryRun = false;
+  });
+
+  test('skips contacts that already have the Instagram URL', () => {
+    global.dryRun = true;
+    const origFetch = global.fetchContacts;
+    global.fetchContacts = () => [
+      new Contact('Already Done', null, [], '', '', '', ['@existing'], 'people/c456', '@existing',
+        [{ value: 'https://www.instagram.com/existing', type: 'other', formattedType: 'Instagram' }])
+    ];
+
+    const result = runInstagramToWebsite();
+    expect(result.converted).toBe(0);
+    expect(result.skipped).toBe(1);
+
+    global.fetchContacts = origFetch;
+    global.dryRun = false;
+  });
+
+  test('skips contacts with no handles in notes', () => {
+    global.dryRun = true;
+    const origFetch = global.fetchContacts;
+    // Contact has Instagram from URL field only (not from notes)
+    global.fetchContacts = () => [
+      new Contact('URL Only', null, [], '', '', '', ['@fromurl'], 'people/c789', '',
+        [{ value: 'https://www.instagram.com/fromurl' }])
+    ];
+
+    const result = runInstagramToWebsite();
+    expect(result.converted).toBe(0);
+
+    global.fetchContacts = origFetch;
+    global.dryRun = false;
+  });
+});

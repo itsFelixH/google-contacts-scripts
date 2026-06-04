@@ -547,3 +547,109 @@ describe('validateLabelFilter', () => {
     expect(() => validateLabelFilter([null])).toThrow();
   });
 });
+
+
+describe('findDuplicatePhones', () => {
+  test('finds contacts sharing the same phone number', () => {
+    const contacts = [
+      new Contact('Alice', null, [], '', '', '+491761234567'),
+      new Contact('Bob', null, [], '', '', '+491761234567'),
+      new Contact('Charlie', null, [], '', '', '+491769876543'),
+    ];
+    const result = findDuplicatePhones(contacts);
+    expect(result).toHaveLength(1);
+    expect(result[0].contacts).toHaveLength(2);
+    expect(result[0].contacts.map(c => c.getName())).toContain('Alice');
+    expect(result[0].contacts.map(c => c.getName())).toContain('Bob');
+  });
+
+  test('returns empty when no duplicates', () => {
+    const contacts = [
+      new Contact('Alice', null, [], '', '', '+491761234567'),
+      new Contact('Bob', null, [], '', '', '+491769876543'),
+    ];
+    expect(findDuplicatePhones(contacts)).toHaveLength(0);
+  });
+
+  test('ignores contacts without phone numbers', () => {
+    const contacts = [
+      new Contact('NoPhone', null),
+      new Contact('AlsoNoPhone', null),
+    ];
+    expect(findDuplicatePhones(contacts)).toHaveLength(0);
+  });
+
+  test('normalizes whitespace and separators', () => {
+    const contacts = [
+      new Contact('Alice', null, [], '', '', '+49 176 1234567'),
+      new Contact('Bob', null, [], '', '', '+491761234567'),
+    ];
+    const result = findDuplicatePhones(contacts);
+    expect(result).toHaveLength(1);
+  });
+});
+
+
+describe('findEmptyContacts', () => {
+  test('finds contacts with only a name', () => {
+    const contacts = [
+      new Contact('Empty', null),
+      new Contact('Has Email', null, [], 'test@example.com'),
+      new Contact('Has Phone', null, [], '', '', '+49123'),
+      new Contact('Also Empty', null, [], '', '', ''),
+    ];
+    const result = findEmptyContacts(contacts);
+    expect(result).toHaveLength(2);
+    expect(result.map(c => c.getName())).toEqual(['Empty', 'Also Empty']);
+  });
+
+  test('returns empty when all contacts have data', () => {
+    const contacts = [
+      new Contact('Full', new Date(1990, 0, 1), [], 'a@b.com', 'Berlin', '+49123'),
+    ];
+    expect(findEmptyContacts(contacts)).toHaveLength(0);
+  });
+});
+
+
+describe('findBadlyFormattedNames', () => {
+  test('finds ALL CAPS names', () => {
+    const contacts = [
+      new Contact('JOHN SMITH', null),
+      new Contact('Normal Name', null),
+    ];
+    const result = findBadlyFormattedNames(contacts);
+    expect(result).toHaveLength(1);
+    expect(result[0].getName()).toBe('JOHN SMITH');
+  });
+
+  test('finds all lowercase names', () => {
+    const contacts = [
+      new Contact('maria garcia', null),
+      new Contact('Normal Name', null),
+    ];
+    const result = findBadlyFormattedNames(contacts);
+    expect(result).toHaveLength(1);
+    expect(result[0].getName()).toBe('maria garcia');
+  });
+
+  test('ignores short names', () => {
+    const contacts = [
+      new Contact('x', null),
+      new Contact('AB', null),  // 2 letters, all caps but short
+    ];
+    const result = findBadlyFormattedNames(contacts);
+    // 'x' has only 1 letter after filtering — skipped
+    // 'AB' has 2 letters and is all caps — flagged
+    expect(result.map(c => c.getName())).toContain('AB');
+  });
+
+  test('ignores properly formatted names', () => {
+    const contacts = [
+      new Contact('Anna Schmidt', null),
+      new Contact('Anna-Lena', null),
+      new Contact('Felix (Swing)', null),
+    ];
+    expect(findBadlyFormattedNames(contacts)).toHaveLength(0);
+  });
+});

@@ -136,6 +136,19 @@ describe('applyLimit', () => {
     expect(applyLimit(contacts)).toHaveLength(5);
     global.maxContactsPerReport = original;
   });
+
+  test('sets _totalBeforeLimit metadata when truncated', () => {
+    const original = global.maxContactsPerReport;
+    global.maxContactsPerReport = 3;
+    const result = applyLimit(contacts);
+    expect(result._totalBeforeLimit).toBe(5);
+    global.maxContactsPerReport = original;
+  });
+
+  test('does not set _totalBeforeLimit when not truncated', () => {
+    const result = applyLimit(contacts);
+    expect(result._totalBeforeLimit).toBeUndefined();
+  });
 });
 
 
