@@ -297,8 +297,9 @@ function sendDataQualityReport(prefetchedContacts) {
     const duplicatePhones = findDuplicatePhones(contacts);
     const emptyContacts = prepareContacts(findEmptyContacts(contacts));
     const badNames = prepareContacts(findBadlyFormattedNames(contacts));
+    const incompleteMessenger = prepareContacts(findIncompleteMessenger(contacts));
 
-    const totalIssues = noSurname.length + invalidPhones.length + duplicatePhones.length + emptyContacts.length + badNames.length;
+    const totalIssues = noSurname.length + invalidPhones.length + duplicatePhones.length + emptyContacts.length + badNames.length + incompleteMessenger.length;
 
     if (totalIssues === 0) {
       Logger.log('No data quality issues found');
@@ -306,7 +307,7 @@ function sendDataQualityReport(prefetchedContacts) {
     }
 
     const emailManager = new EmailManager();
-    emailManager.sendDataQualityEmail(noSurname, invalidPhones, duplicatePhones, emptyContacts, badNames, contacts.length);
+    emailManager.sendDataQualityEmail(noSurname, invalidPhones, duplicatePhones, emptyContacts, badNames, incompleteMessenger, contacts.length);
     Logger.log(`✅ Sent Data Quality report (${totalIssues} issues)`);
   } catch (error) {
     Logger.log(`Error in sendDataQualityReport: ${error.message}`);
