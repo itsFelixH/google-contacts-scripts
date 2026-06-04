@@ -89,16 +89,18 @@ Here's what the plain-text versions look like:
 ```
 🔧 Data Quality
 
-5 issues found
+7 issues found
 
-👤 Missing Surnames (3):
+👤 Missing Surnames (4):
   • Felix
   • Anna
   • Max
+  • Pizzaservice
 
-📱 Invalid Phone Numbers (2):
+📱 Invalid Phone Numbers (3):
   • Old Contact — abc123
   • Test Entry — 12
+  • Broken Import — +---
 ```
 
 ## Setup
