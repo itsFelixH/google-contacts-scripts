@@ -244,7 +244,7 @@ const emailSubjects = {
   duplicates: '🔍 Duplicate Contacts',
   overview: '📊 Contact Overview',
   labelOverview: '🏷️ Label Overview',
-  missingInfo: '📋 Missing Info: {field}',  // {field} is replaced with the field name
+  missingInfo: '📋 Missing Info',
   dataQuality: '🔧 Data Quality',
 };
 ```
@@ -295,7 +295,7 @@ You can run any report individually from the Apps Script editor:
 - `sendDuplicateContactsReport()`
 - `sendContactOverviewReport()`
 - `sendLabelOverviewReport()`
-- `sendMissingInfoReport('email')` — also: `'phone'`, `'city'`, `'birthday'`
+- `sendMissingInfoReport()` — all configured fields in one email
 - `sendDataQualityReport()`
 - `sendAllReports()` — runs all enabled reports
 
