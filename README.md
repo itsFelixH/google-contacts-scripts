@@ -13,7 +13,7 @@ Reports are sent to yourself — think of it as a personal contacts health check
 | 📊 **Contact Overview** | Stats dashboard — % of contacts with email, phone, birthday, etc. |
 | 🏷️ **Label Overview** | Label distribution, most/least used labels, and unlabeled contacts |
 | 📋 **Missing Info** | Contacts missing email, phone, city, or birthday |
-| 🔧 **Data Quality** | Contacts without surnames + invalid phone numbers |
+| 🔧 **Data Quality** | Missing surnames, invalid phones, shared numbers, empty contacts, formatting issues |
 
 All reports can be enabled/disabled individually. Empty reports are never sent.
 
@@ -92,7 +92,13 @@ Here's what the plain-text versions look like:
 ```
 🔧 Data Quality
 
-7 issues found
+12 issues found across 342 contacts
+
+  • 4 missing surnames
+  • 3 invalid phones
+  • 2 shared numbers
+  • 2 empty contacts
+  • 1 formatting issues
 
 👤 Missing Surnames (4):
   • Felix
@@ -104,6 +110,17 @@ Here's what the plain-text versions look like:
   • Old Contact — abc123
   • Test Entry — 12
   • Broken Import — +---
+
+📞 Shared Phone Numbers (2):
+  • +491701234567: Tom Fischer, Thomas Fischer
+  • +493012345: Pizzaservice, Pizza Express
+
+👻 Empty Contacts (2):
+  • Unknown Person
+  • Test
+
+🔤 Name Formatting Issues (1):
+  • JOHN SMITH
 ```
 
 ## Setup
