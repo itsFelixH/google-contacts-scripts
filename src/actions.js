@@ -550,12 +550,13 @@ function runInstagramToWebsite() {
   const changes = []; // { name, handles, url }
 
   contactsWithInstagram.forEach(contact => {
-    // Fetch current urls in a single API call (notes already available on contact)
-    const personData = getContactFields(contact.resourceName, 'urls');
-    const existingUrls = personData.urls || [];
+    // Use urls already fetched during initial load (no extra API call needed)
+    const existingUrls = contact.urls;
     const existingUrlValues = existingUrls.map(u => (u.value || '').toLowerCase());
     const currentNotes = contact.notes;
 
+    // Only convert handles that are in the notes (not already in website fields)
+    const handlesInNotes = extractInstagramNamesFromNotes(currentNotes);
     const handlesToConvert = [];
 
     contact.instagramNames.forEach(handle => {
@@ -635,23 +636,6 @@ function runInstagramToWebsite() {
 
   Logger.log(`📸 Instagram → Website done: ${converted} converted, ${skipped} already existed`);
   return { converted, skipped, changes };
-}
-
-
-/**
- * Gets specific fields for a contact from the People API in a single call.
- * @param {string} resourceName The contact's resource name
- * @param {string} personFields Comma-separated fields to fetch
- * @returns {Object} The person object with requested fields
- * @private
- */
-function getContactFields(resourceName, personFields) {
-  try {
-    return People.People.get(resourceName, { personFields });
-  } catch (error) {
-    Logger.log(`  ⚠️ Failed to read ${resourceName}: ${error.message}`);
-    return {};
-  }
 }
 
 
