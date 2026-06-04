@@ -669,3 +669,161 @@ function sendInstagramToWebsiteReport(changes) {
   emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
   Logger.log(`✅ Sent Instagram → Website report (${changes.length} contacts)`);
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Messenger → Website
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Converts Messenger/Facebook usernames from contact notes into website fields.
+ * For each username found (via "FB: username", "Messenger: username", "Facebook: username"):
+ * - Adds https://m.me/username as a website (type: "Messenger")
+ * - Removes the "FB: username" / "Messenger: username" pattern from notes
+ *
+ * Skips contacts that already have the m.me URL in their websites.
+ * Supports dryRun mode for previewing changes.
+ *
+ * @returns {{converted: number, skipped: number, changes: Object[]}} Results
+ */
+function runMessengerToWebsite() {
+  const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+  Logger.log('💬 Running Messenger → Website conversion...');
+
+  const contacts = fetchContacts([]);
+  // Only process contacts that have messenger usernames extracted from notes
+  const contactsWithMessenger = contacts.filter(c => {
+    // Check if notes contain a FB/Messenger/Facebook: username pattern
+    return /(?:fb|messenger|facebook):\s*[a-zA-Z0-9_.]+/i.test(c.notes);
+  });
+
+  if (contactsWithMessenger.length === 0) {
+    Logger.log('No contacts with Messenger usernames in notes found');
+    return { converted: 0, skipped: 0, changes: [] };
+  }
+
+  Logger.log(`💬 Found ${contactsWithMessenger.length} contacts with Messenger usernames in notes`);
+
+  let converted = 0;
+  let skipped = 0;
+  const changes = []; // { name, usernames, urls }
+
+  contactsWithMessenger.forEach(contact => {
+    const existingUrls = contact.urls;
+    const existingUrlValues = existingUrls.map(u => (u.value || '').toLowerCase());
+    const currentNotes = contact.notes;
+
+    // Extract usernames from notes
+    const usernamesToConvert = [];
+    const pattern = /(?:fb|messenger|facebook):\s*([a-zA-Z0-9_.]+)/gi;
+    let match;
+    while ((match = pattern.exec(currentNotes)) !== null) {
+      const username = match[1];
+      const messengerUrl = `https://m.me/${username}`;
+
+      // Skip if m.me URL or facebook.com URL already exists for this username
+      if (existingUrlValues.some(url => url.includes(`m.me/${username.toLowerCase()}`) || url.includes(`facebook.com/${username.toLowerCase()}`))) {
+        skipped++;
+        continue;
+      }
+
+      // Avoid duplicates within this contact
+      if (!usernamesToConvert.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+        usernamesToConvert.push({ username, url: messengerUrl, fullMatch: match[0] });
+      }
+    }
+
+    if (usernamesToConvert.length === 0) return;
+
+    changes.push({
+      name: contact.getName(),
+      usernames: usernamesToConvert.map(u => u.username),
+      urls: usernamesToConvert.map(u => u.url),
+    });
+
+    if (isDryRun) {
+      usernamesToConvert.forEach(u => {
+        Logger.log(`🧪 [DRY RUN] ${contact.getName()}: ${u.username} → website ${u.url}`);
+      });
+      converted += usernamesToConvert.length;
+      return;
+    }
+
+    try {
+      // Build new websites array (keep existing + add new Messenger ones)
+      const newUrls = [
+        ...existingUrls,
+        ...usernamesToConvert.map(u => ({ value: u.url, type: 'other', formattedType: 'Messenger' })),
+      ];
+
+      // Remove FB/Messenger/Facebook: username patterns from notes
+      let updatedNotes = currentNotes;
+      usernamesToConvert.forEach(u => {
+        updatedNotes = updatedNotes.replace(new RegExp(`(?:fb|messenger|facebook):\\s*${u.username}`, 'gi'), '');
+      });
+      // Clean up leftover separators and whitespace
+      updatedNotes = updatedNotes.replace(/[,;]\s*[,;]/g, ',').replace(/^\s*[,;.]\s*/gm, '').replace(/\s*[,;.]\s*$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+
+      // Update the contact: add websites + clean notes
+      const updateFields = ['urls'];
+      const updateBody = { urls: newUrls };
+
+      if (updatedNotes !== currentNotes) {
+        updateFields.push('biographies');
+        updateBody.biographies = updatedNotes ? [{ value: updatedNotes, contentType: 'TEXT_PLAIN' }] : [];
+      }
+
+      People.People.updateContact(updateBody, contact.resourceName, {
+        updatePersonFields: updateFields.join(',')
+      });
+
+      converted += usernamesToConvert.length;
+      usernamesToConvert.forEach(u => {
+        Logger.log(`  ✅ ${contact.getName()}: ${u.username} → ${u.url}`);
+      });
+      throttle(isDryRun);
+    } catch (error) {
+      Logger.log(`  ❌ Failed to update ${contact.getName()}: ${error.message}`);
+    }
+  });
+
+  // Send summary report
+  if (changes.length > 0 && !isDryRun && shouldSendActionReports()) {
+    sendMessengerToWebsiteReport(changes);
+  }
+
+  Logger.log(`💬 Messenger → Website done: ${converted} converted, ${skipped} already existed`);
+  return { converted, skipped, changes };
+}
+
+
+/**
+ * Sends a summary email of Messenger → Website conversions.
+ * @param {Object[]} changes Array of { name, usernames, urls }
+ * @private
+ */
+function sendMessengerToWebsiteReport(changes) {
+  const emailManager = new EmailManager();
+  const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
+  const totalUsernames = changes.reduce((sum, c) => sum + c.usernames.length, 0);
+  const subject = '💬 Messenger → Website Summary';
+
+  const textBody = ['💬 Messenger → Website Summary', '',
+    `${totalUsernames} usernames converted for ${changes.length} contacts:`, '',
+    ...changes.map(c => `  • ${c.name}: ${c.usernames.join(', ')} → m.me`)
+  ].join('\n');
+
+  const listHtml = changes.map(c => {
+    const links = c.urls.map(url => `<a href="${url}" style="color: #1a73e8; text-decoration: none;">${url}</a>`).join(', ');
+    return EmailTemplates.listItem(`<strong>${c.name}</strong><br><small style="color: #666;">${c.usernames.join(', ')} → ${links}</small>`);
+  }).join('\n');
+
+  const htmlBody = EmailTemplates.wrapEmail(
+    EmailTemplates.header('💬 Messenger → Website', `${totalUsernames} usernames converted for ${changes.length} contacts`) +
+    EmailTemplates.card(EmailTemplates.list(listHtml)) +
+    EmailTemplates.footer(emailManager.scriptId)
+  );
+
+  emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  Logger.log(`✅ Sent Messenger → Website report (${changes.length} contacts)`);
+}
