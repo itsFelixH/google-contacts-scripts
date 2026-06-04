@@ -29,11 +29,11 @@ const excludeLabels = []; // e.g. ['Blocked', 'Spam', 'Business']
 
 const enabledReports = {
   upcomingBirthdays: true,
-  duplicates: true,
-  contactOverview: true,
-  labelOverview: true,
-  missingInfo: true,
-  dataQuality: true,
+  duplicates:        true,
+  contactOverview:   true,
+  labelOverview:     true,
+  missingInfo:       true,
+  dataQuality:       true,
 };
 
 // ─── Upcoming Birthdays ───────────────────────────────────────────────────────
@@ -116,10 +116,12 @@ const reportSchedules = {
 
 const autoLabelRules = [
   // { field: 'email', contains: '@company.com', label: 'Work' },
-  // { field: 'email', endsWith: '.edu', label: 'University' },
-  // { field: 'phone', startsWith: '+44', label: 'UK' },
-  // { field: 'city', equals: 'berlin', label: 'Berlin' },
-  // { field: 'name', startsWith: 'dr.', label: 'Doctors' },
+  // { field: 'email', endsWith: '.edu',        label: 'University' },
+  // { field: 'phone', startsWith: '+44',       label: '🇬🇧 UK' },
+  // { field: 'city',  equals: 'berlin',        label: '📍 Berlin' },
+  // { field: 'name',  startsWith: 'dr.',       label: 'Doctors' },
+  // { field: 'name',  matches: '\\(swing\\)',  label: 'Swing' },
+  // { field: 'name',  matches: '\\(swing .+\\)', label: 'Swing Festivals' },
 ];
 
 // ─── Phone normalizer ─────────────────────────────────────────────────────────
@@ -133,7 +135,8 @@ const defaultCountryCode = '+49';
 const nameSwapLastFirst = false;          // convert "Last, First" → "First Last"
 
 // ─── Action reports ───────────────────────────────────────────────────────────
-// Send a summary email after each action runs. Set to true to enable.
+// Send a summary email after each action runs.
+
 const sendActionReports = false;
 
 
@@ -153,11 +156,11 @@ const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
 
 const emailSubjects = {
   upcomingBirthdays: '🎂 Upcoming Birthdays',
-  duplicates: '🔍 Duplicate Contacts',
-  overview: '📊 Contact Overview',
-  labelOverview: '🏷️ Label Overview',
-  missingInfo: '📋 Missing Info: {field}',
-  dataQuality: '🔧 Data Quality',
+  duplicates:        '🔍 Duplicate Contacts',
+  overview:          '📊 Contact Overview',
+  labelOverview:     '🏷️ Label Overview',
+  missingInfo:       '📋 Missing Info: {field}',
+  dataQuality:       '🔧 Data Quality',
 };
 
 
@@ -165,4 +168,4 @@ const emailSubjects = {
 // 7. ADVANCED
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const dryRun = false; // true = preview mode, no emails sent
+const dryRun = false;                     // true = preview mode, no emails sent
