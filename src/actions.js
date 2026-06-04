@@ -117,7 +117,7 @@ function runAutoLabeling() {
  * Checks if a contact matches an auto-label rule.
  *
  * @param {Contact} contact The contact to check
- * @param {Object} rule Rule with { field, contains|equals|endsWith|startsWith, label }
+ * @param {Object} rule Rule with { field, contains|equals|endsWith|startsWith|matches, label }
  * @returns {boolean} True if the rule matches
  * @private
  */
@@ -133,6 +133,16 @@ function matchesAutoLabelRule(contact, rule) {
   }
 
   if (!value) return false;
+
+  // Regex match (case-insensitive)
+  if (rule.matches) {
+    try {
+      return new RegExp(rule.matches, 'i').test(value);
+    } catch (e) {
+      Logger.log(`⚠️ Invalid regex in auto-label rule: ${rule.matches}`);
+      return false;
+    }
+  }
 
   // Apply the matching condition
   const target = (rule.contains || rule.equals || rule.startsWith || rule.endsWith || '').toLowerCase();
