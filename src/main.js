@@ -163,7 +163,6 @@ function sendAllReports() {
 function sendUpcomingBirthdaysReport(days, prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
-    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
     const lookAhead = days || (typeof upcomingBirthdaysDays !== 'undefined' ? upcomingBirthdaysDays : 14);
 
     if (typeof lookAhead !== 'number' || lookAhead < 1 || lookAhead > 365) {
@@ -175,11 +174,6 @@ function sendUpcomingBirthdaysReport(days, prefetchedContacts) {
 
     if (upcoming.length === 0) {
       Logger.log(`No upcoming birthdays in the next ${lookAhead} days`);
-      return;
-    }
-
-    if (isDryRun) {
-      Logger.log(`🧪 [DRY RUN] Would send Upcoming Birthdays report (${upcoming.length} contacts, ${lookAhead} days)`);
       return;
     }
 
@@ -225,15 +219,9 @@ function sendDuplicateContactsReport(prefetchedContacts) {
 function sendContactOverviewReport(prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
-    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
 
     const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
     const stats = computeContactStats(contacts);
-
-    if (isDryRun) {
-      Logger.log(`🧪 [DRY RUN] Would send Contact Overview report (${stats.totalContacts} contacts)`);
-      return;
-    }
 
     const emailManager = new EmailManager();
     emailManager.sendContactOverviewEmail(stats);
@@ -252,17 +240,11 @@ function sendContactOverviewReport(prefetchedContacts) {
 function sendLabelOverviewReport(prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
-    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
 
     const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
     const labelStats = computeLabelStats(contacts);
     const unlabeled = prepareContacts(findUnlabeled(contacts));
     const stats = computeContactStats(contacts);
-
-    if (isDryRun) {
-      Logger.log(`🧪 [DRY RUN] Would send Label Overview report (${labelStats.totalLabels} labels, ${unlabeled.length} unlabeled)`);
-      return;
-    }
 
     const emailManager = new EmailManager();
     emailManager.sendLabelOverviewEmail(labelStats, unlabeled, stats.labelDistribution, stats.totalContacts);
@@ -281,7 +263,6 @@ function sendLabelOverviewReport(prefetchedContacts) {
 function sendMissingInfoReport(prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
-    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
     const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
 
     const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
@@ -295,11 +276,6 @@ function sendMissingInfoReport(prefetchedContacts) {
     const totalMissing = Object.values(fieldData).reduce((sum, arr) => sum + arr.length, 0);
     if (totalMissing === 0) {
       Logger.log('No missing info found');
-      return;
-    }
-
-    if (isDryRun) {
-      Logger.log(`🧪 [DRY RUN] Would send Missing Info report (${totalMissing} gaps)`);
       return;
     }
 

@@ -8,7 +8,7 @@ global.maxContactsPerReport = 0;
 global.includeEditLinks = true;
 global.includeWhatsAppLinks = false;
 global.phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
-global.dryRun = false;
+global.dryRunActions = false;
 global.emailSubjects = {};
 global.enabledReports = {
   upcomingBirthdays: true,

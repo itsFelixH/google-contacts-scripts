@@ -57,7 +57,7 @@ function throttle(isDryRun) {
  */
 function runAutoLabeling() {
   const rules = typeof autoLabelRules !== 'undefined' ? autoLabelRules : [];
-  const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+  const isDryRun = typeof dryRunActions !== 'undefined' ? dryRunActions : (typeof dryRun !== 'undefined' && dryRun);
 
   if (rules.length === 0) {
     Logger.log('⚠️ No auto-label rules configured. Add autoLabelRules to config.js.');
@@ -117,7 +117,7 @@ function runAutoLabeling() {
   });
 
   // Send summary report
-  if (changes.length > 0 && !isDryRun && shouldSendActionReports()) {
+  if (changes.length > 0 && shouldSendActionReports()) {
     sendAutoLabelingReport(changes);
   }
 
@@ -216,7 +216,7 @@ function sendAutoLabelingReport(changes) {
  * @returns {{fixed: number, unchanged: number, changes: Object[]}} Results
  */
 function runNameFormatter() {
-  const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+  const isDryRun = typeof dryRunActions !== 'undefined' ? dryRunActions : (typeof dryRun !== 'undefined' && dryRun);
   Logger.log('✏️ Running name formatter...');
 
   const contacts = fetchContacts([]);
@@ -255,7 +255,7 @@ function runNameFormatter() {
   });
 
   // Send summary report
-  if (changes.length > 0 && !isDryRun && shouldSendActionReports()) {
+  if (changes.length > 0 && shouldSendActionReports()) {
     sendNameFormatterReport(changes);
   }
 
@@ -361,7 +361,7 @@ function sendNameFormatterReport(changes) {
  */
 function runPhoneNormalizer() {
   const countryCode = typeof defaultCountryCode !== 'undefined' ? defaultCountryCode : '+49';
-  const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+  const isDryRun = typeof dryRunActions !== 'undefined' ? dryRunActions : (typeof dryRun !== 'undefined' && dryRun);
 
   Logger.log(`📱 Running phone normalizer (country code: ${countryCode})...`);
 
@@ -405,7 +405,7 @@ function runPhoneNormalizer() {
   });
 
   // Send summary report
-  if (changes.length > 0 && !isDryRun && shouldSendActionReports()) {
+  if (changes.length > 0 && shouldSendActionReports()) {
     sendPhoneNormalizerReport(changes);
   }
 
@@ -531,7 +531,7 @@ function sendPhoneNormalizerReport(changes) {
  * @returns {{converted: number, skipped: number, changes: Object[]}} Results
  */
 function runInstagramToWebsite() {
-  const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+  const isDryRun = typeof dryRunActions !== 'undefined' ? dryRunActions : (typeof dryRun !== 'undefined' && dryRun);
   Logger.log('📸 Running Instagram → Website conversion...');
 
   // Fetch contacts with biographies and urls
@@ -630,7 +630,7 @@ function runInstagramToWebsite() {
   });
 
   // Send summary report
-  if (changes.length > 0 && !isDryRun && shouldSendActionReports()) {
+  if (changes.length > 0 && shouldSendActionReports()) {
     sendInstagramToWebsiteReport(changes);
   }
 
@@ -687,7 +687,7 @@ function sendInstagramToWebsiteReport(changes) {
  * @returns {{converted: number, skipped: number, changes: Object[]}} Results
  */
 function runMessengerToWebsite() {
-  const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+  const isDryRun = typeof dryRunActions !== 'undefined' ? dryRunActions : (typeof dryRun !== 'undefined' && dryRun);
   Logger.log('💬 Running Messenger → Website conversion...');
 
   const contacts = fetchContacts([]);
@@ -788,7 +788,7 @@ function runMessengerToWebsite() {
   });
 
   // Send summary report
-  if (changes.length > 0 && !isDryRun && shouldSendActionReports()) {
+  if (changes.length > 0 && shouldSendActionReports()) {
     sendMessengerToWebsiteReport(changes);
   }
 

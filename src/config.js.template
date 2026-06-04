@@ -173,4 +173,4 @@ const emailSubjects = {
 // 7. ADVANCED
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const dryRun = false;                     // true = preview mode, no emails sent
+const dryRunActions = false;              // true = preview mode for actions (no contact changes)
