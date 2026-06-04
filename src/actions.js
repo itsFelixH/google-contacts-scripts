@@ -550,11 +550,11 @@ function runInstagramToWebsite() {
   const changes = []; // { name, handles, url }
 
   contactsWithInstagram.forEach(contact => {
-    // Fetch current urls + notes in a single API call
-    const personData = getContactFields(contact.resourceName, 'urls,biographies');
+    // Fetch current urls in a single API call (notes already available on contact)
+    const personData = getContactFields(contact.resourceName, 'urls');
     const existingUrls = personData.urls || [];
     const existingUrlValues = existingUrls.map(u => (u.value || '').toLowerCase());
-    const currentNotes = (personData.biographies || []).map(b => b.value).join('\n') || '';
+    const currentNotes = contact.notes;
 
     const handlesToConvert = [];
 
