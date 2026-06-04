@@ -35,6 +35,10 @@ global.reportSchedules = {
   missingInfo: 'off',
   dataQuality: 'off',
   autoLabeling: 'off',
+  nameFormatter: 'off',
+  phoneNormalizer: 'off',
+  instagramToWebsite: 'off',
+  messengerToWebsite: 'off',
 };
 global.autoLabelRules = [];
 global.defaultCountryCode = '+49';
