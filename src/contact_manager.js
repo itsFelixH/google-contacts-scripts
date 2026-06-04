@@ -325,6 +325,17 @@ function findBadlyFormattedNames(contacts) {
 
 
 /**
+ * Finds contacts that mention Messenger/FB in notes but have no username.
+ *
+ * @param {Contact[]} contacts Contacts to search
+ * @returns {Contact[]} Contacts with incomplete Messenger info
+ */
+function findIncompleteMessenger(contacts) {
+  return contacts.filter(c => c.hasMessengerTag && !c.messengerUsername);
+}
+
+
+/**
  * Finds contacts whose name has no space (likely missing a surname).
  *
  * @param {Contact[]} contacts Contacts to search
