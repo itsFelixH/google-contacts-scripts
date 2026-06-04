@@ -74,18 +74,31 @@ describe('formatName', () => {
     expect(formatName('John Doe')).toBe('John Doe');
     expect(formatName('Anna Schmidt')).toBe('Anna Schmidt');
   });
+
+  test('capitalizes after hyphens', () => {
+    expect(formatName('anna-lena müller')).toBe('Anna-Lena Müller');
+    expect(formatName('hans-peter von berg')).toBe('Hans-Peter von Berg');
+    expect(formatName('JEAN-CLAUDE')).toBe('Jean-Claude');
+  });
+
+  test('preserves parenthetical content as-is', () => {
+    expect(formatName('anna (Swing Barcelona) castellví')).toBe('Anna (Swing Barcelona) Castellví');
+    expect(formatName('FELIX (Vegan)')).toBe('Felix (Vegan)');
+    expect(formatName('emine (Swing Istanbul) küçükkalfa')).toBe('Emine (Swing Istanbul) Küçükkalfa');
+  });
 });
 
 
 describe('normalizePhoneNumber', () => {
-  test('converts local format to international', () => {
-    expect(normalizePhoneNumber('0176 1234567', '+49')).toBe('+491761234567');
-    expect(normalizePhoneNumber('01761234567', '+49')).toBe('+491761234567');
+  test('converts local format to international with grouping', () => {
+    expect(normalizePhoneNumber('0176 1234567', '+49')).toBe('+49 176 1234567');
+    expect(normalizePhoneNumber('01761234567', '+49')).toBe('+49 176 1234567');
   });
 
-  test('strips separators from international format', () => {
-    expect(normalizePhoneNumber('+49 (176) 123-4567', '+49')).toBe('+491761234567');
+  test('cleans separators from international format but preserves spaces', () => {
+    expect(normalizePhoneNumber('+49 (176) 123-4567', '+49')).toBe('+49 176 1234567');
     expect(normalizePhoneNumber('+49-176-1234567', '+49')).toBe('+491761234567');
+    expect(normalizePhoneNumber('+49 176 1234567', '+49')).toBe('+49 176 1234567');
   });
 
   test('leaves unknown formats unchanged', () => {
@@ -94,8 +107,8 @@ describe('normalizePhoneNumber', () => {
   });
 
   test('works with different country codes', () => {
-    expect(normalizePhoneNumber('0201234567', '+1')).toBe('+1201234567');
-    expect(normalizePhoneNumber('07911123456', '+44')).toBe('+447911123456');
+    expect(normalizePhoneNumber('0201234567', '+1')).toBe('+1 201 234567');
+    expect(normalizePhoneNumber('07911123456', '+44')).toBe('+44 791 1123456');
   });
 });
 
