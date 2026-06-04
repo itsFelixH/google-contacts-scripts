@@ -30,7 +30,7 @@ function fetchContacts(labelNames = [], maxRetries = 3) {
 
     // API settings (hardcoded — no need to configure these)
     const pageSize = 100;
-    const personFields = 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies';
+    const personFields = 'names,birthdays,memberships,emailAddresses,phoneNumbers,addresses,biographies,urls';
     const retries = maxRetries;
 
     if (labelNames.length === 0) {
