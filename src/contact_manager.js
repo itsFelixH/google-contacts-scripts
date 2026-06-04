@@ -411,12 +411,23 @@ function findDuplicates(contacts, matchFields) {
  * Computes label usage statistics across all contacts.
  *
  * @param {Contact[]} contacts Contacts to analyze
- * @returns {{totalLabels: number, mostUsed: Object|null, leastUsed: Object|null, allLabels: Object[], unlabeledCount: number}}
+ * @returns {Object} Label statistics including counts, averages, and distribution data
  */
 function computeLabelStats(contacts) {
   // Count how many contacts use each label
   const counts = {};
+  let totalAssignments = 0;
+  let multiLabelCount = 0;
+  let maxLabelsOnContact = 0;
+  let singleLabelCount = 0;
+
   contacts.forEach(c => {
+    const labelCount = c.getLabels().length;
+    totalAssignments += labelCount;
+    if (labelCount > 1) multiLabelCount++;
+    if (labelCount === 1) singleLabelCount++;
+    if (labelCount > maxLabelsOnContact) maxLabelsOnContact = labelCount;
+
     c.getLabels().forEach(label => {
       counts[label] = (counts[label] || 0) + 1;
     });
@@ -432,13 +443,22 @@ function computeLabelStats(contacts) {
     .sort((a, b) => b.count - a.count);
 
   const unlabeledCount = contacts.filter(c => c.getLabels().length === 0).length;
+  const labeledCount = contacts.length - unlabeledCount;
+  const avgLabelsPerContact = contacts.length > 0 ? (totalAssignments / contacts.length).toFixed(1) : '0.0';
+  const avgLabelsPerLabeled = labeledCount > 0 ? (totalAssignments / labeledCount).toFixed(1) : '0.0';
 
   return {
     totalLabels: sorted.length,
     mostUsed: sorted[0] || null,
     leastUsed: sorted[sorted.length - 1] || null,
     allLabels: sorted,
-    unlabeledCount
+    unlabeledCount,
+    labeledCount,
+    multiLabelCount,
+    singleLabelCount,
+    maxLabelsOnContact,
+    avgLabelsPerContact,
+    avgLabelsPerLabeled,
   };
 }
 
