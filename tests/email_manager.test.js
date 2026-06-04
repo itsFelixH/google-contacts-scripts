@@ -150,7 +150,7 @@ describe('EmailManager', () => {
     test('sends email with multiple sections', () => {
       const noSurname = [new Contact('SingleName', null)];
       const invalidPhones = [new Contact('Bad Phone', null, [], '', '', 'abc')];
-      emailManager.sendDataQualityEmail(noSurname, invalidPhones, [], [], [], 100);
+      emailManager.sendDataQualityEmail(noSurname, invalidPhones, [], [], [], [], 100);
       expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
       expect(lastRawMessage).toContain('SingleName');
       expect(lastRawMessage).toContain('Bad Phone');
@@ -159,7 +159,7 @@ describe('EmailManager', () => {
 
     test('works with only surnames section', () => {
       const noSurname = [new Contact('OnlyFirst', null)];
-      emailManager.sendDataQualityEmail(noSurname, [], [], [], [], 50);
+      emailManager.sendDataQualityEmail(noSurname, [], [], [], [], [], 50);
       expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
       expect(lastRawMessage).toContain('OnlyFirst');
       expect(lastRawMessage).not.toContain('Invalid Phone');
@@ -167,7 +167,7 @@ describe('EmailManager', () => {
 
     test('works with only invalid phones section', () => {
       const invalidPhones = [new Contact('Bad Phone', null, [], '', '', 'xyz')];
-      emailManager.sendDataQualityEmail([], invalidPhones, [], [], [], 50);
+      emailManager.sendDataQualityEmail([], invalidPhones, [], [], [], [], 50);
       expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
       expect(lastRawMessage).toContain('xyz');
       expect(lastRawMessage).not.toContain('Missing Surnames');
@@ -176,10 +176,18 @@ describe('EmailManager', () => {
     test('includes summary card and total contacts', () => {
       const noSurname = [new Contact('Felix', null)];
       const empty = [new Contact('Ghost', null)];
-      emailManager.sendDataQualityEmail(noSurname, [], [], empty, [], 342);
+      emailManager.sendDataQualityEmail(noSurname, [], [], empty, [], [], 342);
       expect(lastRawMessage).toContain('342');
       expect(lastRawMessage).toContain('missing surnames');
       expect(lastRawMessage).toContain('empty contacts');
+    });
+
+    test('includes messenger without username section', () => {
+      const messenger = [new Contact('FB Friend', null, [], '', '', '', [], '', 'FB')];
+      emailManager.sendDataQualityEmail([], [], [], [], [], messenger, 100);
+      expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+      expect(lastRawMessage).toContain('FB Friend');
+      expect(lastRawMessage).toContain('Messenger without username');
     });
   });
 });
