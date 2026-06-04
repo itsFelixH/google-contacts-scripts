@@ -117,11 +117,9 @@ const reportSchedules = {
 const autoLabelRules = [
   // { field: 'email', contains: '@company.com', label: 'Work' },
   // { field: 'email', endsWith: '.edu', label: 'University' },
-  // { field: 'phone', startsWith: '+44', label: '🇬🇧 UK' },
-  // { field: 'city', equals: 'berlin', label: '📍 Berlin' },
+  // { field: 'phone', startsWith: '+44', label: 'UK' },
+  // { field: 'city', equals: 'berlin', label: 'Berlin' },
   // { field: 'name', startsWith: 'dr.', label: 'Doctors' },
-  // { field: 'name', matches: '\\(swing\\)', label: 'Swing' },
-  // { field: 'name', matches: '\\(swing .+\\)', label: 'Swing Festivals' },
 ];
 
 // ─── Phone normalizer ─────────────────────────────────────────────────────────
