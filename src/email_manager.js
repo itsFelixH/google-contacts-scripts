@@ -22,6 +22,9 @@ class EmailManager {
 
     /** @type {Object} Custom email subjects from config */
     this.subjects = typeof emailSubjects !== 'undefined' ? emailSubjects : {};
+
+    /** @type {string} Script ID for Apps Script editor link */
+    this.scriptId = typeof ScriptApp !== 'undefined' ? ScriptApp.getScriptId() : '';
   }
 
 
@@ -117,7 +120,7 @@ class EmailManager {
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('🎂 Upcoming Birthdays', `${contacts.length} birthdays in the next ${days} days`) +
       this.templates.card(this.templates.list(listHtml)) +
-      this.templates.footer()
+      this.templates.footer(this.scriptId)
     );
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -158,7 +161,7 @@ class EmailManager {
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('🔍 Duplicate Contacts', `${duplicateGroups.length} groups may need review`) +
       this.templates.card(this.templates.list(listHtml)) +
-      this.templates.footer()
+      this.templates.footer(this.scriptId)
     );
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -197,7 +200,7 @@ class EmailManager {
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('📊 Contact Overview', `${stats.totalContacts} contacts`) +
       this.templates.card(statsHtml) +
-      this.templates.footer()
+      this.templates.footer(this.scriptId)
     );
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -267,7 +270,7 @@ class EmailManager {
       this.templates.section('📊 Label Distribution') +
       this.templates.card(this.templates.list(distHtml)) +
       unlabeledHtml +
-      this.templates.footer()
+      this.templates.footer(this.scriptId)
     );
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -322,7 +325,7 @@ class EmailManager {
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('📋 Missing Info', `${totalMissing} gaps across ${fields.length} fields`) +
       sectionsHtml +
-      this.templates.footer()
+      this.templates.footer(this.scriptId)
     );
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -414,7 +417,7 @@ class EmailManager {
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('🔧 Data Quality', `${totalIssues} issues found`) +
       sectionsHtml +
-      this.templates.footer()
+      this.templates.footer(this.scriptId)
     );
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -556,11 +559,16 @@ class EmailTemplates {
 
   /**
    * Renders the email footer with styled action buttons.
+   * @param {string} scriptId Google Apps Script project ID (for edit link)
    * @returns {string} HTML string
    */
-  static footer() {
+  static footer(scriptId) {
+    const scriptLink = scriptId
+      ? `<span style="display: inline-block; width: 8px;"></span><a href="https://script.google.com/home/projects/${scriptId}/edit" style="display: inline-block; padding: 10px 20px; background: #f1f3f4; color: #333; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">Script</a>`
+      : '';
     return `<div style="margin-top: 24px; text-align: center;">` +
       `<a href="https://contacts.google.com" style="display: inline-block; padding: 10px 20px; background: #1a73e8; color: #ffffff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">Manage Contacts</a>` +
+      scriptLink +
       `<span style="display: inline-block; width: 8px;"></span>` +
       `<a href="https://github.com/itsFelixH/google-contacts-scripts" style="display: inline-block; padding: 10px 20px; background: #f1f3f4; color: #333; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">GitHub</a>` +
       `</div>\n`;
