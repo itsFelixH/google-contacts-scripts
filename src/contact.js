@@ -70,21 +70,48 @@ class Contact {
     /** @type {boolean} Whether notes mention Messenger/FB without a username */
     this.hasMessengerTag = /\b(fb|messenger|facebook)\b/i.test(this.notes);
 
-    /** @type {string} Messenger username if found in notes (e.g. "FB: john.doe") */
-    this.messengerUsername = this._extractMessengerUsername(this.notes);
+    /** @type {string[]} Messenger/Facebook usernames extracted from notes and URLs */
+    this.messengerNames = this._extractMessengerNames(this.notes, this.urls);
   }
 
   /**
-   * Extracts a Messenger/Facebook username from notes.
-   * Matches patterns like "FB: username", "Messenger: username", "Facebook: username"
+   * Extracts Messenger/Facebook usernames from notes and website URLs.
+   * Notes patterns: "FB: username", "Messenger: username", "Facebook: username"
+   * URL patterns: m.me/username, facebook.com/username, messenger.com/t/username
    * @param {string} notes
-   * @returns {string} Username or empty string
+   * @param {Object[]} urls
+   * @returns {string[]} Deduplicated usernames
    * @private
    */
-  _extractMessengerUsername(notes) {
-    if (!notes) return '';
-    const match = notes.match(/(?:fb|messenger|facebook):\s*([a-zA-Z0-9_.]+)/i);
-    return match ? match[1] : '';
+  _extractMessengerNames(notes, urls) {
+    const names = [];
+
+    // Extract from notes
+    if (notes) {
+      const pattern = /(?:fb|messenger|facebook):\s*([a-zA-Z0-9_.]+)/gi;
+      let match;
+      while ((match = pattern.exec(notes)) !== null) {
+        const username = match[1];
+        if (!names.includes(username)) names.push(username);
+      }
+    }
+
+    // Extract from URLs
+    if (urls && Array.isArray(urls)) {
+      urls.forEach(urlObj => {
+        const url = urlObj.value || '';
+        // m.me/username
+        let match = url.match(/^https?:\/\/m\.me\/([a-zA-Z0-9_.]+)/i);
+        if (match) { if (!names.includes(match[1])) names.push(match[1]); return; }
+        // facebook.com/username (but not facebook.com/profile.php etc)
+        match = url.match(/^https?:\/\/(www\.)?facebook\.com\/([a-zA-Z0-9_.]+)\/?$/i);
+        if (match && !['profile.php', 'home.php', 'groups', 'pages', 'events', 'marketplace'].includes(match[2])) {
+          if (!names.includes(match[2])) names.push(match[2]);
+        }
+      });
+    }
+
+    return names;
   }
 
 
