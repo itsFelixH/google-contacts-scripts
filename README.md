@@ -306,6 +306,7 @@ These scripts write changes back to your contacts. Use `dryRun = true` to previe
 - `runAutoLabeling()` — assign labels based on rules (email domain, city, name patterns)
 - `runNameFormatter()` — fix capitalization, trim spaces, swap "Last, First" format
 - `runPhoneNormalizer()` — convert local numbers to international format
+- `runInstagramToWebsite()` — convert @handles in notes to clickable website fields
 
 ### Utility functions
 
