@@ -152,11 +152,11 @@ const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
 
 const emailSubjects = {
   upcomingBirthdays: '🎂 Upcoming Birthdays',
-  duplicates: '🔍 Possible Duplicates',
-  overview: '📊 Contacts at a Glance',
-  labelOverview: '🏷️ Labels & Unlabeled Contacts',
-  missingInfo: '📋 Contacts Without {field}',
-  dataQuality: '🔧 Contacts to Clean Up',
+  duplicates: '🔍 Duplicate Contacts',
+  overview: '📊 Contact Overview',
+  labelOverview: '🏷️ Label Overview',
+  missingInfo: '📋 Missing Info: {field}',
+  dataQuality: '🔧 Data Quality',
 };
 
 
