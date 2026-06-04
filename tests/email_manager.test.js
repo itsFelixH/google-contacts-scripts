@@ -81,6 +81,7 @@ describe('EmailManager', () => {
         cityPercentage: '70.0', labelPercentage: '85.0', instagramPercentage: '40.0',
         completeness: [2, 8, 20, 30, 40], completeCount: 40, completenessPercentage: '40.0',
         topCities: [{ city: 'Berlin', count: 25 }, { city: 'Munich', count: 15 }],
+        birthdayMonths: [5, 8, 12, 6, 10, 7, 4, 3, 9, 6, 5, 5],
       };
       emailManager.sendContactOverviewEmail(stats);
       expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
