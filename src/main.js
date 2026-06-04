@@ -107,7 +107,7 @@ function sendAllReports() {
     if (isReportEnabled('duplicates'))        reports.push(() => sendDuplicateContactsReport(contacts));
     if (isReportEnabled('contactOverview'))    reports.push(() => sendContactOverviewReport(contacts));
     if (isReportEnabled('labelOverview'))      reports.push(() => sendLabelOverviewReport(contacts));
-    if (isReportEnabled('missingInfo'))       reports.push(() => sendCombinedMissingInfoReport(contacts));
+    if (isReportEnabled('missingInfo'))       reports.push(() => sendMissingInfoReport(contacts));
     if (isReportEnabled('dataQuality'))        reports.push(() => sendDataQualityReport(contacts));
 
     reports.forEach((reportFn, index) => {
