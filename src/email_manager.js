@@ -3,7 +3,7 @@
  *
  * EmailManager builds both plain-text and HTML versions of each report
  * and sends them as multipart MIME messages via the Gmail API.
- * EmailTemplates provides the minimal HTML wrapper.
+ * EmailTemplates provides the HTML wrapper and reusable components.
  */
 
 
@@ -107,15 +107,16 @@ class EmailManager {
 
     // HTML
     const listHtml = lines.map(l => {
-      const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && l.contact.getContactLink())
-        ? ` <a href="${l.contact.getContactLink()}">edit</a>` : '';
+      const editLink = this._editLink(l.contact);
       const info = this._formatContactDetails(l.contact);
-      return `<li>${l.daysLabel} — <strong>${l.name}</strong>${l.age}${editLink}${info}</li>`;
+      return this.templates.listItem(
+        `${l.daysLabel} — <strong>${l.name}</strong>${l.age}${editLink}${info}`
+      );
     }).join('\n');
 
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('🎂 Upcoming Birthdays', `${contacts.length} birthdays in the next ${days} days`) +
-      `<ul>${listHtml}</ul>` +
+      this.templates.card(this.templates.list(listHtml)) +
       this.templates.footer()
     );
 
@@ -145,17 +146,18 @@ class EmailManager {
     // HTML
     const listHtml = duplicateGroups.map((g, i) => {
       const members = g.contacts.map(c => {
-        const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
-          ? ` <a href="${c.getContactLink()}">edit</a>` : '';
+        const editLink = this._editLink(c);
         const details = this._summarizeDuplicateContactHtml(c);
         return `<strong>${c.getName()}</strong>${editLink}${details}`;
       }).join('<br>');
-      return `<li><strong>Group ${i + 1}</strong> (${g.count}):<br>${members}<br><small>↳ ${g.reason}</small></li>`;
+      return this.templates.listItem(
+        `<strong>Group ${i + 1}</strong> (${g.count}):<br>${members}<br><small style="color: #666;">↳ ${g.reason}</small>`
+      );
     }).join('\n');
 
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('🔍 Duplicate Contacts', `${duplicateGroups.length} groups may need review`) +
-      `<ul>${listHtml}</ul>` +
+      this.templates.card(this.templates.list(listHtml)) +
       this.templates.footer()
     );
 
@@ -171,20 +173,30 @@ class EmailManager {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
     const subject = this.subjects.overview || '📊 Contact Overview';
 
-    const lines = [
-      `📇 Total Contacts: ${stats.totalContacts}`,
-      `🎂 With Birthday: ${stats.withBirthday} (${stats.birthdayPercentage}%)`,
-      `📧 With Email: ${stats.withEmail} (${stats.emailPercentage}%)`,
-      `📱 With Phone: ${stats.withPhone} (${stats.phonePercentage}%)`,
-      `🌆 With City: ${stats.withCity} (${stats.cityPercentage}%)`,
-      `🏷️ With Labels: ${stats.withLabels} (${stats.labelPercentage}%)`,
-      `📸 With Instagram: ${stats.withInstagram} (${stats.instagramPercentage}%)`
+    const statLines = [
+      { emoji: '📇', label: 'Total Contacts', value: stats.totalContacts },
+      { emoji: '🎂', label: 'With Birthday', value: stats.withBirthday, pct: stats.birthdayPercentage },
+      { emoji: '📧', label: 'With Email', value: stats.withEmail, pct: stats.emailPercentage },
+      { emoji: '📱', label: 'With Phone', value: stats.withPhone, pct: stats.phonePercentage },
+      { emoji: '🌆', label: 'With City', value: stats.withCity, pct: stats.cityPercentage },
+      { emoji: '🏷️', label: 'With Labels', value: stats.withLabels, pct: stats.labelPercentage },
+      { emoji: '📸', label: 'With Instagram', value: stats.withInstagram, pct: stats.instagramPercentage },
     ];
 
-    const textBody = ['📊 Contact Overview', '', ...lines].join('\n');
+    // Plain text
+    const textBody = ['📊 Contact Overview', '',
+      ...statLines.map(s => `  ${s.emoji} ${s.label}: ${s.value}${s.pct ? ` (${s.pct}%)` : ''}`)
+    ].join('\n');
+
+    // HTML — stats as a clean table-like layout
+    const statsHtml = statLines.map(s => {
+      const pct = s.pct ? ` <span style="color: #666;">(${s.pct}%)</span>` : '';
+      return `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">${s.emoji} ${s.label}: <strong>${s.value}</strong>${pct}</div>`;
+    }).join('\n');
+
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('📊 Contact Overview', `${stats.totalContacts} contacts`) +
-      lines.map(l => `<p>${l}</p>`).join('\n') +
+      this.templates.card(statsHtml) +
       this.templates.footer()
     );
 
@@ -226,33 +238,34 @@ class EmailManager {
 
     // ── HTML ──
     const summaryHtml = [
-      `<p>🏷️ Total Labels: <strong>${labelStats.totalLabels}</strong></p>`,
-      `<p>👑 Most Used: <strong>${labelStats.mostUsed?.label || 'N/A'}</strong> (${labelStats.mostUsed?.count || 0})</p>`,
-      `<p>📉 Least Used: <strong>${labelStats.leastUsed?.label || 'N/A'}</strong> (${labelStats.leastUsed?.count || 0})</p>`,
-      `<p>❌ Unlabeled: <strong>${labelStats.unlabeledCount}</strong></p>`,
+      `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">🏷️ Total Labels: <strong>${labelStats.totalLabels}</strong></div>`,
+      `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">👑 Most Used: <strong>${labelStats.mostUsed?.label || 'N/A'}</strong> (${labelStats.mostUsed?.count || 0})</div>`,
+      `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">📉 Least Used: <strong>${labelStats.leastUsed?.label || 'N/A'}</strong> (${labelStats.leastUsed?.count || 0})</div>`,
+      `<div style="padding: 8px 0;">❌ Unlabeled: <strong>${labelStats.unlabeledCount}</strong></div>`,
     ].join('\n');
 
     const distHtml = Object.entries(labelDistribution)
       .sort((a, b) => b[1] - a[1])
       .map(([label, count]) =>
-        `<li>🏷️ <strong>${label}</strong>: ${count} (${(count / totalContacts * 100).toFixed(1)}%)</li>`
+        this.templates.listItem(`🏷️ <strong>${label}</strong>: ${count} <span style="color: #666;">(${(count / totalContacts * 100).toFixed(1)}%)</span>`)
       ).join('\n');
 
     // Only show unlabeled section if there are any
     let unlabeledHtml = '';
     if (unlabeledContacts.length > 0) {
       const items = unlabeledContacts.map(c => {
-        const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
-          ? ` <a href="${c.getContactLink()}">edit</a>` : '';
-        return `<li><strong>${c.getName()}</strong>${editLink}</li>`;
+        const editLink = this._editLink(c);
+        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}`);
       }).join('\n');
-      unlabeledHtml = `<h3>❌ Unlabeled Contacts (${unlabeledContacts.length})</h3>\n<ul>${items}</ul>`;
+      unlabeledHtml = this.templates.section(`❌ Unlabeled Contacts (${unlabeledContacts.length})`) +
+        this.templates.card(this.templates.list(items));
     }
 
     const htmlBody = this.templates.wrapEmail(
-      this.templates.header('🏷️ Label Overview', 'Labels overview and unlabeled contacts') +
-      summaryHtml +
-      `<h3>📊 Label Distribution</h3>\n<ul>${distHtml}</ul>` +
+      this.templates.header('🏷️ Label Overview', `${labelStats.totalLabels} labels · ${totalContacts} contacts`) +
+      this.templates.card(summaryHtml) +
+      this.templates.section('📊 Label Distribution') +
+      this.templates.card(this.templates.list(distHtml)) +
       unlabeledHtml +
       this.templates.footer()
     );
@@ -285,15 +298,14 @@ class EmailManager {
 
     // HTML — show existing info + edit links
     const listHtml = contacts.map(c => {
-      const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
-        ? ` <a href="${c.getContactLink()}">edit</a>` : '';
+      const editLink = this._editLink(c);
       const has = this._summarizeExistingFieldsHtml(c, field);
-      return `<li><strong>${c.getName()}</strong>${editLink}${has}</li>`;
+      return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}${has}`);
     }).join('\n');
 
     const htmlBody = this.templates.wrapEmail(
       this.templates.header(`${emoji} Missing Info: ${displayName}`, `${contacts.length} contacts are missing ${displayName.toLowerCase()}`) +
-      `<ul>${listHtml}</ul>` +
+      this.templates.card(this.templates.list(listHtml)) +
       this.templates.footer()
     );
 
@@ -333,7 +345,7 @@ class EmailManager {
     if (missingField !== 'birthday' && contact.getBirthday()) parts.push(`🎂 ${contact.getBirthdayShortFormat()}`);
     if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().join(', ')}`);
     if (parts.length === 0) return '';
-    return `<br><small>${parts.join(' · ')}</small>`;
+    return `<br><small style="color: #666;">${parts.join(' · ')}</small>`;
   }
 
   /**
@@ -367,20 +379,20 @@ class EmailManager {
 
     if (missingSurnames.length > 0) {
       const items = missingSurnames.map(c => {
-        const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
-          ? ` <a href="${c.getContactLink()}">edit</a>` : '';
-        return `<li><strong>${c.getName()}</strong>${editLink}</li>`;
+        const editLink = this._editLink(c);
+        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}`);
       }).join('\n');
-      sectionsHtml += `<h3>👤 Missing Surnames (${missingSurnames.length})</h3>\n<ul>${items}</ul>`;
+      sectionsHtml += this.templates.section(`👤 Missing Surnames (${missingSurnames.length})`) +
+        this.templates.card(this.templates.list(items));
     }
 
     if (invalidPhones.length > 0) {
       const items = invalidPhones.map(c => {
-        const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
-          ? ` <a href="${c.getContactLink()}">edit</a>` : '';
-        return `<li><strong>${c.getName()}</strong>${editLink} — 📱 ${c.phoneNumber}</li>`;
+        const editLink = this._editLink(c);
+        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink} — 📱 ${c.phoneNumber}`);
       }).join('\n');
-      sectionsHtml += `<h3>📱 Invalid Phone Numbers (${invalidPhones.length})</h3>\n<ul>${items}</ul>`;
+      sectionsHtml += this.templates.section(`📱 Invalid Phone Numbers (${invalidPhones.length})`) +
+        this.templates.card(this.templates.list(items));
     }
 
     const htmlBody = this.templates.wrapEmail(
@@ -396,8 +408,20 @@ class EmailManager {
   // ─── Private helpers ────────────────────────────────────────────────────────
 
   /**
+   * Generates an edit link for a contact (respects includeEditLinks config).
+   * @param {Contact} contact
+   * @returns {string} HTML link or empty string
+   * @private
+   */
+  _editLink(contact) {
+    if (typeof includeEditLinks === 'undefined' || !includeEditLinks) return '';
+    const url = contact.getContactLink();
+    if (!url) return '';
+    return ` <a href="${url}" style="color: #1a73e8; text-decoration: none; font-size: 12px;">edit</a>`;
+  }
+
+  /**
    * Summarizes a contact's distinguishing details for the duplicate report (plain text).
-   * Shows email, phone, city, and labels to help differentiate contacts with the same name.
    * @param {Contact} contact
    * @returns {string} Comma-separated summary, or ''
    * @private
@@ -424,7 +448,7 @@ class EmailManager {
     if (contact.city) parts.push(`🌆 ${contact.city}`);
     if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().join(', ')}`);
     if (parts.length === 0) return '';
-    return ` <small>${parts.join(' · ')}</small>`;
+    return ` <small style="color: #666;">${parts.join(' · ')}</small>`;
   }
 
   /**
@@ -439,14 +463,13 @@ class EmailManager {
     const parts = [];
 
     if (contact.email) {
-      parts.push(`📧 <a href="mailto:${contact.email}">${contact.email}</a>`);
+      parts.push(`📧 <a href="mailto:${contact.email}" style="color: #1a73e8; text-decoration: none;">${contact.email}</a>`);
     }
     if (contact.phoneNumber) {
       let phonePart = `📱 ${contact.phoneNumber}`;
-      // Append WhatsApp link if configured
       if (typeof includeWhatsAppLinks !== 'undefined' && includeWhatsAppLinks) {
         const waLink = contact.getWhatsAppLink();
-        if (waLink) phonePart += ` (<a href="${waLink}">WhatsApp</a>)`;
+        if (waLink) phonePart += ` (<a href="${waLink}" style="color: #1a73e8; text-decoration: none;">WhatsApp</a>)`;
       }
       parts.push(phonePart);
     }
@@ -454,7 +477,7 @@ class EmailManager {
     if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().join(', ')}`);
 
     if (parts.length === 0) return '';
-    return `<br><small>${parts.join(' · ')}</small>`;
+    return `<br><small style="color: #666;">${parts.join(' · ')}</small>`;
   }
 }
 
@@ -463,42 +486,79 @@ class EmailManager {
 
 
 /**
- * Minimal HTML email templates.
- * Uses inline styles sparingly — just enough for readability across email clients.
+ * HTML email templates with card-based layout.
+ * Uses inline styles for maximum email client compatibility.
  */
 class EmailTemplates {
 
   /**
    * Renders a report header (title + optional subtitle).
-   *
    * @param {string} heading Main title text
    * @param {string} [subtitle] Optional subtitle/description
    * @returns {string} HTML string
    */
   static header(heading, subtitle = '') {
-    return `<h2>${heading}</h2>${subtitle ? `<p>${subtitle}</p>` : ''}\n`;
+    return `<h2 style="margin: 0 0 4px 0; font-size: 20px; font-weight: 600;">${heading}</h2>\n` +
+      (subtitle ? `<p style="margin: 0 0 16px 0; color: #666; font-size: 14px;">${subtitle}</p>\n` : '');
   }
 
   /**
-   * Renders the email footer with action links.
+   * Renders a section heading (h3 equivalent).
+   * @param {string} text Section title
+   * @returns {string} HTML string
+   */
+  static section(text) {
+    return `<h3 style="margin: 20px 0 8px 0; font-size: 15px; font-weight: 600;">${text}</h3>\n`;
+  }
+
+  /**
+   * Wraps content in a card (light background, rounded corners, padding).
+   * @param {string} content Inner HTML
+   * @returns {string} HTML string
+   */
+  static card(content) {
+    return `<div style="margin: 12px 0; padding: 14px 16px; background: #f8f9fa; border-radius: 8px;">\n${content}\n</div>\n`;
+  }
+
+  /**
+   * Wraps list items in a styled list container.
+   * @param {string} items Concatenated listItem() results
+   * @returns {string} HTML string
+   */
+  static list(items) {
+    return `<ul style="list-style: none; padding: 0; margin: 0;">\n${items}\n</ul>`;
+  }
+
+  /**
+   * Renders a single list item with a bottom border separator.
+   * @param {string} content Inner HTML for the item
+   * @returns {string} HTML string
+   */
+  static listItem(content) {
+    return `<li style="padding: 8px 0; border-bottom: 1px solid #eee;">${content}</li>`;
+  }
+
+  /**
+   * Renders the email footer with a styled button and GitHub link.
    * @returns {string} HTML string
    */
   static footer() {
-    return `<hr><p><a href="https://contacts.google.com">Manage Contacts</a> · <a href="https://github.com/itsFelixH/google-contacts-scripts">GitHub</a></p>\n`;
+    return `<div style="margin-top: 20px; text-align: center;">` +
+      `<a href="https://contacts.google.com" style="display: inline-block; padding: 10px 20px; background: #1a73e8; color: #ffffff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">Manage Contacts</a>` +
+      `</div>\n` +
+      `<p style="margin-top: 16px; text-align: center; font-size: 12px; color: #999;"><a href="https://github.com/itsFelixH/google-contacts-scripts" style="color: #999; text-decoration: none;">google-contacts-scripts</a></p>\n`;
   }
 
   /**
-   * Wraps content in a complete HTML document with minimal styling.
-   *
+   * Wraps content in a complete HTML document with base styling.
    * @param {string} content The email body HTML
    * @returns {string} Complete HTML document
    */
   static wrapEmail(content) {
     return `<!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 16px; line-height: 1.5;">
-<style>li { margin-bottom: 6px; }</style>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #333; background: #ffffff;">
 ${content}
 </body>
 </html>`;
