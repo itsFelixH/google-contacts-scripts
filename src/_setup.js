@@ -45,13 +45,17 @@ function setupSchedules() {
   const weekDay = typeof weeklyReportDay !== 'undefined' ? weeklyReportDay : ScriptApp.WeekDay.MONDAY;
   const monthDay = typeof monthlyReportDay !== 'undefined' ? monthlyReportDay : 1;
   const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
+  const actions = typeof actionSchedules !== 'undefined' ? actionSchedules : {};
 
-  // Check if any reports are scheduled for each frequency
-  const hasWeekly = Object.values(schedules).includes('weekly');
-  const hasMonthly = Object.values(schedules).includes('monthly');
+  // Combine both schedule maps to determine which triggers are needed
+  const allSchedules = { ...schedules, ...actions };
+
+  // Check if any reports/actions are scheduled for each frequency
+  const hasWeekly = Object.values(allSchedules).includes('weekly');
+  const hasMonthly = Object.values(allSchedules).includes('monthly');
 
   if (!hasWeekly && !hasMonthly) {
-    Logger.log('ℹ️ No schedules enabled. Set frequencies in reportSchedules config.');
+    Logger.log('ℹ️ No schedules enabled. Set frequencies in reportSchedules or actionSchedules config.');
     return;
   }
 
@@ -62,7 +66,7 @@ function setupSchedules() {
       .onWeekDay(weekDay)
       .atHour(hour)
       .create();
-    const weeklyKeys = Object.entries(schedules).filter(([_, v]) => v === 'weekly').map(([k]) => k);
+    const weeklyKeys = Object.entries(allSchedules).filter(([_, v]) => v === 'weekly').map(([k]) => k);
     Logger.log(`✅ Weekly (${weekDay === 2 ? 'Monday' : 'day ' + weekDay}) at ~${hour}:00 → ${weeklyKeys.join(', ')}`);
   }
 
@@ -73,7 +77,7 @@ function setupSchedules() {
       .onMonthDay(monthDay)
       .atHour(hour)
       .create();
-    const monthlyKeys = Object.entries(schedules).filter(([_, v]) => v === 'monthly').map(([k]) => k);
+    const monthlyKeys = Object.entries(allSchedules).filter(([_, v]) => v === 'monthly').map(([k]) => k);
     Logger.log(`✅ Monthly (day ${monthDay}) at ~${hour}:00 → ${monthlyKeys.join(', ')}`);
   }
 
