@@ -224,12 +224,14 @@ class EmailManager {
       `Total Labels: ${labelStats.totalLabels}`,
       `👑 Most Used: ${labelStats.mostUsed?.label || 'N/A'} (${labelStats.mostUsed?.count || 0})`,
       `📉 Least Used: ${labelStats.leastUsed?.label || 'N/A'} (${labelStats.leastUsed?.count || 0})`,
-      `❌ Unlabeled: ${labelStats.unlabeledCount}`,
+      `✅ Labeled: ${labelStats.labeledCount} · ❌ Unlabeled: ${labelStats.unlabeledCount}`,
+      `📊 Avg labels/contact: ${labelStats.avgLabelsPerContact}`,
+      `🔀 With multiple labels: ${labelStats.multiLabelCount}`,
       '',
       '── Label Distribution ──', '',
       ...Object.entries(labelDistribution)
         .sort((a, b) => b[1] - a[1])
-        .map(([label, count]) => `  🏷️ ${label}: ${count} (${(count / totalContacts * 100).toFixed(1)}%)`),
+        .map(([label, count]) => `  ${label}: ${count} (${(count / totalContacts * 100).toFixed(1)}%)`),
     ];
 
     if (unlabeledContacts.length > 0) {
@@ -244,13 +246,15 @@ class EmailManager {
       `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">🏷️ Total Labels: <strong>${labelStats.totalLabels}</strong></div>`,
       `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">👑 Most Used: <strong>${labelStats.mostUsed?.label || 'N/A'}</strong> (${labelStats.mostUsed?.count || 0})</div>`,
       `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">📉 Least Used: <strong>${labelStats.leastUsed?.label || 'N/A'}</strong> (${labelStats.leastUsed?.count || 0})</div>`,
-      `<div style="padding: 8px 0;">❌ Unlabeled: <strong>${labelStats.unlabeledCount}</strong></div>`,
+      `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">✅ Labeled: <strong>${labelStats.labeledCount}</strong> · ❌ Unlabeled: <strong>${labelStats.unlabeledCount}</strong></div>`,
+      `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">📊 Avg labels per contact: <strong>${labelStats.avgLabelsPerContact}</strong></div>`,
+      `<div style="padding: 8px 0;">🔀 With multiple labels: <strong>${labelStats.multiLabelCount}</strong></div>`,
     ].join('\n');
 
     const distHtml = Object.entries(labelDistribution)
       .sort((a, b) => b[1] - a[1])
       .map(([label, count]) =>
-        this.templates.listItem(`🏷️ <strong>${label}</strong>: ${count} <span style="color: #666;">(${(count / totalContacts * 100).toFixed(1)}%)</span>`)
+        this.templates.listItem(`<strong>${label}</strong>: ${count} <span style="color: #666;">(${(count / totalContacts * 100).toFixed(1)}%)</span>`)
       ).join('\n');
 
     // Only show unlabeled section if there are any
