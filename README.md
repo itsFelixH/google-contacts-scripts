@@ -45,9 +45,12 @@ Here's what the plain-text versions look like:
 ```
 🔍 Duplicate Contacts
 
-  Group 1: Max Müller, Max Mueller (same name: "max müller")
-  Group 2: Lisa W, Lisa Weber, Lisa W. (same email: lisa.w@gmail.com)
-  Group 3: Tom Fischer, Thomas Fischer (same phone: +491701234567)
+  Group 1: Max Müller (max.mueller@example.com, Work), Max Mueller (max.m@example.com, Friends)
+    ↳ same name: "max müller"
+  Group 2: Lisa W (lisa.w@gmail.com, Berlin), Lisa Weber (lisa.w@gmail.com, Munich, Family), Lisa W. (lisa.w@gmail.com)
+    ↳ same email: lisa.w@gmail.com
+  Group 3: Tom Fischer (tom@example.com, +49 170 1234567, Work), Thomas Fischer (+49 170 1234567, Hamburg, Friends)
+    ↳ same phone: +491701234567
 ```
 
 **📊 Contact Overview**
