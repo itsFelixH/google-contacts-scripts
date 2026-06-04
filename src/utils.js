@@ -251,3 +251,48 @@ function extractInstagramNamesFromNotes(notes) {
 
   return instagramNames;
 }
+
+
+/**
+ * Extracts Instagram usernames from website URL objects.
+ * Matches URLs containing "instagram.com/username".
+ *
+ * @param {Object[]} urls Array of URL objects from People API ({ value, type, formattedType })
+ * @returns {string[]} Array of Instagram usernames (with @ prefix), or empty array if none found.
+ */
+function extractInstagramNamesFromUrls(urls) {
+  if (!urls || !Array.isArray(urls)) return [];
+
+  const instagramNames = [];
+  const pattern = /instagram\.com\/([a-zA-Z0-9_.]+)/i;
+
+  urls.forEach(urlObj => {
+    const url = urlObj.value || '';
+    const match = url.match(pattern);
+    if (match) {
+      const username = '@' + match[1];
+      if (!instagramNames.includes(username)) {
+        instagramNames.push(username);
+      }
+    }
+  });
+
+  return instagramNames;
+}
+
+
+/**
+ * Deduplicates Instagram usernames (case-insensitive).
+ *
+ * @param {string[]} names Array of Instagram usernames (with @ prefix)
+ * @returns {string[]} Deduplicated array
+ */
+function deduplicateInstagramNames(names) {
+  const seen = new Set();
+  return names.filter(name => {
+    const lower = name.toLowerCase();
+    if (seen.has(lower)) return false;
+    seen.add(lower);
+    return true;
+  });
+}
