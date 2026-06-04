@@ -119,7 +119,7 @@ class EmailManager {
 
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('🎂 Upcoming Birthdays', `${contacts.length} birthdays in the next ${days} days`) +
-      this.templates.card(this.templates.list(listHtml)) +
+      this._cardWithList(listHtml, contacts) +
       this.templates.footer(this.scriptId, [{ label: 'Open Calendar', url: 'https://calendar.google.com' }])
     );
 
@@ -199,6 +199,12 @@ class EmailManager {
       textLines.push(...stats.topCities.map(c => `  ${c.city}: ${c.count}`));
     }
 
+    if (stats.birthdayMonths && stats.birthdayMonths.some(n => n > 0)) {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      textLines.push('', '🎂 Birthdays by Month:');
+      textLines.push(...stats.birthdayMonths.map((count, i) => `  ${monthNames[i]}: ${count}`));
+    }
+
     const textBody = textLines.join('\n');
 
     // ── HTML ──
@@ -229,12 +235,30 @@ class EmailManager {
         this.templates.card(this.templates.list(cityItems));
     }
 
+    // Birthday months section
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    let birthdayMonthsHtml = '';
+    if (stats.birthdayMonths && stats.birthdayMonths.some(n => n > 0)) {
+      const maxMonth = Math.max(...stats.birthdayMonths);
+      const monthBars = stats.birthdayMonths.map((count, i) => {
+        const width = maxMonth > 0 ? Math.round((count / maxMonth) * 100) : 0;
+        return `<div style="padding: 4px 0; display: flex; align-items: center;">` +
+          `<span style="width: 32px; font-size: 12px; color: #666;">${monthNames[i]}</span>` +
+          `<span style="flex: 1; height: 14px; background: #e8e8e8; border-radius: 3px; overflow: hidden;">` +
+          `<span style="display: block; height: 100%; width: ${width}%; background: #1a73e8; border-radius: 3px;"></span></span>` +
+          `<span style="width: 28px; text-align: right; font-size: 12px; font-weight: 500;">${count}</span></div>`;
+      }).join('\n');
+      birthdayMonthsHtml = this.templates.section('🎂 Birthdays by Month') +
+        this.templates.card(monthBars);
+    }
+
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('📊 Contact Overview', `${stats.totalContacts} contacts`) +
       this.templates.card(statsHtml) +
       this.templates.section('📋 Completeness (email + phone + birthday + city)') +
       this.templates.card(completenessHtml) +
       citiesHtml +
+      birthdayMonthsHtml +
       this.templates.footer(this.scriptId)
     );
 
@@ -300,7 +324,7 @@ class EmailManager {
         return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}`);
       }).join('\n');
       unlabeledHtml = this.templates.section(`❌ Unlabeled Contacts (${unlabeledContacts.length})`) +
-        this.templates.card(this.templates.list(items));
+        this._cardWithList(items, unlabeledContacts);
     }
 
     const htmlBody = this.templates.wrapEmail(
@@ -545,6 +569,18 @@ class EmailManager {
   }
 
   /**
+   * Renders a card with a list and an optional truncation note.
+   * @param {string} listHtml Concatenated listItem() results
+   * @param {any[]} sourceList The original (possibly truncated) array for the "and X more" note
+   * @returns {string} HTML string
+   * @private
+   */
+  _cardWithList(listHtml, sourceList) {
+    return this.templates.card(this.templates.list(listHtml)) +
+      this.templates.truncatedNote(sourceList || []);
+  }
+
+  /**
    * Summarizes a contact's distinguishing details for the duplicate report (plain text).
    * @param {Contact} contact
    * @returns {string} Comma-separated summary, or ''
@@ -660,6 +696,17 @@ class EmailTemplates {
    */
   static listItem(content) {
     return `<li style="padding: 8px 0; border-bottom: 1px solid #eee;">${content}</li>`;
+  }
+
+  /**
+   * Renders a "and X more..." note when a list was truncated.
+   * @param {Contact[]|any[]} list The (possibly truncated) list
+   * @returns {string} HTML string or empty
+   */
+  static truncatedNote(list) {
+    if (!list._totalBeforeLimit) return '';
+    const remaining = list._totalBeforeLimit - list.length;
+    return `<p style="margin: 8px 0 0 0; color: #999; font-size: 13px; font-style: italic;">…and ${remaining} more</p>\n`;
   }
 
   /**
