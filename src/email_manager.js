@@ -131,15 +131,25 @@ class EmailManager {
 
     // Plain text
     const textBody = ['🔍 Duplicate Contacts', '',
-      ...duplicateGroups.map((g, i) =>
-        `  Group ${i + 1}: ${g.contacts.map(c => c.getName()).join(', ')} (${g.reason})`
-      )
+      ...duplicateGroups.map((g, i) => {
+        const names = g.contacts.map(c => {
+          const details = this._summarizeDuplicateContact(c);
+          return details ? `${c.getName()} (${details})` : c.getName();
+        }).join(', ');
+        return `  Group ${i + 1}: ${names}\n    ↳ ${g.reason}`;
+      })
     ].join('\n');
 
     // HTML
-    const listHtml = duplicateGroups.map((g, i) =>
-      `<li><strong>Group ${i + 1}</strong> (${g.count}): ${g.contacts.map(c => c.getName()).join(', ')}<br>↳ ${g.reason}</li>`
-    ).join('\n');
+    const listHtml = duplicateGroups.map((g, i) => {
+      const members = g.contacts.map(c => {
+        const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
+          ? ` <a href="${c.getContactLink()}">edit</a>` : '';
+        const details = this._summarizeDuplicateContactHtml(c);
+        return `<strong>${c.getName()}</strong>${editLink}${details}`;
+      }).join('<br>');
+      return `<li><strong>Group ${i + 1}</strong> (${g.count}):<br>${members}<br><small>↳ ${g.reason}</small></li>`;
+    }).join('\n');
 
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('🔍 Duplicate Contacts', `${duplicateGroups.length} groups may need review`) +
@@ -382,6 +392,38 @@ class EmailManager {
 
 
   // ─── Private helpers ────────────────────────────────────────────────────────
+
+  /**
+   * Summarizes a contact's distinguishing details for the duplicate report (plain text).
+   * Shows email, phone, city, and labels to help differentiate contacts with the same name.
+   * @param {Contact} contact
+   * @returns {string} Comma-separated summary, or ''
+   * @private
+   */
+  _summarizeDuplicateContact(contact) {
+    const parts = [];
+    if (contact.email) parts.push(contact.email);
+    if (contact.phoneNumber) parts.push(contact.phoneNumber);
+    if (contact.city) parts.push(contact.city);
+    if (contact.getLabels().length > 0) parts.push(contact.getLabels().join(', '));
+    return parts.join(', ');
+  }
+
+  /**
+   * Summarizes a contact's distinguishing details for the duplicate report (HTML).
+   * @param {Contact} contact
+   * @returns {string} HTML snippet or ''
+   * @private
+   */
+  _summarizeDuplicateContactHtml(contact) {
+    const parts = [];
+    if (contact.email) parts.push(`📧 ${contact.email}`);
+    if (contact.phoneNumber) parts.push(`📱 ${contact.phoneNumber}`);
+    if (contact.city) parts.push(`🌆 ${contact.city}`);
+    if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().join(', ')}`);
+    if (parts.length === 0) return '';
+    return ` <small>${parts.join(' · ')}</small>`;
+  }
 
   /**
    * Formats a contact's details (email, phone, city, labels) as an HTML snippet.
