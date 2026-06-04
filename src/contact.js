@@ -105,7 +105,7 @@ class Contact {
         if (match) { if (!names.includes(match[1])) names.push(match[1]); return; }
         // facebook.com/username (but not facebook.com/profile.php etc)
         match = url.match(/^https?:\/\/(www\.)?facebook\.com\/([a-zA-Z0-9_.]+)\/?$/i);
-        if (match && !['profile.php', 'home.php', 'groups', 'pages', 'events', 'marketplace'].includes(match[2])) {
+        if (match && !['profile.php', 'home.php', 'groups', 'pages', 'events', 'marketplace', 'watch', 'stories', 'reels', 'gaming', 'fundraisers', 'bookmarks', 'memories', 'notifications', 'messages', 'settings', 'help', 'login', 'recover'].includes(match[2])) {
           if (!names.includes(match[2])) names.push(match[2]);
         }
       });
