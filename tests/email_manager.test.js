@@ -117,25 +117,26 @@ describe('EmailManager', () => {
   });
 
   describe('sendMissingInfoEmail', () => {
-    test('sends email for each field type', () => {
+    test('sends email with all field sections', () => {
       const contacts = [new Contact('Missing Person', null)];
+      const fieldData = {
+        email: contacts,
+        phone: contacts,
+        city: contacts,
+        birthday: contacts,
+      };
 
-      ['email', 'phone', 'city', 'birthday'].forEach(field => {
-        Gmail.Users.Messages.send.mockClear();
-        emailManager.sendMissingInfoEmail(field, contacts);
-        expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
-        expect(lastRawMessage).toContain('Missing Person');
-      });
+      emailManager.sendMissingInfoEmail(fieldData);
+      expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
+      expect(lastRawMessage).toContain('Missing Person');
     });
 
     test('uses correct emoji per field', () => {
       const contacts = [new Contact('Test', null)];
+      const fieldData = { email: contacts, phone: contacts };
 
-      emailManager.sendMissingInfoEmail('email', contacts);
+      emailManager.sendMissingInfoEmail(fieldData);
       expect(lastRawMessage).toContain('📧');
-
-      Gmail.Users.Messages.send.mockClear();
-      emailManager.sendMissingInfoEmail('phone', contacts);
       expect(lastRawMessage).toContain('📱');
     });
   });
