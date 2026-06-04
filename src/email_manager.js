@@ -127,7 +127,7 @@ class EmailManager {
    */
   sendDuplicateContactsEmail(duplicateGroups) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.duplicates || '🔍 Possible Duplicates';
+    const subject = this.subjects.duplicates || '🔍 Duplicate Contacts';
 
     // Plain text
     const textBody = ['🔍 Duplicate Contacts', '',
@@ -157,7 +157,7 @@ class EmailManager {
    */
   sendContactOverviewEmail(stats) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.overview || '📊 Contacts at a Glance';
+    const subject = this.subjects.overview || '📊 Contact Overview';
 
     const lines = [
       `📇 Total Contacts: ${stats.totalContacts}`,
@@ -189,7 +189,7 @@ class EmailManager {
    */
   sendLabelOverviewEmail(labelStats, unlabeledContacts, labelDistribution, totalContacts) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.labelOverview || '🏷️ Labels & Unlabeled Contacts';
+    const subject = this.subjects.labelOverview || '🏷️ Label Overview';
 
     // ── Plain text ──
     const textLines = [
@@ -261,7 +261,7 @@ class EmailManager {
     const fieldEmojis = { email: '📧', phone: '📱', city: '🌆', birthday: '🎂' };
     const emoji = fieldEmojis[field] || '📋';
     const displayName = fieldNames[field] || field;
-    const subject = (this.subjects.missingInfo || `${emoji} Contacts Without {field}`).replace('{field}', displayName);
+    const subject = (this.subjects.missingInfo || `${emoji} Missing Info: {field}`).replace('{field}', displayName);
 
     // Plain text — show what info the contact does have for context
     const textBody = [`${emoji} Contacts Missing ${displayName}`, '',
@@ -332,7 +332,7 @@ class EmailManager {
    */
   sendDataQualityEmail(missingSurnames, invalidPhones) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.dataQuality || '🔧 Contacts to Clean Up';
+    const subject = this.subjects.dataQuality || '🔧 Data Quality';
     const totalIssues = missingSurnames.length + invalidPhones.length;
 
     // ── Plain text ──
@@ -363,9 +363,11 @@ class EmailManager {
     }
 
     if (invalidPhones.length > 0) {
-      const items = invalidPhones.map(c =>
-        `<li><strong>${c.getName()}</strong> — 📱 ${c.phoneNumber}</li>`
-      ).join('\n');
+      const items = invalidPhones.map(c => {
+        const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
+          ? ` — <a href="${c.getContactLink()}">edit</a>` : '';
+        return `<li><strong>${c.getName()}</strong>${editLink} — 📱 ${c.phoneNumber}</li>`;
+      }).join('\n');
       sectionsHtml += `<h3>📱 Invalid Phone Numbers (${invalidPhones.length})</h3>\n<ul>${items}</ul>`;
     }
 
