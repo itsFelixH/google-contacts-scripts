@@ -313,6 +313,61 @@ class EmailManager {
   }
 
   /**
+   * Sends a combined Missing Info report for multiple fields in one email.
+   *
+   * @param {Object} fieldData Map of field → Contact[] (e.g. { email: [...], phone: [...] })
+   */
+  sendCombinedMissingInfoEmail(fieldData) {
+    const { toEmail, fromEmail, senderName } = this.getEmailContext();
+
+    const fieldNames = { email: 'Email', phone: 'Phone', city: 'City', birthday: 'Birthday' };
+    const fieldEmojis = { email: '📧', phone: '📱', city: '🌆', birthday: '🎂' };
+
+    const fields = Object.keys(fieldData).filter(f => fieldData[f].length > 0);
+    if (fields.length === 0) return;
+
+    const totalMissing = fields.reduce((sum, f) => sum + fieldData[f].length, 0);
+    const subject = this.subjects.missingInfoCombined || '📋 Missing Info';
+
+    // ── Plain text ──
+    const textLines = ['📋 Missing Info', '', `${totalMissing} gaps across ${fields.length} fields`, ''];
+    fields.forEach(field => {
+      const displayName = fieldNames[field] || field;
+      const emoji = fieldEmojis[field] || '📋';
+      textLines.push(`${emoji} Missing ${displayName} (${fieldData[field].length}):`);
+      textLines.push(...fieldData[field].map(c => {
+        const has = this._summarizeExistingFields(c, field);
+        return `  • ${c.getName()}${has ? `  (${has})` : ''}`;
+      }));
+      textLines.push('');
+    });
+
+    const textBody = textLines.join('\n');
+
+    // ── HTML ──
+    let sectionsHtml = '';
+    fields.forEach(field => {
+      const displayName = fieldNames[field] || field;
+      const emoji = fieldEmojis[field] || '📋';
+      const items = fieldData[field].map(c => {
+        const editLink = this._editLink(c);
+        const has = this._summarizeExistingFieldsHtml(c, field);
+        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}${has}`);
+      }).join('\n');
+      sectionsHtml += this.templates.section(`${emoji} Missing ${displayName} (${fieldData[field].length})`) +
+        this.templates.card(this.templates.list(items));
+    });
+
+    const htmlBody = this.templates.wrapEmail(
+      this.templates.header('📋 Missing Info', `${totalMissing} gaps across ${fields.length} fields`) +
+      sectionsHtml +
+      this.templates.footer()
+    );
+
+    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  }
+
+  /**
    * Summarizes what fields a contact does have (excluding the missing one).
    * Used for plain text version.
    * @param {Contact} contact
@@ -539,14 +594,15 @@ class EmailTemplates {
   }
 
   /**
-   * Renders the email footer with a styled button and GitHub link.
+   * Renders the email footer with styled action buttons.
    * @returns {string} HTML string
    */
   static footer() {
-    return `<div style="margin-top: 20px; text-align: center;">` +
+    return `<div style="margin-top: 24px; text-align: center;">` +
       `<a href="https://contacts.google.com" style="display: inline-block; padding: 10px 20px; background: #1a73e8; color: #ffffff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">Manage Contacts</a>` +
-      `</div>\n` +
-      `<p style="margin-top: 16px; text-align: center; font-size: 12px; color: #999;"><a href="https://github.com/itsFelixH/google-contacts-scripts" style="color: #999; text-decoration: none;">google-contacts-scripts</a></p>\n`;
+      `<span style="display: inline-block; width: 8px;"></span>` +
+      `<a href="https://github.com/itsFelixH/google-contacts-scripts" style="display: inline-block; padding: 10px 20px; background: #f1f3f4; color: #333; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">GitHub</a>` +
+      `</div>\n`;
   }
 
   /**
