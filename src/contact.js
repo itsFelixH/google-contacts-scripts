@@ -66,6 +66,25 @@ class Contact {
 
     /** @type {Object[]} Website URL objects */
     this.urls = Array.isArray(urls) ? urls : [];
+
+    /** @type {boolean} Whether notes mention Messenger/FB without a username */
+    this.hasMessengerTag = /\b(fb|messenger|facebook)\b/i.test(this.notes);
+
+    /** @type {string} Messenger username if found in notes (e.g. "FB: john.doe") */
+    this.messengerUsername = this._extractMessengerUsername(this.notes);
+  }
+
+  /**
+   * Extracts a Messenger/Facebook username from notes.
+   * Matches patterns like "FB: username", "Messenger: username", "Facebook: username"
+   * @param {string} notes
+   * @returns {string} Username or empty string
+   * @private
+   */
+  _extractMessengerUsername(notes) {
+    if (!notes) return '';
+    const match = notes.match(/(?:fb|messenger|facebook):\s*([a-zA-Z0-9_.]+)/i);
+    return match ? match[1] : '';
   }
 
 
