@@ -62,7 +62,6 @@ function monthlyRun() {
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
     const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
-    const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
     let successful = 0;
     let failed = 0;
 
@@ -71,7 +70,7 @@ function monthlyRun() {
       { key: 'duplicates',        fn: () => sendDuplicateContactsReport(contacts) },
       { key: 'contactOverview',   fn: () => sendContactOverviewReport(contacts) },
       { key: 'labelOverview',     fn: () => sendLabelOverviewReport(contacts) },
-      { key: 'missingInfo',       fn: () => { fields.forEach(f => sendMissingInfoReport(f, contacts)); } },
+      { key: 'missingInfo',       fn: () => sendCombinedMissingInfoReport(contacts) },
       { key: 'dataQuality',       fn: () => sendDataQualityReport(contacts) },
       { key: 'autoLabeling',      fn: () => runAutoLabeling() },
     ];
@@ -100,7 +99,6 @@ function sendAllReports() {
     Logger.log('📬 Running all reports...');
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
     let successful = 0;
     let failed = 0;
 
@@ -109,9 +107,7 @@ function sendAllReports() {
     if (isReportEnabled('duplicates'))        reports.push(() => sendDuplicateContactsReport(contacts));
     if (isReportEnabled('contactOverview'))    reports.push(() => sendContactOverviewReport(contacts));
     if (isReportEnabled('labelOverview'))      reports.push(() => sendLabelOverviewReport(contacts));
-    if (isReportEnabled('missingInfo')) {
-      fields.forEach(field => reports.push(() => sendMissingInfoReport(field, contacts)));
-    }
+    if (isReportEnabled('missingInfo'))       reports.push(() => sendCombinedMissingInfoReport(contacts));
     if (isReportEnabled('dataQuality'))        reports.push(() => sendDataQualityReport(contacts));
 
     reports.forEach((reportFn, index) => {
@@ -275,6 +271,45 @@ function sendMissingInfoReport(field, prefetchedContacts) {
     Logger.log(`✅ Sent Missing Info report for ${field} (${missing.length} contacts)`);
   } catch (error) {
     Logger.log(`Error in sendMissingInfoReport: ${error.message}`);
+    throw error;
+  }
+}
+
+
+/**
+ * Sends a combined Missing Info report for all configured fields in one email.
+ * @param {Contact[]} [prefetchedContacts] Pre-fetched contacts (skips API call if provided)
+ */
+function sendCombinedMissingInfoReport(prefetchedContacts) {
+  try {
+    if (!isLabelFilterConfigured()) return;
+    const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+    const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
+
+    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
+
+    // Build map of field → contacts missing that field
+    const fieldData = {};
+    fields.forEach(field => {
+      fieldData[field] = prepareContacts(findMissingField(contacts, field));
+    });
+
+    const totalMissing = Object.values(fieldData).reduce((sum, arr) => sum + arr.length, 0);
+    if (totalMissing === 0) {
+      Logger.log('No missing info found');
+      return;
+    }
+
+    if (isDryRun) {
+      Logger.log(`🧪 [DRY RUN] Would send Combined Missing Info report (${totalMissing} gaps)`);
+      return;
+    }
+
+    const emailManager = new EmailManager();
+    emailManager.sendCombinedMissingInfoEmail(fieldData);
+    Logger.log(`✅ Sent Combined Missing Info report (${totalMissing} gaps across ${fields.length} fields)`);
+  } catch (error) {
+    Logger.log(`Error in sendCombinedMissingInfoReport: ${error.message}`);
     throw error;
   }
 }
