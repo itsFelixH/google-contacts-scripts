@@ -231,6 +231,9 @@ const reportSchedules = {
   labelOverview:      'off',     // 'weekly' | 'monthly' | 'off'
   missingInfo:        'off',     // 'weekly' | 'monthly' | 'off'
   dataQuality:        'off',     // 'weekly' | 'monthly' | 'off'
+};
+
+const actionSchedules = {
   autoLabeling:       'off',     // 'weekly' | 'monthly' | 'off'
   nameFormatter:      'off',     // 'weekly' | 'monthly' | 'off'
   phoneNormalizer:    'off',     // 'weekly' | 'monthly' | 'off'
@@ -249,6 +252,9 @@ const reportSchedules = {
   labelOverview:      'monthly',
   missingInfo:        'monthly',
   dataQuality:        'monthly',
+};
+
+const actionSchedules = {
   autoLabeling:       'monthly',
   nameFormatter:      'off',
   phoneNormalizer:    'off',
