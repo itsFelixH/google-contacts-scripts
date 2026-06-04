@@ -111,7 +111,7 @@ const reportSchedules = {
 
 // ─── Auto-labeling rules ──────────────────────────────────────────────────────
 // Each rule assigns a label when a field matches a condition.
-// Conditions: contains, equals, startsWith, endsWith
+// Conditions: contains, equals, startsWith, endsWith, matches (regex)
 // Fields: 'email', 'phone', 'city', 'name'
 
 const autoLabelRules = [
@@ -119,6 +119,7 @@ const autoLabelRules = [
   // { field: 'city', equals: 'berlin', label: 'Berlin' },
   // { field: 'email', endsWith: '.de', label: 'Germany' },
   // { field: 'name', startsWith: 'dr.', label: 'Doctors' },
+  // { field: 'name', matches: '\\(swing\\)', label: 'Swing' },
 ];
 
 // ─── Phone normalizer ─────────────────────────────────────────────────────────
