@@ -152,7 +152,9 @@ function isReportEnabled(reportName) {
 function applyLimit(contacts) {
   const max = typeof maxContactsPerReport !== 'undefined' ? maxContactsPerReport : 0;
   if (max > 0 && contacts.length > max) {
-    return contacts.slice(0, max);
+    const limited = contacts.slice(0, max);
+    limited._totalBeforeLimit = contacts.length;
+    return limited;
   }
   return contacts;
 }
