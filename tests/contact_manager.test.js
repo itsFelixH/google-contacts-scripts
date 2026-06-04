@@ -425,6 +425,112 @@ describe('extractInstagramNamesFromNotes', () => {
 });
 
 
+describe('extractInstagramNamesFromUrls', () => {
+  test('extracts usernames from instagram.com URLs', () => {
+    const urls = [{ value: 'https://www.instagram.com/johndoe' }];
+    expect(extractInstagramNamesFromUrls(urls)).toEqual(['@johndoe']);
+  });
+
+  test('handles URLs without www', () => {
+    const urls = [{ value: 'https://instagram.com/cooluser' }];
+    expect(extractInstagramNamesFromUrls(urls)).toEqual(['@cooluser']);
+  });
+
+  test('handles URLs with trailing slash', () => {
+    const urls = [{ value: 'https://www.instagram.com/user123/' }];
+    expect(extractInstagramNamesFromUrls(urls)).toEqual(['@user123']);
+  });
+
+  test('extracts multiple Instagram URLs', () => {
+    const urls = [
+      { value: 'https://www.instagram.com/user1' },
+      { value: 'https://example.com' },
+      { value: 'https://instagram.com/user2/' },
+    ];
+    expect(extractInstagramNamesFromUrls(urls)).toEqual(['@user1', '@user2']);
+  });
+
+  test('ignores non-Instagram URLs', () => {
+    const urls = [
+      { value: 'https://twitter.com/user' },
+      { value: 'https://example.com/instagram.com/fake' },
+    ];
+    expect(extractInstagramNamesFromUrls(urls)).toEqual([]);
+  });
+
+  test('handles usernames with dots and underscores', () => {
+    const urls = [{ value: 'https://www.instagram.com/user.name_123' }];
+    expect(extractInstagramNamesFromUrls(urls)).toEqual(['@user.name_123']);
+  });
+
+  test('deduplicates within URLs', () => {
+    const urls = [
+      { value: 'https://instagram.com/same' },
+      { value: 'https://www.instagram.com/same/' },
+    ];
+    expect(extractInstagramNamesFromUrls(urls)).toEqual(['@same']);
+  });
+
+  test('handles empty/null input', () => {
+    expect(extractInstagramNamesFromUrls([])).toEqual([]);
+    expect(extractInstagramNamesFromUrls(null)).toEqual([]);
+    expect(extractInstagramNamesFromUrls(undefined)).toEqual([]);
+  });
+});
+
+
+describe('deduplicateInstagramNames', () => {
+  test('removes case-insensitive duplicates', () => {
+    expect(deduplicateInstagramNames(['@User', '@user', '@USER'])).toEqual(['@User']);
+  });
+
+  test('keeps unique names', () => {
+    expect(deduplicateInstagramNames(['@alice', '@bob', '@charlie'])).toEqual(['@alice', '@bob', '@charlie']);
+  });
+
+  test('handles empty array', () => {
+    expect(deduplicateInstagramNames([])).toEqual([]);
+  });
+
+  test('deduplicates across notes and URL sources', () => {
+    // Simulates combining results from both extractors
+    const fromNotes = ['@johndoe', '@JaneDoe'];
+    const fromUrls = ['@JohnDoe', '@newuser'];
+    expect(deduplicateInstagramNames([...fromNotes, ...fromUrls])).toEqual(['@johndoe', '@JaneDoe', '@newuser']);
+  });
+});
+
+
+describe('extractInstagramNamesFromNotes (edge cases)', () => {
+  test('handles usernames with dots and underscores', () => {
+    expect(extractInstagramNamesFromNotes('@user.name')).toEqual(['@user.name']);
+    expect(extractInstagramNamesFromNotes('@under_score')).toEqual(['@under_score']);
+    expect(extractInstagramNamesFromNotes('@mix.ed_name.123')).toEqual(['@mix.ed_name.123']);
+  });
+
+  test('handles @username at end of sentence with punctuation', () => {
+    expect(extractInstagramNamesFromNotes('Follow me @cooluser.')).toEqual(['@cooluser']);
+  });
+
+  test('handles multiple Instagram: patterns', () => {
+    expect(extractInstagramNamesFromNotes('Instagram: user1, Instagram: user2')).toEqual(['@user1', '@user2']);
+  });
+
+  test('handles notes with mixed content', () => {
+    const notes = 'Met at conference. Instagram: john_doe. Email: test@example.com. Also @side.account';
+    const result = extractInstagramNamesFromNotes(notes);
+    expect(result).toContain('@john_doe');
+    expect(result).toContain('@side.account');
+  });
+
+  test('does not extract email addresses as Instagram handles', () => {
+    const notes = 'Contact at test@gmail.com';
+    const result = extractInstagramNamesFromNotes(notes);
+    expect(result).toEqual([]);
+  });
+});
+
+
 describe('validateLabelFilter', () => {
   test('accepts valid arrays', () => {
     expect(() => validateLabelFilter([])).not.toThrow();
