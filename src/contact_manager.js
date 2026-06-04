@@ -101,7 +101,12 @@ function parseContactFromPerson(person, labels) {
 
     // Extract Instagram usernames from biography/notes
     const notes = (person.biographies || []).map(bio => bio.value).join('. ');
-    const instagram = extractInstagramNamesFromNotes(notes);
+    const urls = person.urls || [];
+
+    // Gather Instagram names from notes AND website fields
+    const instagramFromNotes = extractInstagramNamesFromNotes(notes);
+    const instagramFromUrls = extractInstagramNamesFromUrls(urls);
+    const instagram = deduplicateInstagramNames([...instagramFromNotes, ...instagramFromUrls]);
 
     return new Contact(
       person.names?.[0]?.displayName || 'Unnamed Contact',
@@ -112,7 +117,8 @@ function parseContactFromPerson(person, labels) {
       person.phoneNumbers?.[0]?.value || '',
       instagram,
       person.resourceName || '',
-      notes
+      notes,
+      urls
     );
   } catch (error) {
     Logger.log(`⚠️ Error parsing contact: ${error.message}`);
