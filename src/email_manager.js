@@ -120,7 +120,7 @@ class EmailManager {
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('🎂 Upcoming Birthdays', `${contacts.length} birthdays in the next ${days} days`) +
       this.templates.card(this.templates.list(listHtml)) +
-      this.templates.footer(this.scriptId)
+      this.templates.footer(this.scriptId, [{ label: 'Open Calendar', url: 'https://calendar.google.com' }])
     );
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -161,7 +161,7 @@ class EmailManager {
     const htmlBody = this.templates.wrapEmail(
       this.templates.header('🔍 Duplicate Contacts', `${duplicateGroups.length} groups may need review`) +
       this.templates.card(this.templates.list(listHtml)) +
-      this.templates.footer(this.scriptId)
+      this.templates.footer(this.scriptId, [{ label: 'Merge Contacts', url: 'https://contacts.google.com/merge' }])
     );
 
     this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -560,18 +560,26 @@ class EmailTemplates {
   /**
    * Renders the email footer with styled action buttons.
    * @param {string} scriptId Google Apps Script project ID (for edit link)
+   * @param {Object[]} [extraButtons] Additional buttons [{label, url}] to show before GitHub
    * @returns {string} HTML string
    */
-  static footer(scriptId) {
-    const scriptLink = scriptId
-      ? `<span style="display: inline-block; width: 8px;"></span><a href="https://script.google.com/home/projects/${scriptId}/edit" style="display: inline-block; padding: 10px 20px; background: #f1f3f4; color: #333; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">Script</a>`
-      : '';
-    return `<div style="margin-top: 24px; text-align: center;">` +
-      `<a href="https://contacts.google.com" style="display: inline-block; padding: 10px 20px; background: #1a73e8; color: #ffffff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">Manage Contacts</a>` +
-      scriptLink +
-      `<span style="display: inline-block; width: 8px;"></span>` +
-      `<a href="https://github.com/itsFelixH/google-contacts-scripts" style="display: inline-block; padding: 10px 20px; background: #f1f3f4; color: #333; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">GitHub</a>` +
-      `</div>\n`;
+  static footer(scriptId, extraButtons = []) {
+    const btnStyle = 'display: inline-block; padding: 10px 20px; background: #f1f3f4; color: #333; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;';
+    const spacer = '<span style="display: inline-block; width: 8px;"></span>';
+
+    let buttons = `<a href="https://contacts.google.com" style="display: inline-block; padding: 10px 20px; background: #1a73e8; color: #ffffff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">Manage Contacts</a>`;
+
+    extraButtons.forEach(btn => {
+      buttons += `${spacer}<a href="${btn.url}" style="${btnStyle}">${btn.label}</a>`;
+    });
+
+    if (scriptId) {
+      buttons += `${spacer}<a href="https://script.google.com/home/projects/${scriptId}/edit" style="${btnStyle}">Script</a>`;
+    }
+
+    buttons += `${spacer}<a href="https://github.com/itsFelixH/google-contacts-scripts" style="${btnStyle}">GitHub</a>`;
+
+    return `<div style="margin-top: 24px; text-align: center;">${buttons}</div>\n`;
   }
 
   /**
