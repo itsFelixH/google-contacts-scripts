@@ -559,7 +559,7 @@ function runInstagramToWebsite() {
     const handlesInNotes = extractInstagramNamesFromNotes(currentNotes);
     const handlesToConvert = [];
 
-    contact.instagramNames.forEach(handle => {
+    handlesInNotes.forEach(handle => {
       const cleanHandle = handle.replace(/^@/, '');
       const instagramUrl = `https://www.instagram.com/${cleanHandle}`;
 
