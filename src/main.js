@@ -70,7 +70,7 @@ function monthlyRun() {
       { key: 'duplicates',        fn: () => sendDuplicateContactsReport(contacts) },
       { key: 'contactOverview',   fn: () => sendContactOverviewReport(contacts) },
       { key: 'labelOverview',     fn: () => sendLabelOverviewReport(contacts) },
-      { key: 'missingInfo',       fn: () => sendCombinedMissingInfoReport(contacts) },
+      { key: 'missingInfo',       fn: () => sendMissingInfoReport(contacts) },
       { key: 'dataQuality',       fn: () => sendDataQualityReport(contacts) },
       { key: 'autoLabeling',      fn: () => runAutoLabeling() },
     ];
@@ -247,40 +247,10 @@ function sendLabelOverviewReport(prefetchedContacts) {
 
 
 /**
- * Sends the Missing Info report for a specific field.
- * @param {string} field Field to check ('email', 'phone', 'city', 'birthday')
+ * Sends the Missing Info report for all configured fields in one email.
  * @param {Contact[]} [prefetchedContacts] Pre-fetched contacts (skips API call if provided)
  */
-function sendMissingInfoReport(field, prefetchedContacts) {
-  try {
-    const validFields = ['email', 'phone', 'city', 'birthday'];
-    if (!validFields.includes(field)) {
-      throw new Error(`Invalid field. Must be one of: ${validFields.join(', ')}`);
-    }
-
-    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
-    const missing = prepareContacts(findMissingField(contacts, field));
-
-    if (missing.length === 0) {
-      Logger.log(`No contacts missing ${field} found`);
-      return;
-    }
-
-    const emailManager = new EmailManager();
-    emailManager.sendMissingInfoEmail(field, missing);
-    Logger.log(`✅ Sent Missing Info report for ${field} (${missing.length} contacts)`);
-  } catch (error) {
-    Logger.log(`Error in sendMissingInfoReport: ${error.message}`);
-    throw error;
-  }
-}
-
-
-/**
- * Sends a combined Missing Info report for all configured fields in one email.
- * @param {Contact[]} [prefetchedContacts] Pre-fetched contacts (skips API call if provided)
- */
-function sendCombinedMissingInfoReport(prefetchedContacts) {
+function sendMissingInfoReport(prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
     const isDryRun = typeof dryRun !== 'undefined' && dryRun;
@@ -301,15 +271,15 @@ function sendCombinedMissingInfoReport(prefetchedContacts) {
     }
 
     if (isDryRun) {
-      Logger.log(`🧪 [DRY RUN] Would send Combined Missing Info report (${totalMissing} gaps)`);
+      Logger.log(`🧪 [DRY RUN] Would send Missing Info report (${totalMissing} gaps)`);
       return;
     }
 
     const emailManager = new EmailManager();
-    emailManager.sendCombinedMissingInfoEmail(fieldData);
-    Logger.log(`✅ Sent Combined Missing Info report (${totalMissing} gaps across ${fields.length} fields)`);
+    emailManager.sendMissingInfoEmail(fieldData);
+    Logger.log(`✅ Sent Missing Info report (${totalMissing} gaps across ${fields.length} fields)`);
   } catch (error) {
-    Logger.log(`Error in sendCombinedMissingInfoReport: ${error.message}`);
+    Logger.log(`Error in sendMissingInfoReport: ${error.message}`);
     throw error;
   }
 }
