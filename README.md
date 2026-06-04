@@ -225,13 +225,17 @@ const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
 const monthlyReportDay = 1;
 
 const reportSchedules = {
-  upcomingBirthdays: 'off',     // 'weekly' | 'monthly' | 'off'
-  duplicates:        'off',     // 'weekly' | 'monthly' | 'off'
-  contactOverview:   'off',     // 'weekly' | 'monthly' | 'off'
-  labelOverview:     'off',     // 'weekly' | 'monthly' | 'off'
-  missingInfo:       'off',     // 'weekly' | 'monthly' | 'off'
-  dataQuality:       'off',     // 'weekly' | 'monthly' | 'off'
-  autoLabeling:      'off',     // 'weekly' | 'monthly' | 'off'
+  upcomingBirthdays:  'off',     // 'weekly' | 'monthly' | 'off'
+  duplicates:         'off',     // 'weekly' | 'monthly' | 'off'
+  contactOverview:    'off',     // 'weekly' | 'monthly' | 'off'
+  labelOverview:      'off',     // 'weekly' | 'monthly' | 'off'
+  missingInfo:        'off',     // 'weekly' | 'monthly' | 'off'
+  dataQuality:        'off',     // 'weekly' | 'monthly' | 'off'
+  autoLabeling:       'off',     // 'weekly' | 'monthly' | 'off'
+  nameFormatter:      'off',     // 'weekly' | 'monthly' | 'off'
+  phoneNormalizer:    'off',     // 'weekly' | 'monthly' | 'off'
+  instagramToWebsite: 'off',     // 'weekly' | 'monthly' | 'off'
+  messengerToWebsite: 'off',     // 'weekly' | 'monthly' | 'off'
 };
 ```
 
@@ -239,13 +243,17 @@ All schedules are off by default — enable what you want. A typical setup:
 
 ```js
 const reportSchedules = {
-  upcomingBirthdays: 'weekly',
-  duplicates:        'monthly',
-  contactOverview:   'monthly',
-  labelOverview:     'monthly',
-  missingInfo:       'monthly',
-  dataQuality:       'monthly',
-  autoLabeling:      'weekly',
+  upcomingBirthdays:  'weekly',
+  duplicates:         'monthly',
+  contactOverview:    'monthly',
+  labelOverview:      'monthly',
+  missingInfo:        'monthly',
+  dataQuality:        'monthly',
+  autoLabeling:       'monthly',
+  nameFormatter:      'off',
+  phoneNormalizer:    'off',
+  instagramToWebsite: 'off',
+  messengerToWebsite: 'off',
 };
 ```
 
@@ -357,7 +365,7 @@ pnpm test
 ```
 src/
 ├── _setup.js          # Schedule management (setupSchedules, removeSchedules)
-├── actions.js         # Contact actions (auto-label, name format, phone normalize)
+├── actions.js         # Contact actions (auto-label, name format, phone normalize, social → website)
 ├── config.js          # Your config (not committed)
 ├── config.js.template # Config template with all options documented
 ├── contact.js         # Contact class
