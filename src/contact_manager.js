@@ -260,6 +260,64 @@ function findInvalidPhones(contacts) {
 
 
 /**
+ * Finds contacts that share the same phone number with another contact.
+ * Returns one entry per duplicate number (listing all contacts that share it).
+ *
+ * @param {Contact[]} contacts Contacts to search
+ * @returns {Object[]} Array of { phone, contacts: Contact[] }
+ */
+function findDuplicatePhones(contacts) {
+  const phoneMap = new Map();
+  contacts.forEach(c => {
+    const phone = (c.phoneNumber || '').replace(/[\s\-().]/g, '').trim();
+    if (!phone) return;
+    if (!phoneMap.has(phone)) phoneMap.set(phone, []);
+    phoneMap.get(phone).push(c);
+  });
+  return [...phoneMap.entries()]
+    .filter(([_, arr]) => arr.length > 1)
+    .map(([phone, arr]) => ({ phone, contacts: arr }));
+}
+
+
+/**
+ * Finds contacts with only a name but no other useful info
+ * (no email, no phone, no city, no birthday).
+ *
+ * @param {Contact[]} contacts Contacts to search
+ * @returns {Contact[]} Contacts with only a name
+ */
+function findEmptyContacts(contacts) {
+  return contacts.filter(c => {
+    return !c.email &&
+      !c.phoneNumber &&
+      !c.city &&
+      !c.getBirthday();
+  });
+}
+
+
+/**
+ * Finds contacts with potential name formatting issues:
+ * - ALL CAPS names
+ * - all lowercase names
+ *
+ * @param {Contact[]} contacts Contacts to search
+ * @returns {Contact[]} Contacts with formatting issues
+ */
+function findBadlyFormattedNames(contacts) {
+  return contacts.filter(c => {
+    const name = c.getName().trim();
+    if (!name || name.length < 2) return false;
+    // Only check names that have letters (skip purely numeric/symbol names)
+    const letters = name.replace(/[^a-zA-ZÀ-ÿ]/g, '');
+    if (letters.length < 2) return false;
+    return letters === letters.toUpperCase() || letters === letters.toLowerCase();
+  });
+}
+
+
+/**
  * Finds contacts whose name has no space (likely missing a surname).
  *
  * @param {Contact[]} contacts Contacts to search

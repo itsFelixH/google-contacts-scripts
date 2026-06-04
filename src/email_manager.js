@@ -372,18 +372,31 @@ class EmailManager {
   }
 
   /**
-   * Sends the Data Quality report (missing surnames + invalid phones).
+   * Sends the Data Quality report.
    *
    * @param {Contact[]} missingSurnames Contacts without a surname
    * @param {Contact[]} invalidPhones Contacts with invalid phone numbers
+   * @param {Object[]} duplicatePhones Array of { phone, contacts: Contact[] }
+   * @param {Contact[]} emptyContacts Contacts with only a name
+   * @param {Contact[]} badNames Contacts with ALL CAPS or all lowercase names
+   * @param {number} totalContacts Total contact count for context
    */
-  sendDataQualityEmail(missingSurnames, invalidPhones) {
+  sendDataQualityEmail(missingSurnames, invalidPhones, duplicatePhones, emptyContacts, badNames, totalContacts) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
     const subject = this.subjects.dataQuality || '🔧 Data Quality';
-    const totalIssues = missingSurnames.length + invalidPhones.length;
+    const totalIssues = missingSurnames.length + invalidPhones.length + duplicatePhones.length + emptyContacts.length + badNames.length;
+
+    // ── Summary parts ──
+    const summaryParts = [];
+    if (missingSurnames.length > 0) summaryParts.push(`${missingSurnames.length} missing surnames`);
+    if (invalidPhones.length > 0) summaryParts.push(`${invalidPhones.length} invalid phones`);
+    if (duplicatePhones.length > 0) summaryParts.push(`${duplicatePhones.length} shared numbers`);
+    if (emptyContacts.length > 0) summaryParts.push(`${emptyContacts.length} empty contacts`);
+    if (badNames.length > 0) summaryParts.push(`${badNames.length} formatting issues`);
 
     // ── Plain text ──
-    const textLines = ['🔧 Data Quality', '', `${totalIssues} issues found`, ''];
+    const textLines = ['🔧 Data Quality', '', `${totalIssues} issues found across ${totalContacts} contacts`, '',
+      ...summaryParts.map(p => `  • ${p}`), ''];
 
     if (missingSurnames.length > 0) {
       textLines.push(`👤 Missing Surnames (${missingSurnames.length}):`);
@@ -393,17 +406,39 @@ class EmailManager {
     if (invalidPhones.length > 0) {
       textLines.push(`📱 Invalid Phone Numbers (${invalidPhones.length}):`);
       textLines.push(...invalidPhones.map(c => `  • ${c.getName()} — ${c.phoneNumber}`));
+      textLines.push('');
+    }
+    if (duplicatePhones.length > 0) {
+      textLines.push(`📞 Shared Phone Numbers (${duplicatePhones.length}):`);
+      textLines.push(...duplicatePhones.map(g => `  • ${g.phone}: ${g.contacts.map(c => c.getName()).join(', ')}`));
+      textLines.push('');
+    }
+    if (emptyContacts.length > 0) {
+      textLines.push(`👻 Empty Contacts (${emptyContacts.length}):`);
+      textLines.push(...emptyContacts.map(c => `  • ${c.getName()}`));
+      textLines.push('');
+    }
+    if (badNames.length > 0) {
+      textLines.push(`🔤 Name Formatting Issues (${badNames.length}):`);
+      textLines.push(...badNames.map(c => `  • ${c.getName()}`));
+      textLines.push('');
     }
 
     const textBody = textLines.join('\n');
 
     // ── HTML ──
+    // Summary card
+    const summaryHtml = summaryParts.map((p, i) =>
+      `<div style="padding: 6px 0;${i < summaryParts.length - 1 ? ' border-bottom: 1px solid #eee;' : ''}">${p}</div>`
+    ).join('\n');
+
     let sectionsHtml = '';
 
     if (missingSurnames.length > 0) {
       const items = missingSurnames.map(c => {
         const editLink = this._editLink(c);
-        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}`);
+        const info = this._summarizeExistingFieldsHtml(c, 'name');
+        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}${info}`);
       }).join('\n');
       sectionsHtml += this.templates.section(`👤 Missing Surnames (${missingSurnames.length})`) +
         this.templates.card(this.templates.list(items));
@@ -418,8 +453,39 @@ class EmailManager {
         this.templates.card(this.templates.list(items));
     }
 
+    if (duplicatePhones.length > 0) {
+      const items = duplicatePhones.map(g => {
+        const names = g.contacts.map(c => {
+          const editLink = this._editLink(c);
+          return `<strong>${c.getName()}</strong>${editLink}`;
+        }).join(', ');
+        return this.templates.listItem(`📞 ${g.phone}<br><small style="color: #666;">→ ${names}</small>`);
+      }).join('\n');
+      sectionsHtml += this.templates.section(`📞 Shared Phone Numbers (${duplicatePhones.length})`) +
+        this.templates.card(this.templates.list(items));
+    }
+
+    if (emptyContacts.length > 0) {
+      const items = emptyContacts.map(c => {
+        const editLink = this._editLink(c);
+        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}`);
+      }).join('\n');
+      sectionsHtml += this.templates.section(`👻 Empty Contacts (${emptyContacts.length})`) +
+        this.templates.card(this.templates.list(items));
+    }
+
+    if (badNames.length > 0) {
+      const items = badNames.map(c => {
+        const editLink = this._editLink(c);
+        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}`);
+      }).join('\n');
+      sectionsHtml += this.templates.section(`🔤 Name Formatting Issues (${badNames.length})`) +
+        this.templates.card(this.templates.list(items));
+    }
+
     const htmlBody = this.templates.wrapEmail(
-      this.templates.header('🔧 Data Quality', `${totalIssues} issues found`) +
+      this.templates.header('🔧 Data Quality', `${totalIssues} issues across ${totalContacts} contacts`) +
+      this.templates.card(summaryHtml) +
       sectionsHtml +
       this.templates.footer(this.scriptId)
     );

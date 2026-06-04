@@ -294,15 +294,20 @@ function sendDataQualityReport(prefetchedContacts) {
     const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
     const noSurname = prepareContacts(findMissingSurnames(contacts));
     const invalidPhones = prepareContacts(findInvalidPhones(contacts));
+    const duplicatePhones = findDuplicatePhones(contacts);
+    const emptyContacts = prepareContacts(findEmptyContacts(contacts));
+    const badNames = prepareContacts(findBadlyFormattedNames(contacts));
 
-    if (noSurname.length === 0 && invalidPhones.length === 0) {
+    const totalIssues = noSurname.length + invalidPhones.length + duplicatePhones.length + emptyContacts.length + badNames.length;
+
+    if (totalIssues === 0) {
       Logger.log('No data quality issues found');
       return;
     }
 
     const emailManager = new EmailManager();
-    emailManager.sendDataQualityEmail(noSurname, invalidPhones);
-    Logger.log(`✅ Sent Data Quality report (${noSurname.length} missing surnames, ${invalidPhones.length} invalid phones)`);
+    emailManager.sendDataQualityEmail(noSurname, invalidPhones, duplicatePhones, emptyContacts, badNames, contacts.length);
+    Logger.log(`✅ Sent Data Quality report (${totalIssues} issues)`);
   } catch (error) {
     Logger.log(`Error in sendDataQualityReport: ${error.message}`);
     throw error;
