@@ -653,3 +653,81 @@ describe('findBadlyFormattedNames', () => {
     expect(findBadlyFormattedNames(contacts)).toHaveLength(0);
   });
 });
+
+
+describe('Contact messenger properties', () => {
+  test('hasMessengerTag detects FB in notes', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', 'FB');
+    expect(contact.hasMessengerTag).toBe(true);
+  });
+
+  test('hasMessengerTag detects Messenger in notes', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', 'Messenger');
+    expect(contact.hasMessengerTag).toBe(true);
+  });
+
+  test('hasMessengerTag detects Facebook in notes', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', 'Reach via Facebook');
+    expect(contact.hasMessengerTag).toBe(true);
+  });
+
+  test('hasMessengerTag is false when no tag present', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', 'Just some notes');
+    expect(contact.hasMessengerTag).toBe(false);
+  });
+
+  test('hasMessengerTag is case-insensitive', () => {
+    expect(new Contact('T', null, [], '', '', '', [], '', 'fb').hasMessengerTag).toBe(true);
+    expect(new Contact('T', null, [], '', '', '', [], '', 'MESSENGER').hasMessengerTag).toBe(true);
+  });
+
+  test('messengerNames extracts FB: username from notes', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', 'FB: john.doe', []);
+    expect(contact.messengerNames).toEqual(['john.doe']);
+  });
+
+  test('messengerNames extracts Messenger: username from notes', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', 'Messenger: cool_user', []);
+    expect(contact.messengerNames).toEqual(['cool_user']);
+  });
+
+  test('messengerNames extracts from m.me URL', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', '',
+      [{ value: 'https://m.me/webuser' }]);
+    expect(contact.messengerNames).toEqual(['webuser']);
+  });
+
+  test('messengerNames extracts from facebook.com URL', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', '',
+      [{ value: 'https://www.facebook.com/fbuser' }]);
+    expect(contact.messengerNames).toEqual(['fbuser']);
+  });
+
+  test('messengerNames deduplicates across notes and URLs', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', 'FB: same_user',
+      [{ value: 'https://m.me/same_user' }]);
+    expect(contact.messengerNames).toEqual(['same_user']);
+  });
+
+  test('messengerNames is empty when only tag without username', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', 'FB', []);
+    expect(contact.messengerNames).toEqual([]);
+  });
+
+  test('messengerNames ignores facebook.com system pages', () => {
+    const contact = new Contact('Test', null, [], '', '', '', [], '', '',
+      [{ value: 'https://www.facebook.com/groups' }]);
+    expect(contact.messengerNames).toEqual([]);
+  });
+
+  test('findIncompleteMessenger finds tag without username', () => {
+    const contacts = [
+      new Contact('Has Tag', null, [], '', '', '', [], '', 'FB', []),
+      new Contact('Has Username', null, [], '', '', '', [], '', 'FB: user123', []),
+      new Contact('No Tag', null, [], '', '', '', [], '', 'Just notes', []),
+    ];
+    const result = findIncompleteMessenger(contacts);
+    expect(result).toHaveLength(1);
+    expect(result[0].getName()).toBe('Has Tag');
+  });
+});

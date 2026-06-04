@@ -253,3 +253,101 @@ describe('runInstagramToWebsite', () => {
     global.dryRun = false;
   });
 });
+
+
+describe('runMessengerToWebsite', () => {
+  test('converts FB: username to m.me website in dry run', () => {
+    global.dryRun = true;
+    const origFetch = global.fetchContacts;
+    global.fetchContacts = () => [
+      new Contact('FB User', null, [], '', '', '', [], 'people/c100', 'FB: john.doe', [])
+    ];
+
+    const result = runMessengerToWebsite();
+    expect(result.converted).toBe(1);
+    expect(result.changes).toHaveLength(1);
+    expect(result.changes[0].name).toBe('FB User');
+    expect(result.changes[0].urls[0]).toBe('https://m.me/john.doe');
+
+    global.fetchContacts = origFetch;
+    global.dryRun = false;
+  });
+
+  test('converts Messenger: username pattern', () => {
+    global.dryRun = true;
+    const origFetch = global.fetchContacts;
+    global.fetchContacts = () => [
+      new Contact('Msg User', null, [], '', '', '', [], 'people/c101', 'Messenger: cool_user', [])
+    ];
+
+    const result = runMessengerToWebsite();
+    expect(result.converted).toBe(1);
+    expect(result.changes[0].urls[0]).toBe('https://m.me/cool_user');
+
+    global.fetchContacts = origFetch;
+    global.dryRun = false;
+  });
+
+  test('skips contacts that already have m.me URL', () => {
+    global.dryRun = true;
+    const origFetch = global.fetchContacts;
+    global.fetchContacts = () => [
+      new Contact('Already Done', null, [], '', '', '', [], 'people/c102', 'FB: existing',
+        [{ value: 'https://m.me/existing', type: 'other', formattedType: 'Messenger' }])
+    ];
+
+    const result = runMessengerToWebsite();
+    expect(result.converted).toBe(0);
+    expect(result.skipped).toBe(1);
+
+    global.fetchContacts = origFetch;
+    global.dryRun = false;
+  });
+
+  test('skips contacts with just a tag and no username', () => {
+    global.dryRun = true;
+    const origFetch = global.fetchContacts;
+    global.fetchContacts = () => [
+      new Contact('Tag Only', null, [], '', '', '', [], 'people/c103', 'FB', [])
+    ];
+
+    const result = runMessengerToWebsite();
+    expect(result.converted).toBe(0);
+    expect(result.changes).toHaveLength(0);
+
+    global.fetchContacts = origFetch;
+    global.dryRun = false;
+  });
+
+  test('skips contacts with facebook.com URL for same username', () => {
+    global.dryRun = true;
+    const origFetch = global.fetchContacts;
+    global.fetchContacts = () => [
+      new Contact('FB Link', null, [], '', '', '', [], 'people/c104', 'Facebook: myuser',
+        [{ value: 'https://www.facebook.com/myuser' }])
+    ];
+
+    const result = runMessengerToWebsite();
+    expect(result.converted).toBe(0);
+    expect(result.skipped).toBe(1);
+
+    global.fetchContacts = origFetch;
+    global.dryRun = false;
+  });
+
+  test('returns zeros when no contacts have messenger usernames', () => {
+    global.dryRun = true;
+    const origFetch = global.fetchContacts;
+    global.fetchContacts = () => [
+      new Contact('Normal', null, [], '', '', '', [], 'people/c105', 'Just some notes', [])
+    ];
+
+    const result = runMessengerToWebsite();
+    expect(result.converted).toBe(0);
+    expect(result.skipped).toBe(0);
+    expect(result.changes).toHaveLength(0);
+
+    global.fetchContacts = origFetch;
+    global.dryRun = false;
+  });
+});
