@@ -79,11 +79,15 @@ describe('EmailManager', () => {
         withCity: 70, withLabels: 85, withInstagram: 40,
         birthdayPercentage: '75.0', emailPercentage: '90.0', phonePercentage: '80.0',
         cityPercentage: '70.0', labelPercentage: '85.0', instagramPercentage: '40.0',
+        completeness: [2, 8, 20, 30, 40], completeCount: 40, completenessPercentage: '40.0',
+        topCities: [{ city: 'Berlin', count: 25 }, { city: 'Munich', count: 15 }],
       };
       emailManager.sendContactOverviewEmail(stats);
       expect(Gmail.Users.Messages.send).toHaveBeenCalledTimes(1);
       expect(lastRawMessage).toContain('100');
       expect(lastRawMessage).toContain('75.0%');
+      expect(lastRawMessage).toContain('40.0%');
+      expect(lastRawMessage).toContain('Berlin');
     });
   });
 
