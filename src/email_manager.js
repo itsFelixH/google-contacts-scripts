@@ -107,8 +107,10 @@ class EmailManager {
 
     // HTML
     const listHtml = lines.map(l => {
+      const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && l.contact.getContactLink())
+        ? ` <a href="${l.contact.getContactLink()}">edit</a>` : '';
       const info = this._formatContactDetails(l.contact);
-      return `<li>${l.daysLabel} — <strong>${l.name}</strong>${l.age}${info}</li>`;
+      return `<li>${l.daysLabel} — <strong>${l.name}</strong>${l.age}${editLink}${info}</li>`;
     }).join('\n');
 
     const htmlBody = this.templates.wrapEmail(
@@ -241,8 +243,8 @@ class EmailManager {
     if (unlabeledContacts.length > 0) {
       const items = unlabeledContacts.map(c => {
         const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
-          ? ` — <a href="${c.getContactLink()}">edit</a>` : '';
-        return `<li>${c.getName()}${editLink}</li>`;
+          ? ` <a href="${c.getContactLink()}">edit</a>` : '';
+        return `<li><strong>${c.getName()}</strong>${editLink}</li>`;
       }).join('\n');
       unlabeledHtml = `<h3>❌ Unlabeled Contacts (${unlabeledContacts.length})</h3>\n<ul>${items}</ul>`;
     }
@@ -366,8 +368,8 @@ class EmailManager {
     if (missingSurnames.length > 0) {
       const items = missingSurnames.map(c => {
         const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
-          ? ` — <a href="${c.getContactLink()}">edit</a>` : '';
-        return `<li>${c.getName()}${editLink}</li>`;
+          ? ` <a href="${c.getContactLink()}">edit</a>` : '';
+        return `<li><strong>${c.getName()}</strong>${editLink}</li>`;
       }).join('\n');
       sectionsHtml += `<h3>👤 Missing Surnames (${missingSurnames.length})</h3>\n<ul>${items}</ul>`;
     }
@@ -375,7 +377,7 @@ class EmailManager {
     if (invalidPhones.length > 0) {
       const items = invalidPhones.map(c => {
         const editLink = (typeof includeEditLinks !== 'undefined' && includeEditLinks && c.getContactLink())
-          ? ` — <a href="${c.getContactLink()}">edit</a>` : '';
+          ? ` <a href="${c.getContactLink()}">edit</a>` : '';
         return `<li><strong>${c.getName()}</strong>${editLink} — 📱 ${c.phoneNumber}</li>`;
       }).join('\n');
       sectionsHtml += `<h3>📱 Invalid Phone Numbers (${invalidPhones.length})</h3>\n<ul>${items}</ul>`;
