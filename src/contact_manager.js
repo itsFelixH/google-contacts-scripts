@@ -111,7 +111,8 @@ function parseContactFromPerson(person, labels) {
       city,
       person.phoneNumbers?.[0]?.value || '',
       instagram,
-      person.resourceName || ''
+      person.resourceName || '',
+      notes
     );
   } catch (error) {
     Logger.log(`⚠️ Error parsing contact: ${error.message}`);
