@@ -34,6 +34,10 @@ function weeklyRun() {
     const weeklyReports = [
       { key: 'upcomingBirthdays', fn: () => sendUpcomingBirthdaysReport(null, contacts) },
       { key: 'autoLabeling',      fn: () => runAutoLabeling() },
+      { key: 'nameFormatter',     fn: () => runNameFormatter() },
+      { key: 'phoneNormalizer',   fn: () => runPhoneNormalizer() },
+      { key: 'instagramToWebsite', fn: () => runInstagramToWebsite() },
+      { key: 'messengerToWebsite', fn: () => runMessengerToWebsite() },
     ];
 
     weeklyReports.forEach(({ key, fn }) => {
@@ -73,6 +77,10 @@ function monthlyRun() {
       { key: 'missingInfo',       fn: () => sendMissingInfoReport(contacts) },
       { key: 'dataQuality',       fn: () => sendDataQualityReport(contacts) },
       { key: 'autoLabeling',      fn: () => runAutoLabeling() },
+      { key: 'nameFormatter',     fn: () => runNameFormatter() },
+      { key: 'phoneNormalizer',   fn: () => runPhoneNormalizer() },
+      { key: 'instagramToWebsite', fn: () => runInstagramToWebsite() },
+      { key: 'messengerToWebsite', fn: () => runMessengerToWebsite() },
     ];
 
     monthlyReports.forEach(({ key, fn }) => {
