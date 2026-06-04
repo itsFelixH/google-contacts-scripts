@@ -26,9 +26,10 @@ class Contact {
    * @param {string} phoneNumber Primary phone number
    * @param {string[]} instagramNames Instagram usernames (with @ prefix)
    * @param {string} resourceName Google People API resource ID (e.g. 'people/c12345')
+   * @param {string} notes Raw biography/notes text
    * @throws {Error} If name is missing or empty
    */
-  constructor(name, birthday, labels = [], email = '', city = '', phoneNumber = '', instagramNames = [], resourceName = '') {
+  constructor(name, birthday, labels = [], email = '', city = '', phoneNumber = '', instagramNames = [], resourceName = '', notes = '') {
     if (!name || typeof name !== 'string' || !name.trim()) {
       throw new Error('Contact name is required and must be a non-empty string');
     }
@@ -58,6 +59,9 @@ class Contact {
 
     /** @type {string} Google People API resource name */
     this.resourceName = resourceName || '';
+
+    /** @type {string} Raw biography/notes text */
+    this.notes = (notes || '').toString();
   }
 
 
