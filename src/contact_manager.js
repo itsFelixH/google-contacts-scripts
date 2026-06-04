@@ -331,7 +331,7 @@ function findBadlyFormattedNames(contacts) {
  * @returns {Contact[]} Contacts with incomplete Messenger info
  */
 function findIncompleteMessenger(contacts) {
-  return contacts.filter(c => c.hasMessengerTag && !c.messengerUsername);
+  return contacts.filter(c => c.hasMessengerTag && c.messengerNames.length === 0);
 }
 
 
