@@ -88,17 +88,20 @@ const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
 const monthlyReportDay = 1;
 
 const reportSchedules = {
-  upcomingBirthdays: 'off',               // 'weekly' | 'monthly' | 'off'
-  duplicates:        'off',               // 'weekly' | 'monthly' | 'off'
-  contactOverview:   'off',               // 'weekly' | 'monthly' | 'off'
-  labelOverview:     'off',               // 'weekly' | 'monthly' | 'off'
-  missingInfo:       'off',               // 'weekly' | 'monthly' | 'off'
-  dataQuality:       'off',               // 'weekly' | 'monthly' | 'off'
-  autoLabeling:      'off',               // 'weekly' | 'monthly' | 'off'
-  nameFormatter:     'off',               // 'weekly' | 'monthly' | 'off'
-  phoneNormalizer:   'off',               // 'weekly' | 'monthly' | 'off'
-  instagramToWebsite: 'off',             // 'weekly' | 'monthly' | 'off'
-  messengerToWebsite: 'off',             // 'weekly' | 'monthly' | 'off'
+  upcomingBirthdays:  'off',               // 'weekly' | 'monthly' | 'off'
+  duplicates:         'off',               // 'weekly' | 'monthly' | 'off'
+  contactOverview:    'off',               // 'weekly' | 'monthly' | 'off'
+  labelOverview:      'off',               // 'weekly' | 'monthly' | 'off'
+  missingInfo:        'off',               // 'weekly' | 'monthly' | 'off'
+  dataQuality:        'off',               // 'weekly' | 'monthly' | 'off'
+};
+
+const actionSchedules = {
+  autoLabeling:       'off',               // 'weekly' | 'monthly' | 'off'
+  nameFormatter:      'off',               // 'weekly' | 'monthly' | 'off'
+  phoneNormalizer:    'off',               // 'weekly' | 'monthly' | 'off'
+  instagramToWebsite: 'off',               // 'weekly' | 'monthly' | 'off'
+  messengerToWebsite: 'off',               // 'weekly' | 'monthly' | 'off'
 };
 
 

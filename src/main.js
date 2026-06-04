@@ -28,20 +28,30 @@ function weeklyRun() {
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
     const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
+    const actions = typeof actionSchedules !== 'undefined' ? actionSchedules : {};
     let successful = 0;
     let failed = 0;
 
     const weeklyReports = [
       { key: 'upcomingBirthdays', fn: () => sendUpcomingBirthdaysReport(null, contacts) },
-      { key: 'autoLabeling',      fn: () => runAutoLabeling() },
-      { key: 'nameFormatter',     fn: () => runNameFormatter() },
-      { key: 'phoneNormalizer',   fn: () => runPhoneNormalizer() },
+    ];
+
+    const weeklyActions = [
+      { key: 'autoLabeling',       fn: () => runAutoLabeling() },
+      { key: 'nameFormatter',      fn: () => runNameFormatter() },
+      { key: 'phoneNormalizer',    fn: () => runPhoneNormalizer() },
       { key: 'instagramToWebsite', fn: () => runInstagramToWebsite() },
       { key: 'messengerToWebsite', fn: () => runMessengerToWebsite() },
     ];
 
     weeklyReports.forEach(({ key, fn }) => {
       if (schedules[key] !== 'weekly') return;
+      try { fn(); successful++; }
+      catch (error) { failed++; Logger.log(`  ❌ ${key} failed: ${error.message}`); }
+    });
+
+    weeklyActions.forEach(({ key, fn }) => {
+      if (actions[key] !== 'weekly') return;
       try { fn(); successful++; }
       catch (error) { failed++; Logger.log(`  ❌ ${key} failed: ${error.message}`); }
     });
@@ -66,6 +76,7 @@ function monthlyRun() {
 
     const contacts = fetchContacts(useLabel ? labelFilter : []);
     const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
+    const actions = typeof actionSchedules !== 'undefined' ? actionSchedules : {};
     let successful = 0;
     let failed = 0;
 
@@ -76,15 +87,24 @@ function monthlyRun() {
       { key: 'labelOverview',     fn: () => sendLabelOverviewReport(contacts) },
       { key: 'missingInfo',       fn: () => sendMissingInfoReport(contacts) },
       { key: 'dataQuality',       fn: () => sendDataQualityReport(contacts) },
-      { key: 'autoLabeling',      fn: () => runAutoLabeling() },
-      { key: 'nameFormatter',     fn: () => runNameFormatter() },
-      { key: 'phoneNormalizer',   fn: () => runPhoneNormalizer() },
+    ];
+
+    const monthlyActions = [
+      { key: 'autoLabeling',       fn: () => runAutoLabeling() },
+      { key: 'nameFormatter',      fn: () => runNameFormatter() },
+      { key: 'phoneNormalizer',    fn: () => runPhoneNormalizer() },
       { key: 'instagramToWebsite', fn: () => runInstagramToWebsite() },
       { key: 'messengerToWebsite', fn: () => runMessengerToWebsite() },
     ];
 
     monthlyReports.forEach(({ key, fn }) => {
       if (schedules[key] !== 'monthly') return;
+      try { fn(); successful++; }
+      catch (error) { failed++; Logger.log(`  ❌ ${key} failed: ${error.message}`); }
+    });
+
+    monthlyActions.forEach(({ key, fn }) => {
+      if (actions[key] !== 'monthly') return;
       try { fn(); successful++; }
       catch (error) { failed++; Logger.log(`  ❌ ${key} failed: ${error.message}`); }
     });

@@ -34,6 +34,8 @@ global.reportSchedules = {
   labelOverview: 'off',
   missingInfo: 'off',
   dataQuality: 'off',
+};
+global.actionSchedules = {
   autoLabeling: 'off',
   nameFormatter: 'off',
   phoneNormalizer: 'off',
