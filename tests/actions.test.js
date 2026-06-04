@@ -95,10 +95,11 @@ describe('normalizePhoneNumber', () => {
     expect(normalizePhoneNumber('01761234567', '+49')).toBe('+49 176 1234567');
   });
 
-  test('cleans separators from international format but preserves spaces', () => {
+  test('reformats international numbers with consistent spacing', () => {
     expect(normalizePhoneNumber('+49 (176) 123-4567', '+49')).toBe('+49 176 1234567');
-    expect(normalizePhoneNumber('+49-176-1234567', '+49')).toBe('+491761234567');
+    expect(normalizePhoneNumber('+49-176-1234567', '+49')).toBe('+49 176 1234567');
     expect(normalizePhoneNumber('+49 176 1234567', '+49')).toBe('+49 176 1234567');
+    expect(normalizePhoneNumber('+491761234567', '+49')).toBe('+49 176 1234567');
   });
 
   test('leaves unknown formats unchanged', () => {
