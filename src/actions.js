@@ -9,6 +9,7 @@
  * - Auto-labeling: assign labels based on configurable rules
  * - Name formatter: fix capitalization and formatting issues
  * - Phone normalizer: convert phone numbers to international format
+ * - Instagram → Website: convert @handles in notes to website fields
  */
 
 
@@ -513,3 +514,174 @@ function sendPhoneNormalizerReport(changes) {
   Logger.log(`✅ Sent phone normalizer report (${changes.length} changes)`);
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Instagram → Website
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Converts Instagram @usernames from contact notes into website fields.
+ * For each @username found in the biography/notes:
+ * - Adds https://instagram.com/username as a website (type: "Instagram")
+ * - Removes the @username from the notes
+ *
+ * Skips contacts that already have the Instagram URL in their websites.
+ * Supports dryRun mode for previewing changes.
+ *
+ * @returns {{converted: number, skipped: number, changes: Object[]}} Results
+ */
+function runInstagramToWebsite() {
+  const isDryRun = typeof dryRun !== 'undefined' && dryRun;
+  Logger.log('📸 Running Instagram → Website conversion...');
+
+  // Fetch contacts with biographies and urls
+  const contacts = fetchContacts([]);
+  const contactsWithInstagram = contacts.filter(c => c.instagramNames.length > 0);
+
+  if (contactsWithInstagram.length === 0) {
+    Logger.log('No contacts with Instagram handles found');
+    return { converted: 0, skipped: 0, changes: [] };
+  }
+
+  Logger.log(`📸 Found ${contactsWithInstagram.length} contacts with Instagram handles`);
+
+  let converted = 0;
+  let skipped = 0;
+  const changes = []; // { name, handles, url }
+
+  contactsWithInstagram.forEach(contact => {
+    // Fetch current urls + notes in a single API call
+    const personData = getContactFields(contact.resourceName, 'urls,biographies');
+    const existingUrls = personData.urls || [];
+    const existingUrlValues = existingUrls.map(u => (u.value || '').toLowerCase());
+    const currentNotes = (personData.biographies || []).map(b => b.value).join('\n') || '';
+
+    const handlesToConvert = [];
+
+    contact.instagramNames.forEach(handle => {
+      const cleanHandle = handle.replace(/^@/, '');
+      const instagramUrl = `https://www.instagram.com/${cleanHandle}`;
+
+      // Skip if this URL already exists as a website (check for both www and non-www)
+      if (existingUrlValues.some(url => url.includes(`instagram.com/${cleanHandle.toLowerCase()}`))) {
+        skipped++;
+        return;
+      }
+
+      handlesToConvert.push({ handle, cleanHandle, url: instagramUrl });
+    });
+
+    if (handlesToConvert.length === 0) return;
+
+    changes.push({
+      name: contact.getName(),
+      handles: handlesToConvert.map(h => h.handle),
+      urls: handlesToConvert.map(h => h.url),
+    });
+
+    if (isDryRun) {
+      handlesToConvert.forEach(h => {
+        Logger.log(`🧪 [DRY RUN] ${contact.getName()}: ${h.handle} → website ${h.url}`);
+      });
+      converted += handlesToConvert.length;
+      return;
+    }
+
+    try {
+      // Build new websites array (keep existing + add new Instagram ones)
+      const newUrls = [
+        ...existingUrls,
+        ...handlesToConvert.map(h => ({ value: h.url, type: 'other', formattedType: 'Instagram' })),
+      ];
+
+      // Remove @handles from notes
+      let updatedNotes = currentNotes;
+      handlesToConvert.forEach(h => {
+        // Remove the handle and any surrounding whitespace/punctuation
+        updatedNotes = updatedNotes
+          .replace(new RegExp(`Instagram:\\s*${h.cleanHandle}`, 'gi'), '')
+          .replace(new RegExp(`@${h.cleanHandle}`, 'gi'), '');
+      });
+      // Clean up leftover separators and whitespace
+      updatedNotes = updatedNotes.replace(/[,;]\s*[,;]/g, ',').replace(/^\s*[,;.]\s*/gm, '').replace(/\s*[,;.]\s*$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+
+      // Update the contact: add websites + clean notes
+      const updateFields = ['urls'];
+      const updateBody = { urls: newUrls };
+
+      if (updatedNotes !== currentNotes) {
+        updateFields.push('biographies');
+        updateBody.biographies = updatedNotes ? [{ value: updatedNotes, contentType: 'TEXT_PLAIN' }] : [];
+      }
+
+      People.People.updateContact(updateBody, contact.resourceName, {
+        updatePersonFields: updateFields.join(',')
+      });
+
+      converted += handlesToConvert.length;
+      handlesToConvert.forEach(h => {
+        Logger.log(`  ✅ ${contact.getName()}: ${h.handle} → ${h.url}`);
+      });
+      throttle(isDryRun);
+    } catch (error) {
+      Logger.log(`  ❌ Failed to update ${contact.getName()}: ${error.message}`);
+    }
+  });
+
+  // Send summary report
+  if (changes.length > 0 && !isDryRun && shouldSendActionReports()) {
+    sendInstagramToWebsiteReport(changes);
+  }
+
+  Logger.log(`📸 Instagram → Website done: ${converted} converted, ${skipped} already existed`);
+  return { converted, skipped, changes };
+}
+
+
+/**
+ * Gets specific fields for a contact from the People API in a single call.
+ * @param {string} resourceName The contact's resource name
+ * @param {string} personFields Comma-separated fields to fetch
+ * @returns {Object} The person object with requested fields
+ * @private
+ */
+function getContactFields(resourceName, personFields) {
+  try {
+    return People.People.get(resourceName, { personFields });
+  } catch (error) {
+    Logger.log(`  ⚠️ Failed to read ${resourceName}: ${error.message}`);
+    return {};
+  }
+}
+
+
+/**
+ * Sends a summary email of Instagram → Website conversions.
+ * @param {Object[]} changes Array of { name, handles, urls }
+ * @private
+ */
+function sendInstagramToWebsiteReport(changes) {
+  const emailManager = new EmailManager();
+  const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
+  const totalHandles = changes.reduce((sum, c) => sum + c.handles.length, 0);
+  const subject = '📸 Instagram → Website Summary';
+
+  const textBody = ['📸 Instagram → Website Summary', '',
+    `${totalHandles} handles converted for ${changes.length} contacts:`, '',
+    ...changes.map(c => `  • ${c.name}: ${c.handles.join(', ')} → website`)
+  ].join('\n');
+
+  const listHtml = changes.map(c => {
+    const links = c.urls.map(url => `<a href="${url}" style="color: #1a73e8; text-decoration: none;">${url}</a>`).join(', ');
+    return EmailTemplates.listItem(`<strong>${c.name}</strong><br><small style="color: #666;">${c.handles.join(', ')} → ${links}</small>`);
+  }).join('\n');
+
+  const htmlBody = EmailTemplates.wrapEmail(
+    EmailTemplates.header('📸 Instagram → Website', `${totalHandles} handles converted for ${changes.length} contacts`) +
+    EmailTemplates.card(EmailTemplates.list(listHtml)) +
+    EmailTemplates.footer(emailManager.scriptId)
+  );
+
+  emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
+  Logger.log(`✅ Sent Instagram → Website report (${changes.length} contacts)`);
+}
