@@ -95,6 +95,10 @@ const reportSchedules = {
   missingInfo:       'off',               // 'weekly' | 'monthly' | 'off'
   dataQuality:       'off',               // 'weekly' | 'monthly' | 'off'
   autoLabeling:      'off',               // 'weekly' | 'monthly' | 'off'
+  nameFormatter:     'off',               // 'weekly' | 'monthly' | 'off'
+  phoneNormalizer:   'off',               // 'weekly' | 'monthly' | 'off'
+  instagramToWebsite: 'off',             // 'weekly' | 'monthly' | 'off'
+  messengerToWebsite: 'off',             // 'weekly' | 'monthly' | 'off'
 };
 
 
