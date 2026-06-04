@@ -324,6 +324,7 @@ These scripts write changes back to your contacts. Use `dryRun = true` to previe
 - `runNameFormatter()` — fix capitalization, trim spaces, swap "Last, First" format
 - `runPhoneNormalizer()` — convert local numbers to international format
 - `runInstagramToWebsite()` — convert @handles in notes to clickable website fields
+- `runMessengerToWebsite()` — convert FB/Messenger usernames in notes to m.me website fields
 
 ### Utility functions
 
