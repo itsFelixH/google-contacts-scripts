@@ -438,12 +438,13 @@ class EmailManager {
    * @param {Object[]} duplicatePhones Array of { phone, contacts: Contact[] }
    * @param {Contact[]} emptyContacts Contacts with only a name
    * @param {Contact[]} badNames Contacts with ALL CAPS or all lowercase names
+   * @param {Contact[]} incompleteMessenger Contacts with Messenger tag but no username
    * @param {number} totalContacts Total contact count for context
    */
-  sendDataQualityEmail(missingSurnames, invalidPhones, duplicatePhones, emptyContacts, badNames, totalContacts) {
+  sendDataQualityEmail(missingSurnames, invalidPhones, duplicatePhones, emptyContacts, badNames, incompleteMessenger, totalContacts) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
     const subject = this.subjects.dataQuality || '🔧 Data Quality';
-    const totalIssues = missingSurnames.length + invalidPhones.length + duplicatePhones.length + emptyContacts.length + badNames.length;
+    const totalIssues = missingSurnames.length + invalidPhones.length + duplicatePhones.length + emptyContacts.length + badNames.length + incompleteMessenger.length;
 
     // ── Summary parts ──
     const summaryParts = [];
@@ -452,6 +453,7 @@ class EmailManager {
     if (duplicatePhones.length > 0) summaryParts.push(`${duplicatePhones.length} shared numbers`);
     if (emptyContacts.length > 0) summaryParts.push(`${emptyContacts.length} empty contacts`);
     if (badNames.length > 0) summaryParts.push(`${badNames.length} formatting issues`);
+    if (incompleteMessenger.length > 0) summaryParts.push(`${incompleteMessenger.length} Messenger without username`);
 
     // ── Plain text ──
     const textLines = ['🔧 Data Quality', '', `${totalIssues} issues found across ${totalContacts} contacts`, '',
@@ -480,6 +482,11 @@ class EmailManager {
     if (badNames.length > 0) {
       textLines.push(`🔤 Name Formatting Issues (${badNames.length}):`);
       textLines.push(...badNames.map(c => `  • ${c.getName()}`));
+      textLines.push('');
+    }
+    if (incompleteMessenger.length > 0) {
+      textLines.push(`💬 Messenger without username (${incompleteMessenger.length}):`);
+      textLines.push(...incompleteMessenger.map(c => `  • ${c.getName()}`));
       textLines.push('');
     }
 
@@ -539,6 +546,15 @@ class EmailManager {
         return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}`);
       }).join('\n');
       sectionsHtml += this.templates.section(`🔤 Name Formatting Issues (${badNames.length})`) +
+        this.templates.card(this.templates.list(items));
+    }
+
+    if (incompleteMessenger.length > 0) {
+      const items = incompleteMessenger.map(c => {
+        const editLink = this._editLink(c);
+        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink} <small style="color: #666;">— add FB username to notes</small>`);
+      }).join('\n');
+      sectionsHtml += this.templates.section(`💬 Messenger without username (${incompleteMessenger.length})`) +
         this.templates.card(this.templates.list(items));
     }
 
