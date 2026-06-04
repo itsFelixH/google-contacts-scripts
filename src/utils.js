@@ -219,6 +219,7 @@ function prepareContacts(contacts) {
 /**
  * Extracts Instagram usernames from the given notes.
  * Supports @username patterns and "Instagram: username" format.
+ * Excludes email addresses and strips trailing punctuation.
  *
  * @param {string} notes The notes containing Instagram usernames.
  * @returns {string[]} Array of Instagram usernames (with @ prefix), or empty array if none found.
@@ -228,22 +229,23 @@ function extractInstagramNamesFromNotes(notes) {
 
   const instagramNames = [];
 
-  // Match all @username patterns in the notes
-  const atMatches = notes.match(/@[\w.]+/g);
+  // Match @username patterns that are NOT preceded by a word character (excludes emails)
+  const atMatches = notes.match(/(?<![a-zA-Z0-9])@[\w.]+/g);
   if (atMatches) {
     atMatches.forEach(match => {
-      const username = match.startsWith('@') ? match : '@' + match;
-      if (!instagramNames.includes(username)) {
+      // Strip trailing dots/punctuation from the username
+      const username = match.replace(/[.]+$/, '');
+      if (username.length > 1 && !instagramNames.includes(username)) {
         instagramNames.push(username);
       }
     });
   }
 
   // Also match "Instagram: username" pattern (without @)
-  const instaPattern = /Instagram:\s*([^\s,@][^\s,]*)/gi;
+  const instaPattern = /Instagram:\s*([a-zA-Z0-9_.]+)/gi;
   let match;
   while ((match = instaPattern.exec(notes)) !== null) {
-    const username = '@' + match[1].trim();
+    const username = '@' + match[1].replace(/[.]+$/, '');
     if (!instagramNames.includes(username)) {
       instagramNames.push(username);
     }
@@ -255,7 +257,7 @@ function extractInstagramNamesFromNotes(notes) {
 
 /**
  * Extracts Instagram usernames from website URL objects.
- * Matches URLs containing "instagram.com/username".
+ * Matches URLs where the domain is instagram.com.
  *
  * @param {Object[]} urls Array of URL objects from People API ({ value, type, formattedType })
  * @returns {string[]} Array of Instagram usernames (with @ prefix), or empty array if none found.
@@ -264,13 +266,13 @@ function extractInstagramNamesFromUrls(urls) {
   if (!urls || !Array.isArray(urls)) return [];
 
   const instagramNames = [];
-  const pattern = /instagram\.com\/([a-zA-Z0-9_.]+)/i;
+  const pattern = /^https?:\/\/(www\.)?instagram\.com\/([a-zA-Z0-9_.]+)/i;
 
   urls.forEach(urlObj => {
     const url = urlObj.value || '';
     const match = url.match(pattern);
     if (match) {
-      const username = '@' + match[1];
+      const username = '@' + match[2];
       if (!instagramNames.includes(username)) {
         instagramNames.push(username);
       }
