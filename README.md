@@ -263,13 +263,16 @@ const emailSubjects = {
 ```js
 const autoLabelRules = [
   { field: 'email', contains: '@company.com', label: 'Work' },
-  { field: 'city', equals: 'berlin', label: 'Berlin' },
-  { field: 'email', endsWith: '.de', label: 'Germany' },
+  { field: 'email', endsWith: '.edu', label: 'University' },
+  { field: 'phone', startsWith: '+44', label: '🇬🇧 UK' },
+  { field: 'city', equals: 'berlin', label: '📍 Berlin' },
   { field: 'name', startsWith: 'dr.', label: 'Doctors' },
+  { field: 'name', matches: '\\(swing\\)', label: 'Swing' },
+  { field: 'name', matches: '\\(swing .+\\)', label: 'Swing Festivals' },
 ];
 ```
 
-Rule conditions: `contains`, `equals`, `startsWith`, `endsWith` (all case-insensitive).
+Rule conditions: `contains`, `equals`, `startsWith`, `endsWith`, `matches` (regex, all case-insensitive).
 Fields: `email`, `phone`, `city`, `name`.
 
 **Phone normalizer:**
