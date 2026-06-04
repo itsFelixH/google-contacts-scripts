@@ -173,13 +173,13 @@ function sendAutoLabelingReport(changes) {
   ].join('\n');
 
   const listHtml = changes.map(c =>
-    `<li><strong>${c.name}</strong> → 🏷️ ${c.label}</li>`
+    EmailTemplates.listItem(`<strong>${c.name}</strong> → 🏷️ ${c.label}`)
   ).join('\n');
 
   const htmlBody = EmailTemplates.wrapEmail(
     EmailTemplates.header('🏷️ Auto-Labeling Summary', `${changes.length} labels applied`) +
-    `<ul>${listHtml}</ul>` +
-    EmailTemplates.footer()
+    EmailTemplates.card(EmailTemplates.list(listHtml)) +
+    EmailTemplates.footer(emailManager.scriptId)
   );
 
   emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -272,14 +272,26 @@ function formatName(name) {
     }
   }
 
-  // Title case: lowercase everything, then capitalize first char of each word
-  result = result.toLowerCase().replace(/(^|\s)\S/g, char => char.toUpperCase());
+  // Split into parenthetical segments and regular text
+  // Preserve content inside parens as-is (e.g. "(Swing Barcelona)")
+  const parts = result.split(/(\([^)]*\))/g);
+
+  result = parts.map(part => {
+    // If it's a parenthetical, leave it untouched
+    if (part.startsWith('(') && part.endsWith(')')) return part;
+
+    // Title case: lowercase, then capitalize first char of each word and after hyphens
+    return part.toLowerCase()
+      .replace(/(^|\s|-)(\S)/g, (match, sep, char) => sep + char.toUpperCase());
+  }).join('');
 
   // Handle lowercase prefixes (hardcoded — these are universal)
   const prefixes = ['von', 'van', 'de', 'del', 'der', 'di', 'la', 'le', 'el'];
 
   result = result.split(' ').map((word, i) => {
     if (i === 0) return word; // Never lowercase the first word
+    // Skip words inside parens
+    if (word.startsWith('(')) return word;
     if (prefixes.includes(word.toLowerCase())) return word.toLowerCase();
     return word;
   }).join(' ');
@@ -304,13 +316,13 @@ function sendNameFormatterReport(changes) {
   ].join('\n');
 
   const listHtml = changes.map(c =>
-    `<li>"${c.before}" → <strong>${c.after}</strong></li>`
+    EmailTemplates.listItem(`"${c.before}" → <strong>${c.after}</strong>`)
   ).join('\n');
 
   const htmlBody = EmailTemplates.wrapEmail(
     EmailTemplates.header('✏️ Name Formatter Summary', `${changes.length} names fixed`) +
-    `<ul>${listHtml}</ul>` +
-    EmailTemplates.footer()
+    EmailTemplates.card(EmailTemplates.list(listHtml)) +
+    EmailTemplates.footer(emailManager.scriptId)
   );
 
   emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -389,6 +401,7 @@ function runPhoneNormalizer() {
 
 /**
  * Normalizes a single phone number to international format.
+ * Preserves grouping for international numbers, strips separators for local-to-international conversion.
  *
  * @param {string} phone The phone number to normalize
  * @param {string} countryCode Default country code (e.g. '+49')
@@ -396,15 +409,21 @@ function runPhoneNormalizer() {
  * @private
  */
 function normalizePhoneNumber(phone, countryCode) {
-  // Already international format — just strip separators, keep digits and leading +
+  // Already international format — normalize separators but keep readable grouping
   if (phone.startsWith('+')) {
-    const digits = phone.replace(/[^\d+]/g, '');
-    return digits;
+    // Strip everything except digits, +, and spaces
+    let cleaned = phone.replace(/[^\d+ ]/g, '').replace(/\s+/g, ' ').trim();
+    return cleaned;
   }
 
   // Local format starting with 0 — replace leading 0 with country code
   if (phone.startsWith('0')) {
     const digits = phone.substring(1).replace(/\D/g, '');
+    // Format: +CC XXX XXXXXXX (country code + area code + number)
+    if (digits.length >= 7) {
+      const areaLen = digits.length <= 8 ? 2 : 3;
+      return `${countryCode} ${digits.slice(0, areaLen)} ${digits.slice(areaLen)}`;
+    }
     return `${countryCode}${digits}`;
   }
 
@@ -429,13 +448,13 @@ function sendPhoneNormalizerReport(changes) {
   ].join('\n');
 
   const listHtml = changes.map(c =>
-    `<li><strong>${c.name}</strong>: ${c.before} → <strong>${c.after}</strong></li>`
+    EmailTemplates.listItem(`<strong>${c.name}</strong>: ${c.before} → <strong>${c.after}</strong>`)
   ).join('\n');
 
   const htmlBody = EmailTemplates.wrapEmail(
     EmailTemplates.header('📱 Phone Normalizer Summary', `${changes.length} numbers normalized`) +
-    `<ul>${listHtml}</ul>` +
-    EmailTemplates.footer()
+    EmailTemplates.card(EmailTemplates.list(listHtml)) +
+    EmailTemplates.footer(emailManager.scriptId)
   );
 
   emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
@@ -544,13 +563,13 @@ function sendInstagramSyncReport(brokenContacts) {
   ].join('\n');
 
   const listHtml = brokenContacts.map(b =>
-    `<li><strong>${b.contact.getName()}</strong> — ${b.handle}</li>`
+    EmailTemplates.listItem(`<strong>${b.contact.getName()}</strong> — ${b.handle}`)
   ).join('\n');
 
   const htmlBody = EmailTemplates.wrapEmail(
     EmailTemplates.header('📸 Broken Instagram Handles', `${brokenContacts.length} handles not found`) +
-    `<ul>${listHtml}</ul>` +
-    EmailTemplates.footer()
+    EmailTemplates.card(EmailTemplates.list(listHtml)) +
+    EmailTemplates.footer(emailManager.scriptId)
   );
 
   emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
