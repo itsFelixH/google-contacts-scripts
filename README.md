@@ -177,7 +177,7 @@ All options live in `src/config.js`. Here's the full reference:
 | `duplicateMatchFields` | `['name', 'email', 'phone']` | Fields to compare for duplicates |
 | `maxContactsPerReport` | `0` | Cap list length (0 = unlimited) |
 | `includeEditLinks` | `true` | Add Google Contacts "edit" links |
-| `includeWhatsAppLinks` | `true` | Add WhatsApp links next to phone numbers |
+| `includeWhatsAppLinks` | `false` | Add WhatsApp links next to phone numbers |
 
 ### Birthday format options
 
@@ -306,7 +306,6 @@ These scripts write changes back to your contacts. Use `dryRun = true` to previe
 - `runAutoLabeling()` — assign labels based on rules (email domain, city, name patterns)
 - `runNameFormatter()` — fix capitalization, trim spaces, swap "Last, First" format
 - `runPhoneNormalizer()` — convert local numbers to international format
-- `runInstagramSync()` — check if stored Instagram handles still exist
 
 ### Utility functions
 
@@ -339,7 +338,7 @@ pnpm test
 ```
 src/
 ├── _setup.js          # Schedule management (setupSchedules, removeSchedules)
-├── actions.js         # Contact actions (auto-label, name format, phone normalize, Instagram sync)
+├── actions.js         # Contact actions (auto-label, name format, phone normalize)
 ├── config.js          # Your config (not committed)
 ├── config.js.template # Config template with all options documented
 ├── contact.js         # Contact class
