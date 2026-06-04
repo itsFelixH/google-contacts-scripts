@@ -274,50 +274,11 @@ class EmailManager {
   }
 
   /**
-   * Sends the Missing Info report for a specific field.
-   *
-   * @param {string} field Which field is missing: 'email', 'phone', 'city', or 'birthday'
-   * @param {Contact[]} contacts Contacts missing that field
-   */
-  sendMissingInfoEmail(field, contacts) {
-    const { toEmail, fromEmail, senderName } = this.getEmailContext();
-
-    const fieldNames = { email: 'Email', phone: 'Phone', city: 'City', birthday: 'Birthday' };
-    const fieldEmojis = { email: '📧', phone: '📱', city: '🌆', birthday: '🎂' };
-    const emoji = fieldEmojis[field] || '📋';
-    const displayName = fieldNames[field] || field;
-    const subject = (this.subjects.missingInfo || `${emoji} Missing Info: {field}`).replace('{field}', displayName);
-
-    // Plain text — show what info the contact does have for context
-    const textBody = [`${emoji} Contacts Missing ${displayName}`, '',
-      ...contacts.map(c => {
-        const has = this._summarizeExistingFields(c, field);
-        return `  • ${c.getName()}${has ? `  (has: ${has})` : ''}`;
-      })
-    ].join('\n');
-
-    // HTML — show existing info + edit links
-    const listHtml = contacts.map(c => {
-      const editLink = this._editLink(c);
-      const has = this._summarizeExistingFieldsHtml(c, field);
-      return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}${has}`);
-    }).join('\n');
-
-    const htmlBody = this.templates.wrapEmail(
-      this.templates.header(`${emoji} Missing Info: ${displayName}`, `${contacts.length} contacts are missing ${displayName.toLowerCase()}`) +
-      this.templates.card(this.templates.list(listHtml)) +
-      this.templates.footer()
-    );
-
-    this.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
-  }
-
-  /**
-   * Sends a combined Missing Info report for multiple fields in one email.
+   * Sends the Missing Info report for all configured fields in one email.
    *
    * @param {Object} fieldData Map of field → Contact[] (e.g. { email: [...], phone: [...] })
    */
-  sendCombinedMissingInfoEmail(fieldData) {
+  sendMissingInfoEmail(fieldData) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
 
     const fieldNames = { email: 'Email', phone: 'Phone', city: 'City', birthday: 'Birthday' };
@@ -327,7 +288,7 @@ class EmailManager {
     if (fields.length === 0) return;
 
     const totalMissing = fields.reduce((sum, f) => sum + fieldData[f].length, 0);
-    const subject = this.subjects.missingInfoCombined || '📋 Missing Info';
+    const subject = this.subjects.missingInfo || '📋 Missing Info';
 
     // ── Plain text ──
     const textLines = ['📋 Missing Info', '', `${totalMissing} gaps across ${fields.length} fields`, ''];
