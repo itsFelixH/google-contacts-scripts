@@ -9,7 +9,6 @@
  * - Auto-labeling: assign labels based on configurable rules
  * - Name formatter: fix capitalization and formatting issues
  * - Phone normalizer: convert phone numbers to international format
- * - Instagram sync: validate Instagram handles in contact notes
  */
 
 
@@ -23,6 +22,18 @@
  */
 function shouldSendActionReports() {
   return typeof sendActionReports !== 'undefined' ? sendActionReports : true;
+}
+
+/**
+ * Throttles API write operations to avoid hitting Google's rate limits.
+ * Sleeps briefly between calls. Only active in production (not dry run).
+ * @param {boolean} isDryRun Whether we're in dry run mode
+ * @private
+ */
+function throttle(isDryRun) {
+  if (!isDryRun && typeof Utilities !== 'undefined') {
+    Utilities.sleep(100); // 100ms between writes — ~10 ops/sec
+  }
 }
 
 
@@ -96,6 +107,7 @@ function runAutoLabeling() {
           }, labelId);
           applied++;
           Logger.log(`  ✅ Added "${rule.label}" to ${contact.getName()}`);
+          throttle(isDryRun);
         } catch (error) {
           Logger.log(`  ❌ Failed to label ${contact.getName()}: ${error.message}`);
         }
@@ -235,6 +247,7 @@ function runNameFormatter() {
       }, contact.resourceName, { updatePersonFields: 'names' });
       Logger.log(`  ✅ "${original}" → "${formatted}"`);
       fixed++;
+      throttle(isDryRun);
     } catch (error) {
       Logger.log(`  ❌ Failed to update ${original}: ${error.message}`);
     }
@@ -383,6 +396,7 @@ function runPhoneNormalizer() {
       }, contact.resourceName, { updatePersonFields: 'phoneNumbers' });
       Logger.log(`  ✅ ${contact.getName()}: "${original}" → "${formatted}"`);
       normalized++;
+      throttle(isDryRun);
     } catch (error) {
       Logger.log(`  ❌ Failed to update ${contact.getName()}: ${error.message}`);
       failed++;
@@ -400,8 +414,10 @@ function runPhoneNormalizer() {
 
 
 /**
- * Normalizes a single phone number to international format.
- * Preserves grouping for international numbers, strips separators for local-to-international conversion.
+ * Normalizes a single phone number to international format with consistent spacing.
+ *
+ * Output format: +CC XXX XXXXXXX (country code · area/mobile prefix · number)
+ * Numbers that are already well-formatted are left unchanged.
  *
  * @param {string} phone The phone number to normalize
  * @param {string} countryCode Default country code (e.g. '+49')
@@ -409,17 +425,23 @@ function runPhoneNormalizer() {
  * @private
  */
 function normalizePhoneNumber(phone, countryCode) {
-  // Already international format — normalize separators but keep readable grouping
+  // Already international format — strip all separators, then reformat with consistent spaces
   if (phone.startsWith('+')) {
-    // Strip everything except digits, +, and spaces
-    let cleaned = phone.replace(/[^\d+ ]/g, '').replace(/\s+/g, ' ').trim();
-    return cleaned;
+    const digits = phone.replace(/[^\d]/g, ''); // strip everything except digits
+    // Detect country code length (1-3 digits) using common patterns
+    const ccDigitLen = detectCountryCodeLength(digits);
+    const cc = '+' + digits.slice(0, ccDigitLen);
+    const rest = digits.slice(ccDigitLen);
+    if (rest.length >= 7) {
+      const areaLen = rest.length <= 8 ? 2 : 3;
+      return `${cc} ${rest.slice(0, areaLen)} ${rest.slice(areaLen)}`;
+    }
+    return `+${digits}`; // too short to format meaningfully
   }
 
   // Local format starting with 0 — replace leading 0 with country code
   if (phone.startsWith('0')) {
     const digits = phone.substring(1).replace(/\D/g, '');
-    // Format: +CC XXX XXXXXXX (country code + area code + number)
     if (digits.length >= 7) {
       const areaLen = digits.length <= 8 ? 2 : 3;
       return `${countryCode} ${digits.slice(0, areaLen)} ${digits.slice(areaLen)}`;
@@ -429,6 +451,36 @@ function normalizePhoneNumber(phone, countryCode) {
 
   // Doesn't match known patterns — return as-is
   return phone;
+}
+
+
+/**
+ * Detects the country code length (in digits) from a phone number's leading digits.
+ * Uses ITU-T E.164 patterns for accurate detection.
+ *
+ * @param {string} digits Phone number digits (without +)
+ * @returns {number} Number of digits in the country code (1-3)
+ * @private
+ */
+function detectCountryCodeLength(digits) {
+  // 1-digit country codes
+  if (digits.startsWith('1') || digits.startsWith('7')) return 1;
+
+  // Known 2-digit country codes (major ones)
+  const twoDigitCodes = [
+    '20', '27', '30', '31', '32', '33', '34', '36', '39',
+    '40', '41', '43', '44', '45', '46', '47', '48', '49',
+    '51', '52', '53', '54', '55', '56', '57', '58',
+    '60', '61', '62', '63', '64', '65', '66',
+    '81', '82', '84', '86',
+    '90', '91', '92', '93', '94', '95', '98',
+  ];
+
+  const first2 = digits.slice(0, 2);
+  if (twoDigitCodes.includes(first2)) return 2;
+
+  // Everything else is 3-digit
+  return 3;
 }
 
 
@@ -461,117 +513,3 @@ function sendPhoneNormalizerReport(changes) {
   Logger.log(`✅ Sent phone normalizer report (${changes.length} changes)`);
 }
 
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Instagram sync
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Validates Instagram handles stored in contact notes.
- * Checks if each @username resolves to a valid Instagram profile
- * by attempting to fetch the profile page.
- *
- * Contacts with broken handles are collected and reported via email.
- *
- * @returns {{valid: number, broken: number, checked: number}} Results
- */
-function runInstagramSync() {
-  const isDryRun = typeof dryRun !== 'undefined' && dryRun;
-  Logger.log('📸 Running Instagram sync...');
-
-  const contacts = fetchContacts([]);
-  const contactsWithInstagram = contacts.filter(c => c.instagramNames.length > 0);
-
-  if (contactsWithInstagram.length === 0) {
-    Logger.log('No contacts with Instagram handles found');
-    return { valid: 0, broken: 0, checked: 0 };
-  }
-
-  Logger.log(`📸 Checking ${contactsWithInstagram.length} contacts with Instagram handles...`);
-
-  let valid = 0;
-  let broken = 0;
-  const brokenContacts = []; // { contact, handle }
-
-  contactsWithInstagram.forEach(contact => {
-    contact.instagramNames.forEach(handle => {
-      const cleanHandle = handle.replace(/^@/, '');
-      const isValid = checkInstagramHandle(cleanHandle);
-
-      if (isValid) {
-        valid++;
-      } else {
-        broken++;
-        brokenContacts.push({ contact, handle });
-        Logger.log(`  ❌ ${contact.getName()}: ${handle} — not found`);
-      }
-    });
-
-    // Rate limiting — 1s between requests to avoid Instagram blocking
-    Utilities.sleep(1000);
-  });
-
-  // Send report if there are broken handles (Instagram sync always reports broken ones)
-  if (brokenContacts.length > 0 && !isDryRun && shouldSendActionReports()) {
-    sendInstagramSyncReport(brokenContacts);
-  }
-
-  const checked = valid + broken;
-  Logger.log(`📸 Instagram sync done: ${checked} checked, ${valid} valid, ${broken} broken`);
-  return { valid, broken, checked };
-}
-
-
-/**
- * Checks if an Instagram handle exists by fetching the profile page.
- * Returns true if the page returns a 200 status.
- *
- * @param {string} handle Instagram username (without @)
- * @returns {boolean} True if the profile exists
- * @private
- */
-function checkInstagramHandle(handle) {
-  try {
-    const url = `https://www.instagram.com/${handle}/`;
-    const response = UrlFetchApp.fetch(url, {
-      muteHttpExceptions: true,
-      followRedirects: false
-    });
-    // 200 = profile exists, 404 = not found, 302 = redirect (usually login page for private)
-    const code = response.getResponseCode();
-    return code === 200 || code === 302;
-  } catch (error) {
-    Logger.log(`  ⚠️ Error checking @${handle}: ${error.message}`);
-    return true; // Assume valid on network error (don't flag falsely)
-  }
-}
-
-
-/**
- * Sends an email report of contacts with broken Instagram handles.
- * @param {Object[]} brokenContacts Array of { contact, handle }
- * @private
- */
-function sendInstagramSyncReport(brokenContacts) {
-  const emailManager = new EmailManager();
-  const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
-  const subject = '📸 Broken Instagram Handles';
-
-  const textBody = ['📸 Broken Instagram Handles', '',
-    `${brokenContacts.length} handles could not be found:`, '',
-    ...brokenContacts.map(b => `  • ${b.contact.getName()} — ${b.handle}`)
-  ].join('\n');
-
-  const listHtml = brokenContacts.map(b =>
-    EmailTemplates.listItem(`<strong>${b.contact.getName()}</strong> — ${b.handle}`)
-  ).join('\n');
-
-  const htmlBody = EmailTemplates.wrapEmail(
-    EmailTemplates.header('📸 Broken Instagram Handles', `${brokenContacts.length} handles not found`) +
-    EmailTemplates.card(EmailTemplates.list(listHtml)) +
-    EmailTemplates.footer(emailManager.scriptId)
-  );
-
-  emailManager.sendMail(toEmail, fromEmail, senderName, subject, textBody, htmlBody);
-  Logger.log(`✅ Sent Instagram sync report (${brokenContacts.length} broken handles)`);
-}
