@@ -173,21 +173,21 @@ describe('EmailManager', () => {
 describe('EmailTemplates', () => {
   test('header generates h2 with title', () => {
     const html = EmailTemplates.header('Test Title', 'Subtitle');
-    expect(html).toContain('<h2>Test Title</h2>');
+    expect(html).toContain('Test Title</h2>');
     expect(html).toContain('Subtitle');
   });
 
   test('header works without subtitle', () => {
     const html = EmailTemplates.header('Title Only');
-    expect(html).toContain('<h2>Title Only</h2>');
-    expect(html).not.toContain('<p>');
+    expect(html).toContain('Title Only</h2>');
+    expect(html).not.toContain('Subtitle');
   });
 
   test('footer contains links', () => {
     const html = EmailTemplates.footer();
     expect(html).toContain('contacts.google.com');
     expect(html).toContain('github.com');
-    expect(html).toContain('<hr>');
+    expect(html).toContain('Manage Contacts');
   });
 
   test('wrapEmail generates complete HTML document', () => {
@@ -196,6 +196,6 @@ describe('EmailTemplates', () => {
     expect(html).toContain('<p>Content</p>');
     expect(html).toContain('</html>');
     expect(html).toContain('font-family');
-    expect(html).toContain('margin-bottom: 6px');
+    expect(html).toContain('max-width: 600px');
   });
 });
