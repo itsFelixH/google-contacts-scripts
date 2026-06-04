@@ -537,6 +537,7 @@ function computeContactStats(contacts) {
   let withoutSurnames = 0;
   const labelDistribution = {};
   const cityDistribution = {};
+  const birthdayMonths = new Array(12).fill(0); // index 0 = Jan, 11 = Dec
 
   // Completeness: count how many of the 4 key fields each contact has
   const completeness = [0, 0, 0, 0, 0]; // index = number of fields filled (0-4)
@@ -550,7 +551,10 @@ function computeContactStats(contacts) {
 
     if (hasEmail) withEmail++;
     if (hasPhone) withPhone++;
-    if (hasBirthday) withBirthday++;
+    if (hasBirthday) {
+      withBirthday++;
+      birthdayMonths[c.getBirthday().getMonth()]++;
+    }
     if (hasCity) withCity++;
     if (c.instagramNames.length > 0) withInstagram++;
 
@@ -605,6 +609,7 @@ function computeContactStats(contacts) {
     completeCount,
     completenessPercentage: pct(completeCount),
     topCities,
+    birthdayMonths,
   };
 }
 
