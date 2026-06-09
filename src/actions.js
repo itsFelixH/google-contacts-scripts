@@ -37,6 +37,20 @@ function throttle(isDryRun) {
   }
 }
 
+/**
+ * Checks if a specific action is in dry run mode.
+ * Supports both per-action object and legacy boolean config.
+ * @param {string} actionName Key in dryRunActions (e.g. 'autoLabeling')
+ * @returns {boolean}
+ */
+function isActionDryRun(actionName) {
+  if (typeof dryRunActions === 'object' && dryRunActions !== null) {
+    return dryRunActions[actionName] !== false;
+  }
+  if (typeof dryRunActions === 'boolean') return dryRunActions;
+  return false;
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Auto-labeling
@@ -57,7 +71,7 @@ function throttle(isDryRun) {
  */
 function runAutoLabeling() {
   const rules = typeof autoLabelRules !== 'undefined' ? autoLabelRules : [];
-  const isDryRun = typeof dryRunActions !== 'undefined' ? dryRunActions : (typeof dryRun !== 'undefined' && dryRun);
+  const isDryRun = isActionDryRun('autoLabeling');
 
   if (rules.length === 0) {
     Logger.log('⚠️ No auto-label rules configured. Add autoLabelRules to config.js.');
@@ -216,7 +230,7 @@ function sendAutoLabelingReport(changes) {
  * @returns {{fixed: number, unchanged: number, changes: Object[]}} Results
  */
 function runNameFormatter() {
-  const isDryRun = typeof dryRunActions !== 'undefined' ? dryRunActions : (typeof dryRun !== 'undefined' && dryRun);
+  const isDryRun = isActionDryRun('nameFormatter');
   Logger.log('✏️ Running name formatter...');
 
   const contacts = fetchContacts([]);
@@ -361,7 +375,7 @@ function sendNameFormatterReport(changes) {
  */
 function runPhoneNormalizer() {
   const countryCode = typeof defaultCountryCode !== 'undefined' ? defaultCountryCode : '+49';
-  const isDryRun = typeof dryRunActions !== 'undefined' ? dryRunActions : (typeof dryRun !== 'undefined' && dryRun);
+  const isDryRun = isActionDryRun('phoneNormalizer');
 
   Logger.log(`📱 Running phone normalizer (country code: ${countryCode})...`);
 
@@ -531,7 +545,7 @@ function sendPhoneNormalizerReport(changes) {
  * @returns {{converted: number, skipped: number, changes: Object[]}} Results
  */
 function runInstagramToWebsite() {
-  const isDryRun = typeof dryRunActions !== 'undefined' ? dryRunActions : (typeof dryRun !== 'undefined' && dryRun);
+  const isDryRun = isActionDryRun('instagramToWebsite');
   Logger.log('📸 Running Instagram → Website conversion...');
 
   // Fetch contacts with biographies and urls
@@ -687,7 +701,7 @@ function sendInstagramToWebsiteReport(changes) {
  * @returns {{converted: number, skipped: number, changes: Object[]}} Results
  */
 function runMessengerToWebsite() {
-  const isDryRun = typeof dryRunActions !== 'undefined' ? dryRunActions : (typeof dryRun !== 'undefined' && dryRun);
+  const isDryRun = isActionDryRun('messengerToWebsite');
   Logger.log('💬 Running Messenger → Website conversion...');
 
   const contacts = fetchContacts([]);
