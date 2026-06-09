@@ -173,4 +173,10 @@ const emailSubjects = {
 // 7. ADVANCED
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const dryRunActions = false;              // true = preview mode for actions (no contact changes)
+const dryRunActions = {
+  autoLabeling:       false,              // true = preview only, false = modify contacts
+  nameFormatter:      false,              // true = preview only, false = modify contacts
+  phoneNormalizer:    false,              // true = preview only, false = modify contacts
+  instagramToWebsite: false,              // true = preview only, false = modify contacts
+  messengerToWebsite: false,              // true = preview only, false = modify contacts
+};
