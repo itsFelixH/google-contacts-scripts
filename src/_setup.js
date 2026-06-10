@@ -13,7 +13,7 @@
  * Function names managed by setupSchedules.
  * Only these triggers are touched — user-created triggers are left alone.
  */
-const MANAGED_FUNCTIONS = ['weeklyRun', 'monthlyRun'];
+const MANAGED_FUNCTIONS = ['dailyRun'];
 
 
 /**
@@ -40,46 +40,41 @@ function setupSchedules() {
     });
   }
 
-  // Read config with defaults
-  const hour = typeof scheduleHour !== 'undefined' ? scheduleHour : 8;
-  const weekDay = typeof weeklyReportDay !== 'undefined' ? weeklyReportDay : ScriptApp.WeekDay.MONDAY;
-  const monthDay = typeof monthlyReportDay !== 'undefined' ? monthlyReportDay : 1;
-  const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
-  const actions = typeof actionSchedules !== 'undefined' ? actionSchedules : {};
+  const r = typeof reports !== 'undefined' ? reports : {};
+  const a = typeof actions !== 'undefined' ? actions : {};
+  const hour = 8; // Hardcoded — triggers fire at approximately this hour (±1h)
 
-  // Combine both schedule maps to determine which triggers are needed
-  const allSchedules = { ...schedules, ...actions };
+  // Collect all schedule frequencies from reports and actions
+  const reportFreqs = Object.entries(r)
+    .filter(([k, v]) => typeof v === 'object' && v.schedule)
+    .map(([k, v]) => v.schedule);
+  const actionFreqs = Object.values(a)
+    .filter(v => typeof v === 'object' && v.schedule)
+    .map(v => v.schedule);
+  const allFreqs = [...reportFreqs, ...actionFreqs];
 
-  // Check if any reports/actions are scheduled for each frequency
-  const hasWeekly = Object.values(allSchedules).includes('weekly');
-  const hasMonthly = Object.values(allSchedules).includes('monthly');
+  const hasDaily = allFreqs.includes('daily');
+  const hasWeekly = allFreqs.includes('weekly');
+  const hasMonthly = allFreqs.includes('monthly');
 
-  if (!hasWeekly && !hasMonthly) {
-    Logger.log('ℹ️ No schedules enabled. Set frequencies in reportSchedules or actionSchedules config.');
+  if (!hasDaily && !hasWeekly && !hasMonthly) {
+    Logger.log('ℹ️ No schedules enabled. Set schedule frequencies in reports/actions config.');
     return;
   }
 
-  // Create weekly trigger if needed
-  if (hasWeekly) {
-    ScriptApp.newTrigger('weeklyRun')
-      .timeBased()
-      .onWeekDay(weekDay)
-      .atHour(hour)
-      .create();
-    const weeklyKeys = Object.entries(allSchedules).filter(([_, v]) => v === 'weekly').map(([k]) => k);
-    Logger.log(`✅ Weekly (${weekDay === 2 ? 'Monday' : 'day ' + weekDay}) at ~${hour}:00 → ${weeklyKeys.join(', ')}`);
-  }
+  // Single daily trigger handles all schedule types
+  // (daily runs always, weekly checks weekday, monthly checks day of month)
+  ScriptApp.newTrigger('dailyRun')
+    .timeBased()
+    .everyDays(1)
+    .atHour(hour)
+    .create();
 
-  // Create monthly trigger if needed
-  if (hasMonthly) {
-    ScriptApp.newTrigger('monthlyRun')
-      .timeBased()
-      .onMonthDay(monthDay)
-      .atHour(hour)
-      .create();
-    const monthlyKeys = Object.entries(allSchedules).filter(([_, v]) => v === 'monthly').map(([k]) => k);
-    Logger.log(`✅ Monthly (day ${monthDay}) at ~${hour}:00 → ${monthlyKeys.join(', ')}`);
-  }
+  const summary = [];
+  if (hasDaily) summary.push('daily');
+  if (hasWeekly) summary.push('weekly');
+  if (hasMonthly) summary.push('monthly');
+  Logger.log(`✅ Daily trigger at ~${hour}:00 (handles: ${summary.join(', ')})`);
 
   Logger.log('🎉 Schedules set up!');
 }
