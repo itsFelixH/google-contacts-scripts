@@ -17,70 +17,37 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Runs all reports scheduled as 'weekly'.
- * Fetches contacts once and passes them to each report.
- * This is the weekly trigger target.
+ * Checks if today is the correct weekday for a weekly schedule.
+ * @param {number} [day=2] Day of week (1=Sunday, 2=Monday, ..., 7=Saturday)
+ * @returns {boolean}
  */
-function weeklyRun() {
-  try {
-    if (!isLabelFilterConfigured()) return;
-    Logger.log('📬 Running weekly reports...');
-
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
-    const actions = typeof actionSchedules !== 'undefined' ? actionSchedules : {};
-    let successful = 0;
-    let failed = 0;
-
-    const weeklyReports = [
-      { key: 'upcomingBirthdays', fn: () => sendUpcomingBirthdaysReport(null, contacts) },
-    ];
-
-    const weeklyActions = [
-      { key: 'autoLabeling',       fn: () => runAutoLabeling() },
-      { key: 'nameFormatter',      fn: () => runNameFormatter() },
-      { key: 'phoneNormalizer',    fn: () => runPhoneNormalizer() },
-      { key: 'instagramToWebsite', fn: () => runInstagramToWebsite() },
-      { key: 'messengerToWebsite', fn: () => runMessengerToWebsite() },
-    ];
-
-    weeklyReports.forEach(({ key, fn }) => {
-      if (schedules[key] !== 'weekly') return;
-      try { fn(); successful++; }
-      catch (error) { failed++; Logger.log(`  ❌ ${key} failed: ${error.message}`); }
-    });
-
-    weeklyActions.forEach(({ key, fn }) => {
-      if (actions[key] !== 'weekly') return;
-      try { fn(); successful++; }
-      catch (error) { failed++; Logger.log(`  ❌ ${key} failed: ${error.message}`); }
-    });
-
-    Logger.log(`📬 Weekly reports done: ${successful} successful, ${failed} failed`);
-  } catch (error) {
-    Logger.log(`Error in weeklyRun: ${error.message}`);
-    throw error;
-  }
+function shouldRunWeekly(day) {
+  const targetDay = day || 2; // default Monday
+  const todayDay = new Date().getDay() + 1; // getDay() is 0-based, we use 1-based
+  return todayDay === targetDay;
 }
 
 
 /**
- * Runs all reports scheduled as 'monthly'.
- * Fetches contacts once and passes them to each report.
- * This is the monthly trigger target.
+ * Runs all scheduled reports and actions.
+ * Handles daily, weekly, and monthly schedules.
+ * This is the single daily trigger target.
  */
-function monthlyRun() {
+function dailyRun() {
   try {
     if (!isLabelFilterConfigured()) return;
-    Logger.log('📬 Running monthly reports...');
+    Logger.log('📬 Running daily check...');
 
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
-    const schedules = typeof reportSchedules !== 'undefined' ? reportSchedules : {};
-    const actions = typeof actionSchedules !== 'undefined' ? actionSchedules : {};
+    const c = cfg();
+    const contacts = fetchContacts(c.useLabel ? c.labelFilter : []);
+    const r = typeof reports !== 'undefined' ? reports : {};
+    const a = typeof actions !== 'undefined' ? actions : {};
+    const today = new Date().getDate();
     let successful = 0;
     let failed = 0;
 
-    const monthlyReports = [
+    // All report/action entries
+    const reportEntries = [
       { key: 'upcomingBirthdays', fn: () => sendUpcomingBirthdaysReport(null, contacts) },
       { key: 'duplicates',        fn: () => sendDuplicateContactsReport(contacts) },
       { key: 'contactOverview',   fn: () => sendContactOverviewReport(contacts) },
@@ -89,7 +56,7 @@ function monthlyRun() {
       { key: 'dataQuality',       fn: () => sendDataQualityReport(contacts) },
     ];
 
-    const monthlyActions = [
+    const actionEntries = [
       { key: 'autoLabeling',       fn: () => runAutoLabeling() },
       { key: 'nameFormatter',      fn: () => runNameFormatter() },
       { key: 'phoneNormalizer',    fn: () => runPhoneNormalizer() },
@@ -97,23 +64,53 @@ function monthlyRun() {
       { key: 'messengerToWebsite', fn: () => runMessengerToWebsite() },
     ];
 
-    monthlyReports.forEach(({ key, fn }) => {
-      if (schedules[key] !== 'monthly') return;
+    // Run reports: daily always, weekly on matching weekday, monthly on matching day
+    reportEntries.forEach(({ key, fn }) => {
+      const conf = r[key];
+      if (!conf) return;
+      if (conf.schedule === 'daily') { /* run */ }
+      else if (conf.schedule === 'weekly' && shouldRunWeekly(conf.day)) { /* run */ }
+      else if (conf.schedule === 'monthly' && (conf.day || 1) === today) { /* run */ }
+      else return;
       try { fn(); successful++; }
       catch (error) { failed++; Logger.log(`  ❌ ${key} failed: ${error.message}`); }
     });
 
-    monthlyActions.forEach(({ key, fn }) => {
-      if (actions[key] !== 'monthly') return;
+    // Run actions: daily always, weekly on matching weekday, monthly on matching day
+    actionEntries.forEach(({ key, fn }) => {
+      const conf = a[key];
+      if (!conf) return;
+      if (conf.schedule === 'daily') { /* run */ }
+      else if (conf.schedule === 'weekly' && shouldRunWeekly(conf.day)) { /* run */ }
+      else if (conf.schedule === 'monthly' && (conf.day || 1) === today) { /* run */ }
+      else return;
       try { fn(); successful++; }
       catch (error) { failed++; Logger.log(`  ❌ ${key} failed: ${error.message}`); }
     });
 
-    Logger.log(`📬 Monthly reports done: ${successful} successful, ${failed} failed`);
+    Logger.log(`📬 Daily check done: ${successful} successful, ${failed} failed`);
   } catch (error) {
-    Logger.log(`Error in monthlyRun: ${error.message}`);
+    Logger.log(`Error in dailyRun: ${error.message}`);
     throw error;
   }
+}
+
+
+/**
+ * Legacy weekly trigger — calls dailyRun which handles weekly schedules.
+ * Kept for backward compatibility with existing triggers.
+ */
+function weeklyRun() {
+  dailyRun();
+}
+
+
+/**
+ * Legacy monthly trigger — calls dailyRun which handles monthly schedules.
+ * Kept for backward compatibility with existing triggers.
+ */
+function monthlyRun() {
+  dailyRun();
 }
 
 
@@ -126,7 +123,7 @@ function sendAllReports() {
     if (!isLabelFilterConfigured()) return;
     Logger.log('📬 Running all reports...');
 
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const contacts = fetchContacts(cfg().useLabel ? cfg().labelFilter : []);
     let successful = 0;
     let failed = 0;
 
@@ -163,13 +160,13 @@ function sendAllReports() {
 function sendUpcomingBirthdaysReport(days, prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
-    const lookAhead = days || (typeof upcomingBirthdaysDays !== 'undefined' ? upcomingBirthdaysDays : 14);
+    const lookAhead = days || (reportCfg('upcomingBirthdays').aheadDays || 14);
 
     if (typeof lookAhead !== 'number' || lookAhead < 1 || lookAhead > 365) {
       throw new Error('Days parameter must be a number between 1 and 365');
     }
 
-    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(cfg().useLabel ? cfg().labelFilter : []);
     const upcoming = prepareContacts(findUpcomingBirthdays(contacts, lookAhead));
 
     if (upcoming.length === 0) {
@@ -193,8 +190,8 @@ function sendUpcomingBirthdaysReport(days, prefetchedContacts) {
  */
 function sendDuplicateContactsReport(prefetchedContacts) {
   try {
-    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
-    const matchFields = typeof duplicateMatchFields !== 'undefined' ? duplicateMatchFields : ['name', 'email', 'phone'];
+    const contacts = prefetchedContacts || fetchContacts(cfg().useLabel ? cfg().labelFilter : []);
+    const matchFields = reportCfg('duplicates').matchFields || ['name', 'email', 'phone'];
     const duplicates = findDuplicates(contacts, matchFields);
 
     if (duplicates.length === 0) {
@@ -220,7 +217,7 @@ function sendContactOverviewReport(prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
 
-    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(cfg().useLabel ? cfg().labelFilter : []);
     const stats = computeContactStats(contacts);
 
     const emailManager = new EmailManager();
@@ -241,7 +238,7 @@ function sendLabelOverviewReport(prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
 
-    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(cfg().useLabel ? cfg().labelFilter : []);
     const labelStats = computeLabelStats(contacts);
     const unlabeled = prepareContacts(findUnlabeled(contacts));
     const stats = computeContactStats(contacts);
@@ -263,9 +260,9 @@ function sendLabelOverviewReport(prefetchedContacts) {
 function sendMissingInfoReport(prefetchedContacts) {
   try {
     if (!isLabelFilterConfigured()) return;
-    const fields = typeof missingInfoFields !== 'undefined' ? missingInfoFields : ['email', 'phone', 'birthday'];
+    const fields = reportCfg('missingInfo').fields || ['email', 'phone', 'birthday'];
 
-    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(cfg().useLabel ? cfg().labelFilter : []);
 
     // Build map of field → contacts missing that field
     const fieldData = {};
@@ -295,7 +292,7 @@ function sendMissingInfoReport(prefetchedContacts) {
  */
 function sendDataQualityReport(prefetchedContacts) {
   try {
-    const contacts = prefetchedContacts || fetchContacts(useLabel ? labelFilter : []);
+    const contacts = prefetchedContacts || fetchContacts(cfg().useLabel ? cfg().labelFilter : []);
     const noSurname = prepareContacts(findMissingSurnames(contacts));
     const invalidPhones = prepareContacts(findInvalidPhones(contacts));
     const duplicatePhones = findDuplicatePhones(contacts);
@@ -330,7 +327,7 @@ function sendDataQualityReport(prefetchedContacts) {
  */
 function testContacts() {
   try {
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const contacts = fetchContacts(cfg().useLabel ? cfg().labelFilter : []);
     logContactNames(contacts);
     Logger.log(`Contact test completed — ${contacts.length} contacts found`);
   } catch (error) {
@@ -362,7 +359,7 @@ function testLabels() {
 function getHealthStatus() {
   try {
     const startTime = Date.now();
-    const contacts = fetchContacts(useLabel ? labelFilter : []);
+    const contacts = fetchContacts(cfg().useLabel ? cfg().labelFilter : []);
     const labelManager = new LabelManager();
     const endTime = Date.now();
 
