@@ -10,118 +10,24 @@ Reports are sent to yourself — think of it as a personal contacts health check
 |--------|-------------------|
 | 🎂 **Upcoming Birthdays** | Who has a birthday in the next N days, with age countdown |
 | 🔍 **Duplicate Contacts** | Groups of contacts that look like duplicates (by name, email, or phone) |
-| 📊 **Contact Overview** | Stats dashboard — % of contacts with email, phone, birthday, etc. |
+| 📊 **Contact Overview** | Stats dashboard — completeness, top cities, birthday distribution |
 | 🏷️ **Label Overview** | Label distribution, most/least used labels, and unlabeled contacts |
 | 📋 **Missing Info** | Contacts missing email, phone, city, or birthday |
 | 🔧 **Data Quality** | Missing surnames, invalid phones, shared numbers, empty contacts, formatting issues |
 
-All reports can be enabled/disabled individually. Empty reports are never sent.
+## Actions
+
+| Action | What it does |
+|--------|-------------|
+| 🏷️ **Auto-Labeling** | Assign labels based on rules (email domain, city, name patterns, regex) |
+| ✏️ **Name Formatter** | Fix capitalization, trim spaces, swap "Last, First" format |
+| 📱 **Phone Normalizer** | Convert local numbers to international format with consistent spacing |
+| 📸 **Instagram → Website** | Convert @handles in notes to clickable website fields |
+| 💬 **Messenger → Website** | Convert FB/Messenger usernames in notes to m.me website fields |
+
+All actions support `dryRun` mode — preview changes without modifying contacts.
 
 > 💡 Looking for automatic birthday calendar events? Check out [birthday-calendar-sync](https://github.com/itsFelixH/birthday-calendar-sync).
-
-## Example emails
-
-Open the HTML files in [`examples/`](examples/) to see how each report looks in an email client:
-
-- [`upcoming-birthdays.html`](examples/upcoming-birthdays.html) — Birthday countdown with age and contact details
-- [`duplicate-contacts.html`](examples/duplicate-contacts.html) — Grouped duplicates with match reason
-- [`contact-overview.html`](examples/contact-overview.html) — Stats dashboard
-- [`label-overview.html`](examples/label-overview.html) — Label distribution + unlabeled contacts
-- [`missing-info.html`](examples/missing-info.html) — Contacts missing a field (with edit links)
-- [`data-quality.html`](examples/data-quality.html) — Missing surnames + invalid phones
-
-Here's what the plain-text versions look like:
-
-**🎂 Upcoming Birthdays**
-```
-🎂 Upcoming Birthdays (next 7 days)
-
-  • Anna Schmidt (turns 30) — in 2 days
-  • Max Müller — tomorrow
-  • Lisa Weber (turns 25) — 🎂 TODAY!
-```
-
-**🔍 Duplicate Contacts**
-```
-🔍 Duplicate Contacts
-
-  Group 1: Max Müller (max.mueller@example.com, Work), Max Mueller (max.m@example.com, Friends)
-    ↳ same name: "max müller"
-  Group 2: Lisa W (lisa.w@gmail.com, Berlin), Lisa Weber (lisa.w@gmail.com, Munich, Family), Lisa W. (lisa.w@gmail.com)
-    ↳ same email: lisa.w@gmail.com
-  Group 3: Tom Fischer (tom@example.com, +49 170 1234567, Work), Thomas Fischer (+49 170 1234567, Hamburg, Friends)
-    ↳ same phone: +491701234567
-```
-
-**📊 Contact Overview**
-```
-📊 Contact Overview
-
-📇 Total Contacts: 342
-🎂 With Birthday: 280 (81.9%)
-📧 With Email: 310 (90.6%)
-📱 With Phone: 298 (87.1%)
-🌆 With City: 195 (57.0%)
-🏷️ With Labels: 320 (93.6%)
-📸 With Instagram: 45 (13.2%)
-```
-
-**🏷️ Label Overview**
-```
-🏷️ Label Overview
-
-🏷️ Total Labels: 8
-👑 Most Used: Friends (142)
-📉 Least Used: Neighbors (3)
-❌ Unlabeled: 22
-
-── Label Distribution ──
-
-  🏷️ Friends: 142 (41.5%)
-  🏷️ Family: 58 (17.0%)
-  🏷️ Work: 45 (13.2%)
-  ...
-
-── Unlabeled Contacts ──
-
-  • John Doe
-  • Some Company
-```
-
-**🔧 Data Quality**
-```
-🔧 Data Quality
-
-12 issues found across 342 contacts
-
-  • 4 missing surnames
-  • 3 invalid phones
-  • 2 shared numbers
-  • 2 empty contacts
-  • 1 formatting issues
-
-👤 Missing Surnames (4):
-  • Felix
-  • Anna
-  • Max
-  • Pizzaservice
-
-📱 Invalid Phone Numbers (3):
-  • Old Contact — abc123
-  • Test Entry — 12
-  • Broken Import — +---
-
-📞 Shared Phone Numbers (2):
-  • +491701234567: Tom Fischer, Thomas Fischer
-  • +493012345: Pizzaservice, Pizza Express
-
-👻 Empty Contacts (2):
-  • Unknown Person
-  • Test
-
-🔤 Name Formatting Issues (1):
-  • JOHN SMITH
-```
 
 ## Setup
 
@@ -138,213 +44,187 @@ In the Apps Script editor, go to **Services** (+ icon) and enable:
 
 ### 3. Configure
 
-Copy `src/config.js.template` to `src/config.js` and adjust the settings:
-
-```js
-// Only report on contacts with these labels (or set useLabel = false for all)
-const useLabel = false;
-const labelFilter = []; // e.g. ['Friends', 'Family']
-
-// Exclude contacts with these labels from all reports
-const excludeLabels = []; // e.g. ['Blocked', 'Spam']
-
-// How far ahead to look for birthdays
-const upcomingBirthdaysDays = 7;
-
-// When to send reports
-const scheduleHour = 8;
-const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
-```
+Copy `src/config.js.template` to `src/config.js` and adjust the settings.
 
 ### 4. Set up schedules
 
-Run `setupSchedules()` once from the Apps Script editor. It creates triggers for each report you've enabled in `reportSchedules`. All schedules are off by default — enable what you want, then run `setupSchedules()`.
+Run `setupSchedules()` once from the Apps Script editor. It creates a single daily trigger that runs reports and actions on their configured days.
 
-Re-run `setupSchedules()` any time you change the schedule config. It cleanly replaces existing triggers.
+Re-run `setupSchedules()` any time you change schedules. It cleanly replaces existing triggers.
 
 ### 5. Authorize
 
 The first run will ask for permissions. The script needs access to:
-- Your contacts (read-only)
+- Your contacts (read + write for actions)
 - Gmail (to send yourself reports)
 - Drive (to read the script's own name for the sender field)
 
 ## Configuration
 
-All options live in `src/config.js`. Here's the full reference:
+All options live in `src/config.js`. The config has three sections:
 
-### Contact filtering
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `useLabel` | `false` | Only include contacts with specific labels |
-| `labelFilter` | `[]` | Labels to include (when `useLabel` is true) |
-| `excludeLabels` | `[]` | Labels to always exclude from reports |
-
-### Report settings
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `enabledReports` | all `true` | Toggle individual reports on/off |
-| `upcomingBirthdaysDays` | `14` | Days to look ahead for birthdays (1–365) |
-| `birthdayShowAge` | `true` | Show "turns X" if birth year is known |
-| `birthdayFormat` | `'dd.MM.'` | Date format (see options below) |
-| `sortContactsBy` | `'name'` | How to sort contact lists in reports |
-| `missingInfoFields` | `['email', 'phone', 'birthday']` | Fields to check in Missing Info report |
-| `duplicateMatchFields` | `['name', 'email', 'phone']` | Fields to compare for duplicates |
-| `maxContactsPerReport` | `0` | Cap list length (0 = unlimited) |
-| `includeEditLinks` | `true` | Add Google Contacts "edit" links |
-| `includeWhatsAppLinks` | `false` | Add WhatsApp links next to phone numbers |
-
-### Birthday format options
-
-| Format | Example |
-|--------|---------|
-| `'dd.MM.'` | 15.06. |
-| `'dd/MM'` | 15/06 |
-| `'MM/dd'` | 06/15 |
-| `'dd MMM'` | 15 Jun |
-| `'MMM dd'` | Jun 15 |
-
-### Sort options
-
-| Value | Sorts by |
-|-------|----------|
-| `'name'` | Name A→Z |
-| `'name-desc'` | Name Z→A |
-| `'labels'` | Most labels first |
-| `'city'` | City A→Z |
-
-### Schedules
-
-Each report has its own schedule — set to `'weekly'`, `'monthly'`, or `'off'`:
+### 1. General settings
 
 ```js
-const scheduleHour = 8;
-const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
-const monthlyReportDay = 1;
+const generalConfig = {
+  useLabel: false,                    // only report on contacts with specific labels
+  labelFilter: [],                    // e.g. ['Friends', 'Family']
+  excludeLabels: [],                  // always exclude from all reports
 
-const reportSchedules = {
-  upcomingBirthdays:  'off',     // 'weekly' | 'monthly' | 'off'
-  duplicates:         'off',     // 'weekly' | 'monthly' | 'off'
-  contactOverview:    'off',     // 'weekly' | 'monthly' | 'off'
-  labelOverview:      'off',     // 'weekly' | 'monthly' | 'off'
-  missingInfo:        'off',     // 'weekly' | 'monthly' | 'off'
-  dataQuality:        'off',     // 'weekly' | 'monthly' | 'off'
-};
-
-const actionSchedules = {
-  autoLabeling:       'off',     // 'weekly' | 'monthly' | 'off'
-  nameFormatter:      'off',     // 'weekly' | 'monthly' | 'off'
-  phoneNormalizer:    'off',     // 'weekly' | 'monthly' | 'off'
-  instagramToWebsite: 'off',     // 'weekly' | 'monthly' | 'off'
-  messengerToWebsite: 'off',     // 'weekly' | 'monthly' | 'off'
+  sortContactsBy: 'name',            // 'name' | 'name-desc' | 'labels' | 'city'
+  maxContactsPerReport: 0,           // 0 = unlimited
+  includeEditLinks: true,            // add "edit" links in emails
+  includeWhatsAppLinks: false,       // add WhatsApp links next to phone numbers
+  birthdayFormat: 'dd.MM.',          // 'dd.MM.' | 'dd/MM' | 'MM/dd' | 'dd MMM' | 'MMM dd'
 };
 ```
 
-All schedules are off by default — enable what you want. A typical setup:
+### 2. Reports
+
+Each report has its own config block with schedule, email subject, and report-specific settings:
 
 ```js
-const reportSchedules = {
-  upcomingBirthdays:  'weekly',
-  duplicates:         'monthly',
-  contactOverview:    'monthly',
-  labelOverview:      'monthly',
-  missingInfo:        'monthly',
-  dataQuality:        'monthly',
+const reports = {
+  upcomingBirthdays: {
+    schedule: 'weekly',               // 'daily' | 'weekly' | 'monthly' | 'off'
+    day: 2,                           // 1–7 for weekly (1=Sun, 2=Mon, ..., 7=Sat)
+    emailSubject: '🎂 Upcoming Birthdays',
+    aheadDays: 14,                    // days to look ahead (1–365)
+    showAge: true,
+  },
+
+  duplicates: {
+    schedule: 'monthly',
+    day: 1,                           // 1–28 for monthly (day of month)
+    emailSubject: '🔍 Duplicate Contacts',
+    matchFields: ['name', 'email', 'phone'],
+  },
+
+  contactOverview: {
+    schedule: 'monthly',
+    day: 1,
+    emailSubject: '📊 Contact Overview',
+  },
+
+  labelOverview: {
+    schedule: 'monthly',
+    day: 1,
+    emailSubject: '🏷️ Label Overview',
+  },
+
+  missingInfo: {
+    schedule: 'monthly',
+    day: 1,
+    emailSubject: '📋 Missing Info',
+    fields: ['email', 'phone', 'birthday', 'city'],
+  },
+
+  dataQuality: {
+    schedule: 'monthly',
+    day: 1,
+    emailSubject: '🔧 Data Quality',
+    phoneRegex: /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/,
+  },
 };
+```
 
-const actionSchedules = {
-  autoLabeling:       'monthly',
-  nameFormatter:      'off',
-  phoneNormalizer:    'off',
-  instagramToWebsite: 'off',
-  messengerToWebsite: 'off',
+### 3. Actions
+
+Each action has schedule, dry run, and action-specific settings in one block:
+
+```js
+const actions = {
+  autoLabeling: {
+    schedule: 'monthly',
+    day: 1,
+    dryRun: false,                    // true = preview only, no changes
+    sendReport: true,                 // send summary email
+    emailSubject: '🏷️ Auto-Labeling Summary',
+    rules: [
+      { field: 'email', contains: '@company.com', label: 'Work' },
+      { field: 'city',  equals: 'berlin',         label: '📍 Berlin' },
+      { field: 'name',  matches: '\\(swing\\)',   label: 'Swing' },
+    ],
+  },
+
+  nameFormatter: {
+    schedule: 'monthly',
+    day: 5,
+    dryRun: false,
+    sendReport: true,
+    emailSubject: '✏️ Name Formatter Summary',
+    swapLastFirst: true,              // "Last, First" → "First Last"
+  },
+
+  phoneNormalizer: {
+    schedule: 'monthly',
+    day: 10,
+    dryRun: true,                     // preview first!
+    sendReport: true,
+    emailSubject: '📱 Phone Normalizer Summary',
+    defaultCountryCode: '+49',
+    phoneRegex: /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/,
+  },
+
+  instagramToWebsite: {
+    schedule: 'monthly',
+    day: 15,
+    dryRun: false,
+    sendReport: true,
+    emailSubject: '📸 Instagram → Website Summary',
+  },
+
+  messengerToWebsite: {
+    schedule: 'monthly',
+    day: 15,
+    dryRun: false,
+    sendReport: true,
+    emailSubject: '💬 Messenger → Website Summary',
+  },
 };
 ```
 
-Run `setupSchedules()` after changing. You can also run `sendAllReports()` manually from the editor at any time.
+### Schedule system
 
-### Email customization
+A single daily trigger handles all schedules:
+- `'daily'` — runs every day
+- `'weekly'` — runs on the configured `day` (1=Sunday, 2=Monday, ..., 7=Saturday)
+- `'monthly'` — runs on the configured `day` (1–28, day of month)
+- `'off'` — disabled
 
-Override default email subjects:
+Actions are spread across different days to avoid API quota limits.
 
-```js
-const emailSubjects = {
-  upcomingBirthdays: '🎂 Upcoming Birthdays',
-  duplicates: '🔍 Duplicate Contacts',
-  overview: '📊 Contact Overview',
-  labelOverview: '🏷️ Label Overview',
-  missingInfo: '📋 Missing Info',
-  dataQuality: '🔧 Data Quality',
-};
-```
+### Auto-labeling rules
 
-### Advanced
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `dryRunActions` | `false` | Preview mode for actions — no contact changes, still sends summary email |
-| `phoneRegex` | see template | Regex for valid phone numbers |
-
-### Actions config
-
-**Auto-labeling rules:**
-
-```js
-const autoLabelRules = [
-  { field: 'email', contains: '@company.com', label: 'Work' },
-  { field: 'email', endsWith: '.edu', label: 'University' },
-  { field: 'phone', startsWith: '+44', label: '🇬🇧 UK' },
-  { field: 'city', equals: 'berlin', label: '📍 Berlin' },
-  { field: 'name', startsWith: 'dr.', label: 'Doctors' },
-  { field: 'name', matches: '\\(swing\\)', label: 'Swing' },
-  { field: 'name', matches: '\\(swing .+\\)', label: 'Swing Festivals' },
-];
-```
-
-Rule conditions: `contains`, `equals`, `startsWith`, `endsWith`, `matches` (regex, all case-insensitive).
-Fields: `email`, `phone`, `city`, `name`.
-
-**Phone normalizer:**
-
-```js
-const defaultCountryCode = '+49';  // prepended when converting "0xxx" → "+49xxx"
-```
-
-**Action reports:**
-
-```js
-const sendActionReports = true;  // send summary email after each action (default: true)
-```
+Rule conditions: `contains`, `equals`, `startsWith`, `endsWith`, `matches` (regex).
+All case-insensitive. Fields: `email`, `phone`, `city`, `name`.
 
 ## Running manually
 
-You can run any report individually from the Apps Script editor:
+You can run any report or action from the Apps Script editor:
 
+**Reports:**
 - `sendUpcomingBirthdaysReport()` — or pass days: `sendUpcomingBirthdaysReport(14)`
 - `sendDuplicateContactsReport()`
 - `sendContactOverviewReport()`
 - `sendLabelOverviewReport()`
-- `sendMissingInfoReport()` — all configured fields in one email
+- `sendMissingInfoReport()`
 - `sendDataQualityReport()`
 - `sendAllReports()` — runs all enabled reports
 
-### Actions (modify contacts)
+**Actions:**
+- `runAutoLabeling()`
+- `runNameFormatter()`
+- `runPhoneNormalizer()`
+- `runInstagramToWebsite()`
+- `runMessengerToWebsite()`
 
-These scripts write changes back to your contacts. Use `dryRun = true` to preview first.
-
-- `runAutoLabeling()` — assign labels based on rules (email domain, city, name patterns)
-- `runNameFormatter()` — fix capitalization, trim spaces, swap "Last, First" format
-- `runPhoneNormalizer()` — convert local numbers to international format
-- `runInstagramToWebsite()` — convert @handles in notes to clickable website fields
-- `runMessengerToWebsite()` — convert FB/Messenger usernames in notes to m.me website fields
-
-### Utility functions
-
-- `validateConfig()` — checks your config for errors and logs warnings
-- `testContacts()` — fetches and logs all contact names
-- `testLabels()` — fetches and logs all labels
+**Utility:**
+- `setupSchedules()` — create/update triggers
+- `removeSchedules()` — remove all managed triggers
+- `validateConfig()` — check config for errors
+- `testContacts()` — fetch and log all contact names
+- `testLabels()` — fetch and log all labels
 - `getHealthStatus()` — returns contact/label counts and response time
 
 ## Local development
@@ -378,8 +258,8 @@ src/
 ├── contact_manager.js # Fetching, filtering, and querying contacts
 ├── email_manager.js   # Email formatting and sending
 ├── label_manager.js   # Label fetching and lookup
-├── main.js            # Report entry points
-└── utils.js           # Config validation and helper functions
+├── main.js            # Report and action entry points + scheduling
+└── utils.js           # Config helpers and contact list processing
 ```
 
 ## License
