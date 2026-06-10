@@ -1,21 +1,16 @@
 describe('validateConfig', () => {
-  // Save and restore all globals that tests mutate
-  let originals;
+  let origGeneral, origReports, origActions;
 
   beforeEach(() => {
-    originals = {
-      upcomingBirthdaysDays: global.upcomingBirthdaysDays,
-      birthdayFormat: global.birthdayFormat,
-      sortContactsBy: global.sortContactsBy,
-      enabledReports: global.enabledReports,
-      missingInfoFields: global.missingInfoFields,
-      useLabel: global.useLabel,
-      labelFilter: global.labelFilter,
-    };
+    origGeneral = { ...global.generalConfig };
+    origReports = JSON.parse(JSON.stringify(global.reports));
+    origActions = JSON.parse(JSON.stringify(global.actions));
   });
 
   afterEach(() => {
-    Object.assign(global, originals);
+    Object.assign(global.generalConfig, origGeneral);
+    Object.keys(origReports).forEach(k => { global.reports[k] = origReports[k]; });
+    Object.keys(origActions).forEach(k => { global.actions[k] = origActions[k]; });
   });
 
   test('returns no errors for valid default config', () => {
@@ -23,37 +18,35 @@ describe('validateConfig', () => {
     expect(errors).toHaveLength(0);
   });
 
-  test('catches invalid upcomingBirthdaysDays', () => {
-    global.upcomingBirthdaysDays = 0;
-    expect(validateConfig()).toContainEqual(expect.stringContaining('upcomingBirthdaysDays'));
-    global.upcomingBirthdaysDays = 400;
-    expect(validateConfig()).toContainEqual(expect.stringContaining('upcomingBirthdaysDays'));
-  });
-
   test('catches invalid birthdayFormat', () => {
-    global.birthdayFormat = 'YYYY-MM-DD';
+    global.generalConfig.birthdayFormat = 'YYYY-MM-DD';
     expect(validateConfig()).toContainEqual(expect.stringContaining('birthdayFormat'));
   });
 
   test('catches invalid sortContactsBy', () => {
-    global.sortContactsBy = 'invalid';
+    global.generalConfig.sortContactsBy = 'invalid';
     expect(validateConfig()).toContainEqual(expect.stringContaining('sortContactsBy'));
   });
 
-  test('catches invalid enabledReports keys', () => {
-    global.enabledReports = { unknownReport: true };
-    expect(validateConfig()).toContainEqual(expect.stringContaining('unknownReport'));
-  });
-
-  test('catches invalid missingInfoFields', () => {
-    global.missingInfoFields = ['email', 'invalid'];
-    expect(validateConfig()).toContainEqual(expect.stringContaining('invalid'));
-  });
-
   test('catches useLabel without labelFilter', () => {
-    global.useLabel = true;
-    global.labelFilter = [];
+    global.generalConfig.useLabel = true;
+    global.generalConfig.labelFilter = [];
     expect(validateConfig()).toContainEqual(expect.stringContaining('labelFilter is empty'));
+  });
+
+  test('catches invalid report schedule', () => {
+    global.reports.duplicates.schedule = 'biweekly';
+    expect(validateConfig()).toContainEqual(expect.stringContaining('reports.duplicates.schedule'));
+  });
+
+  test('catches invalid action day', () => {
+    global.actions.autoLabeling.day = 35;
+    expect(validateConfig()).toContainEqual(expect.stringContaining('actions.autoLabeling.day'));
+  });
+
+  test('catches invalid missingInfo fields', () => {
+    global.reports.missingInfo.fields = ['email', 'invalid'];
+    expect(validateConfig()).toContainEqual(expect.stringContaining('invalid'));
   });
 });
 
@@ -62,50 +55,46 @@ describe('isLabelFilterConfigured', () => {
   let originals;
 
   beforeEach(() => {
-    originals = { useLabel: global.useLabel, labelFilter: global.labelFilter };
+    originals = { useLabel: global.generalConfig.useLabel, labelFilter: global.generalConfig.labelFilter };
   });
 
   afterEach(() => {
-    Object.assign(global, originals);
+    global.generalConfig.useLabel = originals.useLabel;
+    global.generalConfig.labelFilter = originals.labelFilter;
   });
 
   test('returns true when useLabel is false', () => {
-    global.useLabel = false;
+    global.generalConfig.useLabel = false;
     expect(isLabelFilterConfigured()).toBe(true);
   });
 
   test('returns false when useLabel is true but filter is empty', () => {
-    global.useLabel = true;
-    global.labelFilter = [];
+    global.generalConfig.useLabel = true;
+    global.generalConfig.labelFilter = [];
     expect(isLabelFilterConfigured()).toBe(false);
   });
 
   test('returns true when useLabel is true and filter has values', () => {
-    global.useLabel = true;
-    global.labelFilter = ['Friends'];
+    global.generalConfig.useLabel = true;
+    global.generalConfig.labelFilter = ['Friends'];
     expect(isLabelFilterConfigured()).toBe(true);
   });
 });
 
 
 describe('isReportEnabled', () => {
-  test('returns true for enabled reports', () => {
+  test('returns true for reports with a schedule', () => {
+    global.reports.upcomingBirthdays.schedule = 'weekly';
     expect(isReportEnabled('upcomingBirthdays')).toBe(true);
-    expect(isReportEnabled('duplicates')).toBe(true);
+    global.reports.upcomingBirthdays.schedule = 'off';
   });
 
-  test('returns false for disabled reports', () => {
-    const original = global.enabledReports;
-    global.enabledReports = { upcomingBirthdays: false };
+  test('returns false for reports set to off', () => {
     expect(isReportEnabled('upcomingBirthdays')).toBe(false);
-    global.enabledReports = original;
   });
 
-  test('returns true when enabledReports is undefined', () => {
-    const original = global.enabledReports;
-    delete global.enabledReports;
-    expect(isReportEnabled('anything')).toBe(true);
-    global.enabledReports = original;
+  test('returns false for unknown reports', () => {
+    expect(isReportEnabled('nonexistent')).toBe(false);
   });
 });
 
@@ -124,25 +113,25 @@ describe('applyLimit', () => {
   });
 
   test('caps contacts when limit is set', () => {
-    const original = global.maxContactsPerReport;
-    global.maxContactsPerReport = 3;
+    const original = global.generalConfig.maxContactsPerReport;
+    global.generalConfig.maxContactsPerReport = 3;
     expect(applyLimit(contacts)).toHaveLength(3);
-    global.maxContactsPerReport = original;
+    global.generalConfig.maxContactsPerReport = original;
   });
 
   test('returns all when list is shorter than limit', () => {
-    const original = global.maxContactsPerReport;
-    global.maxContactsPerReport = 10;
+    const original = global.generalConfig.maxContactsPerReport;
+    global.generalConfig.maxContactsPerReport = 10;
     expect(applyLimit(contacts)).toHaveLength(5);
-    global.maxContactsPerReport = original;
+    global.generalConfig.maxContactsPerReport = original;
   });
 
   test('sets _totalBeforeLimit metadata when truncated', () => {
-    const original = global.maxContactsPerReport;
-    global.maxContactsPerReport = 3;
+    const original = global.generalConfig.maxContactsPerReport;
+    global.generalConfig.maxContactsPerReport = 3;
     const result = applyLimit(contacts);
     expect(result._totalBeforeLimit).toBe(5);
-    global.maxContactsPerReport = original;
+    global.generalConfig.maxContactsPerReport = original;
   });
 
   test('does not set _totalBeforeLimit when not truncated', () => {
@@ -165,28 +154,28 @@ describe('applySorting', () => {
   });
 
   test('sorts by name descending', () => {
-    const original = global.sortContactsBy;
-    global.sortContactsBy = 'name-desc';
+    const original = global.generalConfig.sortContactsBy;
+    global.generalConfig.sortContactsBy = 'name-desc';
     const result = applySorting(contacts);
     expect(result.map(c => c.getName())).toEqual(['Charlie', 'Bob', 'Alice']);
-    global.sortContactsBy = original;
+    global.generalConfig.sortContactsBy = original;
   });
 
   test('sorts by label count', () => {
-    const original = global.sortContactsBy;
-    global.sortContactsBy = 'labels';
+    const original = global.generalConfig.sortContactsBy;
+    global.generalConfig.sortContactsBy = 'labels';
     const result = applySorting(contacts);
     expect(result[0].getName()).toBe('Charlie'); // 2 labels
     expect(result[2].getName()).toBe('Bob');     // 0 labels
-    global.sortContactsBy = original;
+    global.generalConfig.sortContactsBy = original;
   });
 
   test('sorts by city', () => {
-    const original = global.sortContactsBy;
-    global.sortContactsBy = 'city';
+    const original = global.generalConfig.sortContactsBy;
+    global.generalConfig.sortContactsBy = 'city';
     const result = applySorting(contacts);
     expect(result.map(c => c.city)).toEqual(['Berlin', 'Munich', 'Zurich']);
-    global.sortContactsBy = original;
+    global.generalConfig.sortContactsBy = original;
   });
 
   test('does not mutate original array', () => {
@@ -210,22 +199,24 @@ describe('applyExcludeLabels', () => {
   });
 
   test('filters out contacts with excluded labels', () => {
-    const original = global.excludeLabels;
-    global.excludeLabels = ['Blocked', 'Spam'];
+    const original = global.generalConfig.excludeLabels;
+    global.generalConfig.excludeLabels = ['Blocked', 'Spam'];
     const result = applyExcludeLabels(contacts);
     expect(result).toHaveLength(2);
     expect(result.map(c => c.getName())).toEqual(['Keep', 'Also Keep']);
-    global.excludeLabels = original;
+    global.generalConfig.excludeLabels = original;
   });
 });
 
 
 describe('prepareContacts', () => {
   test('applies exclude, sort, and limit in order', () => {
-    const original = { sort: global.sortContactsBy, max: global.maxContactsPerReport, exclude: global.excludeLabels };
-    global.sortContactsBy = 'name';
-    global.maxContactsPerReport = 2;
-    global.excludeLabels = ['Spam'];
+    const origSort = global.generalConfig.sortContactsBy;
+    const origMax = global.generalConfig.maxContactsPerReport;
+    const origExclude = global.generalConfig.excludeLabels;
+    global.generalConfig.sortContactsBy = 'name';
+    global.generalConfig.maxContactsPerReport = 2;
+    global.generalConfig.excludeLabels = ['Spam'];
 
     const contacts = [
       new Contact('Charlie', null, []),
@@ -235,13 +226,120 @@ describe('prepareContacts', () => {
     ];
 
     const result = prepareContacts(contacts);
-    // Bob excluded (Spam), then sorted: Alice, Charlie, Dave, then limited to 2
     expect(result).toHaveLength(2);
     expect(result[0].getName()).toBe('Alice');
     expect(result[1].getName()).toBe('Charlie');
 
-    global.sortContactsBy = original.sort;
-    global.maxContactsPerReport = original.max;
-    global.excludeLabels = original.exclude;
+    global.generalConfig.sortContactsBy = origSort;
+    global.generalConfig.maxContactsPerReport = origMax;
+    global.generalConfig.excludeLabels = origExclude;
+  });
+});
+
+
+describe('shouldRunWeekly', () => {
+  test('returns true when today matches the configured day', () => {
+    const todayDay = new Date().getDay() + 1; // 1=Sunday, 2=Monday, etc.
+    expect(shouldRunWeekly(todayDay)).toBe(true);
+  });
+
+  test('returns false when today does not match', () => {
+    const todayDay = new Date().getDay() + 1;
+    const otherDay = todayDay === 7 ? 1 : todayDay + 1;
+    expect(shouldRunWeekly(otherDay)).toBe(false);
+  });
+
+  test('defaults to Monday (2) when no day provided', () => {
+    const todayDay = new Date().getDay() + 1;
+    if (todayDay === 2) {
+      expect(shouldRunWeekly()).toBe(true);
+    } else {
+      expect(shouldRunWeekly()).toBe(false);
+    }
+  });
+});
+
+
+describe('cfg / reportCfg / actionCfg helpers', () => {
+  test('cfg returns generalConfig values', () => {
+    expect(cfg().sortContactsBy).toBe('name');
+    expect(cfg().includeEditLinks).toBe(true);
+    expect(cfg().maxContactsPerReport).toBe(0);
+  });
+
+  test('reportCfg returns report config by name', () => {
+    expect(reportCfg('upcomingBirthdays').aheadDays).toBe(14);
+    expect(reportCfg('duplicates').matchFields).toEqual(['name', 'email', 'phone']);
+  });
+
+  test('reportCfg returns empty object for unknown report', () => {
+    expect(reportCfg('nonexistent')).toEqual({});
+  });
+
+  test('actionCfg returns action config by name', () => {
+    expect(actionCfg('phoneNormalizer').defaultCountryCode).toBe('+49');
+    expect(actionCfg('nameFormatter').swapLastFirst).toBe(false);
+  });
+
+  test('actionCfg returns empty object for unknown action', () => {
+    expect(actionCfg('nonexistent')).toEqual({});
+  });
+});
+
+
+describe('dailyRun scheduling logic', () => {
+  let origReports, origActions, origFetch;
+
+  beforeEach(() => {
+    origReports = global.reports;
+    origActions = global.actions;
+    origFetch = global.fetchContacts;
+    global.fetchContacts = jest.fn().mockReturnValue([]);
+  });
+
+  afterEach(() => {
+    global.reports = origReports;
+    global.actions = origActions;
+    global.fetchContacts = origFetch;
+  });
+
+  test('runs daily-scheduled reports every day', () => {
+    global.reports = {
+      ...origReports,
+      contactOverview: { schedule: 'daily', day: 1, emailSubject: 'test' },
+    };
+    // Should not throw — runs successfully
+    expect(() => dailyRun()).not.toThrow();
+  });
+
+  test('skips monthly reports when today is not their day', () => {
+    const today = new Date().getDate();
+    const otherDay = today === 28 ? 1 : today + 1;
+    global.reports = {
+      ...origReports,
+      contactOverview: { schedule: 'monthly', day: otherDay, emailSubject: 'test' },
+    };
+    dailyRun();
+    // fetchContacts is called but no report function runs (no errors = skipped correctly)
+    expect(Logger.log).toHaveBeenCalledWith(expect.stringContaining('Daily check done: 0 successful'));
+  });
+
+  test('runs monthly reports when today matches their day', () => {
+    const today = new Date().getDate();
+    global.reports = {
+      ...origReports,
+      contactOverview: { schedule: 'monthly', day: today, emailSubject: 'test' },
+    };
+    dailyRun();
+    expect(Logger.log).toHaveBeenCalledWith(expect.stringContaining('1 successful'));
+  });
+
+  test('skips actions set to off', () => {
+    global.actions = {
+      ...origActions,
+      autoLabeling: { ...origActions.autoLabeling, schedule: 'off' },
+    };
+    dailyRun();
+    expect(Logger.log).toHaveBeenCalledWith(expect.stringContaining('0 successful'));
   });
 });

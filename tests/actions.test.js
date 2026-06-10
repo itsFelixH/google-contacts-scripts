@@ -49,11 +49,11 @@ describe('formatName', () => {
   });
 
   test('swaps "Last, First" to "First Last" when enabled', () => {
-    const original = global.nameSwapLastFirst;
-    global.nameSwapLastFirst = true;
+    const original = global.nameFormatterConfig.swapLastFirst;
+    global.nameFormatterConfig.swapLastFirst = true;
     expect(formatName('Doe, John')).toBe('John Doe');
     expect(formatName('Schmidt, Anna')).toBe('Anna Schmidt');
-    global.nameSwapLastFirst = original;
+    global.nameFormatterConfig.swapLastFirst = original;
   });
 
   test('does not swap "Last, First" when disabled', () => {
@@ -124,7 +124,7 @@ describe('runAutoLabeling', () => {
 
 describe('runNameFormatter', () => {
   test('runs without errors in dry run', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     // Mock fetchContacts to return test data
     const origFetch = global.fetchContacts;
     global.fetchContacts = () => [new Contact('john doe', null)];
@@ -133,14 +133,14 @@ describe('runNameFormatter', () => {
     expect(result.fixed).toBe(1);
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 });
 
 
 describe('runPhoneNormalizer', () => {
   test('runs without errors in dry run', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     const origFetch = global.fetchContacts;
     global.fetchContacts = () => [new Contact('Test', null, [], '', '', '0176 1234567')];
 
@@ -148,7 +148,7 @@ describe('runPhoneNormalizer', () => {
     expect(result.normalized).toBe(1);
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 });
 
@@ -205,7 +205,7 @@ describe('detectCountryCodeLength', () => {
 
 describe('runInstagramToWebsite', () => {
   test('runs without errors in dry run', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     const origFetch = global.fetchContacts;
     global.fetchContacts = () => [
       new Contact('Test User', null, [], 'test@example.com', '', '', ['@testuser'], 'people/c123', '@testuser', [])
@@ -218,11 +218,11 @@ describe('runInstagramToWebsite', () => {
     expect(result.changes[0].urls[0]).toContain('instagram.com/testuser');
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 
   test('skips contacts that already have the Instagram URL', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     const origFetch = global.fetchContacts;
     global.fetchContacts = () => [
       new Contact('Already Done', null, [], '', '', '', ['@existing'], 'people/c456', '@existing',
@@ -234,11 +234,11 @@ describe('runInstagramToWebsite', () => {
     expect(result.skipped).toBe(1);
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 
   test('skips contacts with no handles in notes', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     const origFetch = global.fetchContacts;
     // Contact has Instagram from URL field only (not from notes)
     global.fetchContacts = () => [
@@ -250,14 +250,14 @@ describe('runInstagramToWebsite', () => {
     expect(result.converted).toBe(0);
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 });
 
 
 describe('runMessengerToWebsite', () => {
   test('converts FB: username to m.me website in dry run', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     const origFetch = global.fetchContacts;
     global.fetchContacts = () => [
       new Contact('FB User', null, [], '', '', '', [], 'people/c100', 'FB: john.doe', [])
@@ -270,11 +270,11 @@ describe('runMessengerToWebsite', () => {
     expect(result.changes[0].urls[0]).toBe('https://m.me/john.doe');
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 
   test('converts Messenger: username pattern', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     const origFetch = global.fetchContacts;
     global.fetchContacts = () => [
       new Contact('Msg User', null, [], '', '', '', [], 'people/c101', 'Messenger: cool_user', [])
@@ -285,11 +285,11 @@ describe('runMessengerToWebsite', () => {
     expect(result.changes[0].urls[0]).toBe('https://m.me/cool_user');
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 
   test('skips contacts that already have m.me URL', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     const origFetch = global.fetchContacts;
     global.fetchContacts = () => [
       new Contact('Already Done', null, [], '', '', '', [], 'people/c102', 'FB: existing',
@@ -301,11 +301,11 @@ describe('runMessengerToWebsite', () => {
     expect(result.skipped).toBe(1);
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 
   test('skips contacts with just a tag and no username', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     const origFetch = global.fetchContacts;
     global.fetchContacts = () => [
       new Contact('Tag Only', null, [], '', '', '', [], 'people/c103', 'FB', [])
@@ -316,11 +316,11 @@ describe('runMessengerToWebsite', () => {
     expect(result.changes).toHaveLength(0);
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 
   test('skips contacts with facebook.com URL for same username', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     const origFetch = global.fetchContacts;
     global.fetchContacts = () => [
       new Contact('FB Link', null, [], '', '', '', [], 'people/c104', 'Facebook: myuser',
@@ -332,11 +332,11 @@ describe('runMessengerToWebsite', () => {
     expect(result.skipped).toBe(1);
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 
   test('returns zeros when no contacts have messenger usernames', () => {
-    global.dryRunActions = true;
+    global.nameFormatterConfig.dryRun = true; global.phoneNormalizerConfig.dryRun = true; global.instagramToWebsiteConfig.dryRun = true; global.messengerToWebsiteConfig.dryRun = true; global.autoLabelConfig.dryRun = true;
     const origFetch = global.fetchContacts;
     global.fetchContacts = () => [
       new Contact('Normal', null, [], '', '', '', [], 'people/c105', 'Just some notes', [])
@@ -348,6 +348,6 @@ describe('runMessengerToWebsite', () => {
     expect(result.changes).toHaveLength(0);
 
     global.fetchContacts = origFetch;
-    global.dryRunActions = false;
+    global.nameFormatterConfig.dryRun = false; global.phoneNormalizerConfig.dryRun = false; global.instagramToWebsiteConfig.dryRun = false; global.messengerToWebsiteConfig.dryRun = false; global.autoLabelConfig.dryRun = false;
   });
 });
