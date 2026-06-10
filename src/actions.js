@@ -18,11 +18,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Checks if action reports are enabled.
+ * Checks if action reports are enabled for a specific action.
+ * @param {string} actionName Key in actions config
  * @returns {boolean}
  */
-function shouldSendActionReports() {
-  return typeof sendActionReports !== 'undefined' ? sendActionReports : true;
+function shouldSendActionReport(actionName) {
+  return actionCfg(actionName).sendReport !== false;
 }
 
 /**
@@ -39,16 +40,11 @@ function throttle(isDryRun) {
 
 /**
  * Checks if a specific action is in dry run mode.
- * Supports both per-action object and legacy boolean config.
- * @param {string} actionName Key in dryRunActions (e.g. 'autoLabeling')
+ * @param {string} actionName Key in actions config
  * @returns {boolean}
  */
 function isActionDryRun(actionName) {
-  if (typeof dryRunActions === 'object' && dryRunActions !== null) {
-    return dryRunActions[actionName] !== false;
-  }
-  if (typeof dryRunActions === 'boolean') return dryRunActions;
-  return false;
+  return actionCfg(actionName).dryRun === true;
 }
 
 
@@ -70,7 +66,7 @@ function isActionDryRun(actionName) {
  * @returns {{applied: number, skipped: number, changes: Object[]}} Results
  */
 function runAutoLabeling() {
-  const rules = typeof autoLabelRules !== 'undefined' ? autoLabelRules : [];
+  const rules = actionCfg('autoLabeling').rules || [];
   const isDryRun = isActionDryRun('autoLabeling');
 
   if (rules.length === 0) {
@@ -131,7 +127,7 @@ function runAutoLabeling() {
   });
 
   // Send summary report
-  if (changes.length > 0 && shouldSendActionReports()) {
+  if (changes.length > 0 && shouldSendActionReport('autoLabeling')) {
     sendAutoLabelingReport(changes);
   }
 
@@ -192,7 +188,7 @@ function matchesAutoLabelRule(contact, rule) {
 function sendAutoLabelingReport(changes) {
   const emailManager = new EmailManager();
   const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
-  const subject = '🏷️ Auto-Labeling Summary';
+  const subject = actionCfg('autoLabeling').emailSubject || '🏷️ Auto-Labeling Summary';
 
   const textBody = ['🏷️ Auto-Labeling Summary', '',
     `${changes.length} labels applied:`, '',
@@ -270,7 +266,7 @@ function runNameFormatter() {
   });
 
   // Send summary report
-  if (changes.length > 0 && shouldSendActionReports()) {
+  if (changes.length > 0 && shouldSendActionReport('nameFormatter')) {
     sendNameFormatterReport(changes);
   }
 
@@ -293,7 +289,7 @@ function formatName(name) {
   result = result.replace(/\s+/g, ' ');
 
   // Swap "Last, First" → "First Last" (configurable)
-  const doSwap = typeof nameSwapLastFirst !== 'undefined' ? nameSwapLastFirst : true;
+  const doSwap = actionCfg('nameFormatter').swapLastFirst !== false;
   if (doSwap && result.includes(',') && result.split(',').length === 2) {
     const [last, first] = result.split(',').map(s => s.trim());
     if (first && last) {
@@ -337,7 +333,7 @@ function formatName(name) {
 function sendNameFormatterReport(changes) {
   const emailManager = new EmailManager();
   const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
-  const subject = '✏️ Name Formatter Summary';
+  const subject = actionCfg('nameFormatter').emailSubject || '✏️ Name Formatter Summary';
 
   const textBody = ['✏️ Name Formatter Summary', '',
     `${changes.length} names fixed:`, '',
@@ -375,7 +371,7 @@ function sendNameFormatterReport(changes) {
  * @returns {{normalized: number, unchanged: number, failed: number, changes: Object[]}} Results
  */
 function runPhoneNormalizer() {
-  const countryCode = typeof defaultCountryCode !== 'undefined' ? defaultCountryCode : '+49';
+  const countryCode = actionCfg('phoneNormalizer').defaultCountryCode || '+49';
   const isDryRun = isActionDryRun('phoneNormalizer');
 
   Logger.log(`📱 Running phone normalizer (country code: ${countryCode})...`);
@@ -421,7 +417,7 @@ function runPhoneNormalizer() {
   });
 
   // Send summary report
-  if (changes.length > 0 && shouldSendActionReports()) {
+  if (changes.length > 0 && shouldSendActionReport('phoneNormalizer')) {
     sendPhoneNormalizerReport(changes);
   }
 
@@ -509,7 +505,7 @@ function detectCountryCodeLength(digits) {
 function sendPhoneNormalizerReport(changes) {
   const emailManager = new EmailManager();
   const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
-  const subject = '📱 Phone Normalizer Summary';
+  const subject = actionCfg('phoneNormalizer').emailSubject || '📱 Phone Normalizer Summary';
 
   const textBody = ['📱 Phone Normalizer Summary', '',
     `${changes.length} numbers normalized:`, '',
@@ -646,7 +642,7 @@ function runInstagramToWebsite() {
   });
 
   // Send summary report
-  if (changes.length > 0 && shouldSendActionReports()) {
+  if (changes.length > 0 && shouldSendActionReport('instagramToWebsite')) {
     sendInstagramToWebsiteReport(changes);
   }
 
@@ -664,7 +660,7 @@ function sendInstagramToWebsiteReport(changes) {
   const emailManager = new EmailManager();
   const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
   const totalHandles = changes.reduce((sum, c) => sum + c.handles.length, 0);
-  const subject = '📸 Instagram → Website Summary';
+  const subject = actionCfg('instagramToWebsite').emailSubject || '📸 Instagram → Website Summary';
 
   const textBody = ['📸 Instagram → Website Summary', '',
     `${totalHandles} handles converted for ${changes.length} contacts:`, '',
@@ -804,7 +800,7 @@ function runMessengerToWebsite() {
   });
 
   // Send summary report
-  if (changes.length > 0 && shouldSendActionReports()) {
+  if (changes.length > 0 && shouldSendActionReport('messengerToWebsite')) {
     sendMessengerToWebsiteReport(changes);
   }
 
@@ -822,7 +818,7 @@ function sendMessengerToWebsiteReport(changes) {
   const emailManager = new EmailManager();
   const { toEmail, fromEmail, senderName } = emailManager.getEmailContext();
   const totalUsernames = changes.reduce((sum, c) => sum + c.usernames.length, 0);
-  const subject = '💬 Messenger → Website Summary';
+  const subject = actionCfg('messengerToWebsite').emailSubject || '💬 Messenger → Website Summary';
 
   const textBody = ['💬 Messenger → Website Summary', '',
     `${totalUsernames} usernames converted for ${changes.length} contacts:`, '',
