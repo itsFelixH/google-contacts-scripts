@@ -162,7 +162,7 @@ class Contact {
   getBirthdayShortFormat() {
     try {
       if (this.birthday && this.birthday instanceof Date && !isNaN(this.birthday)) {
-        const format = typeof birthdayFormat !== 'undefined' ? birthdayFormat : 'dd.MM.';
+        const format = (typeof generalConfig !== 'undefined' && generalConfig.birthdayFormat) || 'dd.MM.';
         return Contact.formatBirthday(this.birthday, format);
       }
       return '';
