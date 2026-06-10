@@ -8,98 +8,149 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+ * Gets a value from the new config structure with fallback to legacy globals.
+ * @param {string} path Dot-separated path (e.g. 'generalConfig.sortContactsBy')
+ * @param {*} fallback Default value if not found
+ * @returns {*}
+ */
+function getConfig(path, fallback) {
+  const parts = path.split('.');
+  let obj;
+  try {
+    obj = eval(parts[0]);
+  } catch (e) {
+    return fallback;
+  }
+  if (obj === undefined) return fallback;
+  for (let i = 1; i < parts.length; i++) {
+    if (obj === null || obj === undefined) return fallback;
+    obj = obj[parts[i]];
+  }
+  return obj !== undefined ? obj : fallback;
+}
+
+// ─── Convenience accessors for common config values ───────────────────────────
+
+function cfg() {
+  return typeof generalConfig !== 'undefined' ? generalConfig : {};
+}
+
+function reportCfg(name) {
+  return (typeof reports !== 'undefined' && reports[name]) ? reports[name] : {};
+}
+
+function actionCfg(name) {
+  return (typeof actions !== 'undefined' && actions[name]) ? actions[name] : {};
+}
+
+/**
  * Validates the configuration and logs warnings for invalid values.
  * Call this once at setup or before running reports.
  * @returns {string[]} Array of validation error messages (empty = all good)
  */
 function validateConfig() {
   const errors = [];
+  const c = cfg();
+  const r = typeof reports !== 'undefined' ? reports : {};
+  const a = typeof actions !== 'undefined' ? actions : {};
 
-  // Label filter
-  if (typeof useLabel !== 'boolean') {
-    errors.push('useLabel must be a boolean (true/false)');
+  // ─── General config ─────────────────────────────────────────────────────────
+  if (typeof c.useLabel !== 'boolean') {
+    errors.push('generalConfig.useLabel must be a boolean');
   }
-  if (useLabel && (!Array.isArray(labelFilter) || labelFilter.length === 0)) {
+  if (c.useLabel && (!Array.isArray(c.labelFilter) || c.labelFilter.length === 0)) {
     errors.push('useLabel is true but labelFilter is empty — no contacts will match');
   }
-  if (Array.isArray(labelFilter) && labelFilter.some(l => typeof l !== 'string')) {
-    errors.push('labelFilter must only contain strings');
+  if (c.labelFilter && !Array.isArray(c.labelFilter)) {
+    errors.push('generalConfig.labelFilter must be an array');
+  }
+  if (c.excludeLabels && !Array.isArray(c.excludeLabels)) {
+    errors.push('generalConfig.excludeLabels must be an array');
   }
 
-  // Exclude labels
-  if (typeof excludeLabels !== 'undefined' && !Array.isArray(excludeLabels)) {
-    errors.push('excludeLabels must be an array of strings');
-  }
-
-  // Upcoming birthdays
-  if (typeof upcomingBirthdaysDays !== 'undefined') {
-    if (typeof upcomingBirthdaysDays !== 'number' || upcomingBirthdaysDays < 1 || upcomingBirthdaysDays > 365) {
-      errors.push('upcomingBirthdaysDays must be a number between 1 and 365');
-    }
-  }
-
-  // Birthday format
   const validFormats = ['dd.MM.', 'dd/MM', 'MM/dd', 'dd MMM', 'MMM dd'];
-  if (typeof birthdayFormat !== 'undefined' && !validFormats.includes(birthdayFormat)) {
-    errors.push(`birthdayFormat must be one of: ${validFormats.join(', ')}`);
+  if (c.birthdayFormat && !validFormats.includes(c.birthdayFormat)) {
+    errors.push(`generalConfig.birthdayFormat must be one of: ${validFormats.join(', ')}`);
   }
 
-  // Sort
   const validSorts = ['name', 'name-desc', 'labels', 'city'];
-  if (typeof sortContactsBy !== 'undefined' && !validSorts.includes(sortContactsBy)) {
-    errors.push(`sortContactsBy must be one of: ${validSorts.join(', ')}`);
+  if (c.sortContactsBy && !validSorts.includes(c.sortContactsBy)) {
+    errors.push(`generalConfig.sortContactsBy must be one of: ${validSorts.join(', ')}`);
   }
 
-  // Max contacts
-  if (typeof maxContactsPerReport !== 'undefined') {
-    if (typeof maxContactsPerReport !== 'number' || maxContactsPerReport < 0) {
-      errors.push('maxContactsPerReport must be a number >= 0');
+  if (c.maxContactsPerReport !== undefined && (typeof c.maxContactsPerReport !== 'number' || c.maxContactsPerReport < 0)) {
+    errors.push('generalConfig.maxContactsPerReport must be a number >= 0');
+  }
+
+  // ─── Reports ────────────────────────────────────────────────────────────────
+  const validSchedules = ['daily', 'weekly', 'monthly', 'off'];
+  const validReportKeys = ['upcomingBirthdays', 'duplicates', 'contactOverview', 'labelOverview', 'missingInfo', 'dataQuality'];
+
+  validReportKeys.forEach(key => {
+    const report = r[key];
+    if (!report) return;
+    if (report.schedule && !validSchedules.includes(report.schedule)) {
+      errors.push(`reports.${key}.schedule must be one of: ${validSchedules.join(', ')}`);
     }
-  }
+    if (report.day !== undefined && (typeof report.day !== 'number' || report.day < 1 || report.day > 28)) {
+      errors.push(`reports.${key}.day must be a number 1–28`);
+    }
+  });
 
-  // Enabled reports
-  if (typeof enabledReports !== 'undefined') {
-    const validKeys = ['upcomingBirthdays', 'duplicates', 'contactOverview', 'labelOverview', 'missingInfo', 'dataQuality'];
-    Object.keys(enabledReports).forEach(key => {
-      if (!validKeys.includes(key)) errors.push(`enabledReports: unknown report "${key}"`);
-    });
+  // Upcoming birthdays specific
+  const ub = r.upcomingBirthdays;
+  if (ub && ub.aheadDays !== undefined) {
+    if (typeof ub.aheadDays !== 'number' || ub.aheadDays < 1 || ub.aheadDays > 365) {
+      errors.push('reports.upcomingBirthdays.aheadDays must be 1–365');
+    }
   }
 
   // Missing info fields
-  if (typeof missingInfoFields !== 'undefined') {
+  const mi = r.missingInfo;
+  if (mi && mi.fields) {
     const validFields = ['email', 'phone', 'city', 'birthday'];
-    if (!Array.isArray(missingInfoFields)) {
-      errors.push('missingInfoFields must be an array');
-    } else {
-      missingInfoFields.forEach(f => {
-        if (!validFields.includes(f)) errors.push(`missingInfoFields: invalid field "${f}"`);
-      });
-    }
+    mi.fields.forEach(f => {
+      if (!validFields.includes(f)) errors.push(`reports.missingInfo.fields: invalid field "${f}"`);
+    });
   }
 
-  // Duplicate match fields
-  if (typeof duplicateMatchFields !== 'undefined') {
+  // Duplicates match fields
+  const dup = r.duplicates;
+  if (dup && dup.matchFields) {
     const validDupFields = ['name', 'email', 'phone'];
-    if (!Array.isArray(duplicateMatchFields)) {
-      errors.push('duplicateMatchFields must be an array');
+    dup.matchFields.forEach(f => {
+      if (!validDupFields.includes(f)) errors.push(`reports.duplicates.matchFields: invalid field "${f}"`);
+    });
+  }
+
+  // ─── Actions ────────────────────────────────────────────────────────────────
+  const validActionKeys = ['autoLabeling', 'nameFormatter', 'phoneNormalizer', 'instagramToWebsite', 'messengerToWebsite'];
+
+  validActionKeys.forEach(key => {
+    const action = a[key];
+    if (!action) return;
+    if (action.schedule && !validSchedules.includes(action.schedule)) {
+      errors.push(`actions.${key}.schedule must be one of: ${validSchedules.join(', ')}`);
+    }
+    if (action.day !== undefined && (typeof action.day !== 'number' || action.day < 1 || action.day > 28)) {
+      errors.push(`actions.${key}.day must be a number 1–28`);
+    }
+    if (action.dryRun !== undefined && typeof action.dryRun !== 'boolean') {
+      errors.push(`actions.${key}.dryRun must be a boolean`);
+    }
+  });
+
+  // Auto-labeling rules
+  const al = a.autoLabeling;
+  if (al && al.rules) {
+    if (!Array.isArray(al.rules)) {
+      errors.push('actions.autoLabeling.rules must be an array');
     } else {
-      duplicateMatchFields.forEach(f => {
-        if (!validDupFields.includes(f)) errors.push(`duplicateMatchFields: invalid field "${f}"`);
+      al.rules.forEach((rule, i) => {
+        if (!rule.field || !rule.label) {
+          errors.push(`actions.autoLabeling.rules[${i}]: must have field and label`);
+        }
       });
-    }
-  }
-
-  // Schedule hour
-  if (typeof scheduleHour !== 'undefined') {
-    if (typeof scheduleHour !== 'number' || scheduleHour < 0 || scheduleHour > 23) {
-      errors.push('scheduleHour must be a number between 0 and 23');
-    }
-  }
-
-  // Monthly report day
-  if (typeof monthlyReportDay !== 'undefined') {
-    if (typeof monthlyReportDay !== 'number' || monthlyReportDay < 1 || monthlyReportDay > 28) {
-      errors.push('monthlyReportDay must be a number between 1 and 28');
     }
   }
 
@@ -120,9 +171,10 @@ function validateConfig() {
  * @returns {boolean} true if valid, false if misconfigured
  */
 function isLabelFilterConfigured() {
-  if (useLabel && (!labelFilter || labelFilter.length === 0)) {
+  const c = cfg();
+  if (c.useLabel && (!c.labelFilter || c.labelFilter.length === 0)) {
     Logger.log('⚠️ useLabel is enabled but labelFilter is empty — no contacts will match.');
-    Logger.log('   Add label names to labelFilter in config.js, or set useLabel to false.');
+    Logger.log('   Add label names to labelFilter in config, or set useLabel to false.');
     return false;
   }
   return true;
@@ -130,13 +182,13 @@ function isLabelFilterConfigured() {
 
 
 /**
- * Checks if a specific report is enabled in config.
- * @param {string} reportName Key in enabledReports
+ * Checks if a specific report is enabled (has a schedule that isn't 'off').
+ * @param {string} reportName Key in reports config
  * @returns {boolean}
  */
 function isReportEnabled(reportName) {
-  if (typeof enabledReports === 'undefined') return true;
-  return enabledReports[reportName] !== false;
+  const r = reportCfg(reportName);
+  return !!(r.schedule && r.schedule !== 'off');
 }
 
 
@@ -150,7 +202,7 @@ function isReportEnabled(reportName) {
  * @returns {Contact[]}
  */
 function applyLimit(contacts) {
-  const max = typeof maxContactsPerReport !== 'undefined' ? maxContactsPerReport : 0;
+  const max = cfg().maxContactsPerReport || 0;
   if (max > 0 && contacts.length > max) {
     const limited = contacts.slice(0, max);
     limited._totalBeforeLimit = contacts.length;
@@ -166,7 +218,7 @@ function applyLimit(contacts) {
  * @returns {Contact[]}
  */
 function applySorting(contacts) {
-  const sortBy = typeof sortContactsBy !== 'undefined' ? sortContactsBy : 'name';
+  const sortBy = cfg().sortContactsBy || 'name';
   const sorted = [...contacts];
 
   switch (sortBy) {
@@ -196,7 +248,7 @@ function applySorting(contacts) {
  * @returns {Contact[]}
  */
 function applyExcludeLabels(contacts) {
-  const excluded = typeof excludeLabels !== 'undefined' ? excludeLabels : [];
+  const excluded = cfg().excludeLabels || [];
   if (!Array.isArray(excluded) || excluded.length === 0) return contacts;
   return contacts.filter(c => !c.getLabels().some(l => excluded.includes(l)));
 }
