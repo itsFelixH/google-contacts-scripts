@@ -259,7 +259,7 @@ function findUpcomingBirthdays(contacts, days = 7) {
  * @returns {Contact[]} Contacts with invalid-looking phone numbers
  */
 function findInvalidPhones(contacts) {
-  const regex = typeof phoneRegex !== 'undefined' ? phoneRegex : /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
+  const regex = reportCfg('dataQuality').phoneRegex || /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
   return contacts.filter(c => {
     const phone = c.phoneNumber;
     return phone && phone.trim() && !regex.test(phone.trim());
