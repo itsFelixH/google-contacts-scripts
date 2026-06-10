@@ -28,9 +28,10 @@ class Contact {
    * @param {string} resourceName Google People API resource ID (e.g. 'people/c12345')
    * @param {string} notes Raw biography/notes text
    * @param {Object[]} urls Website URL objects from People API
+   * @param {string} etag People API etag for update operations
    * @throws {Error} If name is missing or empty
    */
-  constructor(name, birthday, labels = [], email = '', city = '', phoneNumber = '', instagramNames = [], resourceName = '', notes = '', urls = []) {
+  constructor(name, birthday, labels = [], email = '', city = '', phoneNumber = '', instagramNames = [], resourceName = '', notes = '', urls = [], etag = '') {
     if (!name || typeof name !== 'string' || !name.trim()) {
       throw new Error('Contact name is required and must be a non-empty string');
     }
@@ -66,6 +67,9 @@ class Contact {
 
     /** @type {Object[]} Website URL objects */
     this.urls = Array.isArray(urls) ? urls : [];
+
+    /** @type {string} People API etag for update operations */
+    this.etag = etag || '';
 
     /** @type {boolean} Whether notes mention Messenger/FB without a username */
     this.hasMessengerTag = /\b(fb|messenger|facebook)\b/i.test(this.notes);
