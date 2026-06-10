@@ -127,15 +127,15 @@ function sendAllReports() {
     let successful = 0;
     let failed = 0;
 
-    const reports = [];
-    if (isReportEnabled('upcomingBirthdays')) reports.push(() => sendUpcomingBirthdaysReport(null, contacts));
-    if (isReportEnabled('duplicates'))        reports.push(() => sendDuplicateContactsReport(contacts));
-    if (isReportEnabled('contactOverview'))    reports.push(() => sendContactOverviewReport(contacts));
-    if (isReportEnabled('labelOverview'))      reports.push(() => sendLabelOverviewReport(contacts));
-    if (isReportEnabled('missingInfo'))       reports.push(() => sendMissingInfoReport(contacts));
-    if (isReportEnabled('dataQuality'))        reports.push(() => sendDataQualityReport(contacts));
+    const reportFns = [];
+    if (isReportEnabled('upcomingBirthdays')) reportFns.push(() => sendUpcomingBirthdaysReport(null, contacts));
+    if (isReportEnabled('duplicates'))        reportFns.push(() => sendDuplicateContactsReport(contacts));
+    if (isReportEnabled('contactOverview'))    reportFns.push(() => sendContactOverviewReport(contacts));
+    if (isReportEnabled('labelOverview'))      reportFns.push(() => sendLabelOverviewReport(contacts));
+    if (isReportEnabled('missingInfo'))       reportFns.push(() => sendMissingInfoReport(contacts));
+    if (isReportEnabled('dataQuality'))        reportFns.push(() => sendDataQualityReport(contacts));
 
-    reports.forEach((reportFn, index) => {
+    reportFns.forEach((reportFn, index) => {
       try { reportFn(); successful++; }
       catch (error) { failed++; Logger.log(`  Report ${index + 1} failed: ${error.message}`); }
     });
