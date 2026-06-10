@@ -21,7 +21,7 @@ class EmailManager {
     this.templates = EmailTemplates;
 
     /** @type {Object} Custom email subjects from config */
-    this.subjects = typeof emailSubjects !== 'undefined' ? emailSubjects : {};
+    this.subjects = {};
 
     /** @type {string} Script ID for Apps Script editor link */
     this.scriptId = typeof ScriptApp !== 'undefined' ? ScriptApp.getScriptId() : '';
@@ -92,8 +92,8 @@ class EmailManager {
    */
   sendUpcomingBirthdaysEmail(contacts, days) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = (this.subjects.upcomingBirthdays || '🎂 Upcoming Birthdays').replace('{days}', days);
-    const showAge = typeof birthdayShowAge !== 'undefined' ? birthdayShowAge : true;
+    const subject = reportCfg('upcomingBirthdays').emailSubject || '🎂 Upcoming Birthdays';
+    const showAge = reportCfg('upcomingBirthdays').showAge !== false;
 
     // Build per-contact display data
     const lines = contacts.map(contact => {
@@ -133,7 +133,7 @@ class EmailManager {
    */
   sendDuplicateContactsEmail(duplicateGroups) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.duplicates || '🔍 Duplicate Contacts';
+    const subject = reportCfg('duplicates').emailSubject || '🔍 Duplicate Contacts';
 
     // Plain text
     const textBody = ['🔍 Duplicate Contacts', '',
@@ -174,7 +174,7 @@ class EmailManager {
    */
   sendContactOverviewEmail(stats) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.overview || '📊 Contact Overview';
+    const subject = reportCfg('contactOverview').emailSubject || '📊 Contact Overview';
 
     const statLines = [
       { emoji: '📇', label: 'Total Contacts', value: stats.totalContacts },
@@ -275,7 +275,7 @@ class EmailManager {
    */
   sendLabelOverviewEmail(labelStats, unlabeledContacts, labelDistribution, totalContacts) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.labelOverview || '🏷️ Label Overview';
+    const subject = reportCfg('labelOverview').emailSubject || '🏷️ Label Overview';
 
     // ── Plain text ──
     const textLines = [
@@ -354,7 +354,7 @@ class EmailManager {
     if (fields.length === 0) return;
 
     const totalMissing = fields.reduce((sum, f) => sum + fieldData[f].length, 0);
-    const subject = this.subjects.missingInfo || '📋 Missing Info';
+    const subject = reportCfg('missingInfo').emailSubject || '�� Missing Info';
 
     // ── Plain text ──
     const textLines = ['📋 Missing Info', '', `${totalMissing} gaps across ${fields.length} fields`, ''];
@@ -443,7 +443,7 @@ class EmailManager {
    */
   sendDataQualityEmail(missingSurnames, invalidPhones, duplicatePhones, emptyContacts, badNames, incompleteMessenger, totalContacts) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = this.subjects.dataQuality || '🔧 Data Quality';
+    const subject = reportCfg('dataQuality').emailSubject || '�� Data Quality';
     const totalIssues = missingSurnames.length + invalidPhones.length + duplicatePhones.length + emptyContacts.length + badNames.length + incompleteMessenger.length;
 
     // ── Summary parts ──
@@ -578,7 +578,7 @@ class EmailManager {
    * @private
    */
   _editLink(contact) {
-    if (typeof includeEditLinks === 'undefined' || !includeEditLinks) return '';
+    if (!cfg().includeEditLinks) return '';
     const url = contact.getContactLink();
     if (!url) return '';
     return ` <a href="${url}" style="color: #1a73e8; text-decoration: none; font-size: 12px;">edit</a>`;
@@ -643,7 +643,7 @@ class EmailManager {
     }
     if (contact.phoneNumber) {
       let phonePart = `📱 ${contact.phoneNumber}`;
-      if (typeof includeWhatsAppLinks !== 'undefined' && includeWhatsAppLinks) {
+      if (cfg().includeWhatsAppLinks) {
         const waLink = contact.getWhatsAppLink();
         if (waLink) phonePart += ` (<a href="${waLink}" style="color: #1a73e8; text-decoration: none;">WhatsApp</a>)`;
       }
