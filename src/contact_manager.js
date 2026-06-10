@@ -118,7 +118,8 @@ function parseContactFromPerson(person, labels) {
       instagram,
       person.resourceName || '',
       notes,
-      urls
+      urls,
+      person.etag || ''
     );
   } catch (error) {
     Logger.log(`⚠️ Error parsing contact: ${error.message}`);
