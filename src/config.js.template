@@ -8,175 +8,138 @@
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 1. CONTACT FILTERING
+// 1. GENERAL SETTINGS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Set useLabel to true and add label names to only report on specific contacts.
-// When false, all contacts are included.
-const useLabel = false;
-const labelFilter = []; // e.g. ['Friends', 'Family']
+const generalConfig = {
+  // ─── Contact filtering ──────────────────────────────────────────────────────
+  useLabel: false,                        // only report on contacts with specific labels
+  labelFilter: [],                        // e.g. ['Friends', 'Family']
+  excludeLabels: [],                      // always exclude these labels from all reports
 
-// Contacts with any of these labels are always excluded from all reports.
-const excludeLabels = []; // e.g. ['Blocked', 'Spam', 'Business']
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 2. REPORT SETTINGS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// ─── Enable/disable individual reports ────────────────────────────────────────
-// Set to false to skip a report in sendAllReports().
-
-const enabledReports = {
-  upcomingBirthdays: true,
-  duplicates:        true,
-  contactOverview:   true,
-  labelOverview:     true,
-  missingInfo:       true,
-  dataQuality:       true,
-};
-
-// ─── Upcoming Birthdays ───────────────────────────────────────────────────────
-
-const upcomingBirthdaysDays = 14;         // days to look ahead (1–365)
-const birthdayShowAge = true;             // show "turns X" if birth year is known
-
-// ─── Birthday date format ─────────────────────────────────────────────────────
-// Options: 'dd.MM.' | 'dd/MM' | 'MM/dd' | 'dd MMM' | 'MMM dd'
-// Examples: '15.06.' | '15/06' | '06/15' | '15 Jun' | 'Jun 15'
-
-const birthdayFormat = 'dd.MM.';
-
-// ─── Sorting ──────────────────────────────────────────────────────────────────
-// How contact lists are sorted in reports.
-// Options: 'name' | 'name-desc' | 'labels' | 'city'
-
-const sortContactsBy = 'name';
-
-// ─── Missing Info ─────────────────────────────────────────────────────────────
-// Which fields to check when running sendAllReports().
-// Options: 'email', 'phone', 'city', 'birthday'
-
-const missingInfoFields = ['email', 'phone', 'birthday'];
-
-// ─── Duplicate Contacts ───────────────────────────────────────────────────────
-// Which fields to compare when detecting duplicates.
-// Options: 'name', 'email', 'phone'
-
-const duplicateMatchFields = ['name', 'email', 'phone'];
-
-// ─── General ──────────────────────────────────────────────────────────────────
-
-const maxContactsPerReport = 0;           // 0 = unlimited, otherwise caps the list
-
-// ─── Links ────────────────────────────────────────────────────────────────────
-
-const includeEditLinks = true;            // add "edit" links next to contact names
-const includeWhatsAppLinks = false;       // add WhatsApp links next to phone numbers
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 3. SCHEDULES — When should things run?
-// ═══════════════════════════════════════════════════════════════════════════════
-// Run setupSchedules() once after deploying. Safe to re-run after changes.
-// Hours are approximate — Apps Script triggers fire within a ±1 hour window.
-//
-// frequency: 'weekly' | 'monthly' | 'off'
-
-const scheduleHour = 8;
-const weeklyReportDay = ScriptApp.WeekDay.MONDAY;
-const monthlyReportDay = 1;
-
-const reportSchedules = {
-  upcomingBirthdays:  'off',               // 'weekly' | 'monthly' | 'off'
-  duplicates:         'off',               // 'weekly' | 'monthly' | 'off'
-  contactOverview:    'off',               // 'weekly' | 'monthly' | 'off'
-  labelOverview:      'off',               // 'weekly' | 'monthly' | 'off'
-  missingInfo:        'off',               // 'weekly' | 'monthly' | 'off'
-  dataQuality:        'off',               // 'weekly' | 'monthly' | 'off'
-};
-
-const actionSchedules = {
-  autoLabeling:       'off',               // 'weekly' | 'monthly' | 'off'
-  nameFormatter:      'off',               // 'weekly' | 'monthly' | 'off'
-  phoneNormalizer:    'off',               // 'weekly' | 'monthly' | 'off'
-  instagramToWebsite: 'off',               // 'weekly' | 'monthly' | 'off'
-  messengerToWebsite: 'off',               // 'weekly' | 'monthly' | 'off'
+  // ─── Display ────────────────────────────────────────────────────────────────
+  sortContactsBy: 'name',                 // 'name' | 'name-desc' | 'labels' | 'city'
+  maxContactsPerReport: 0,                // 0 = unlimited, otherwise caps the list
+  includeEditLinks: true,                 // add "edit" links next to contact names
+  includeWhatsAppLinks: false,            // add WhatsApp links next to phone numbers
+  birthdayFormat: 'dd.MM.',               // 'dd.MM.' | 'dd/MM' | 'MM/dd' | 'dd MMM' | 'MMM dd'
 };
 
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2. REPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-//   ✅ You can stop here. Everything below is optional / power-user settings.
-//
-// ═══════════════════════════════════════════════════════════════════════════════
+// schedule: 'daily' | 'weekly' | 'monthly' | 'off'
+// day:      1–7 for weekly (1=Sunday, 2=Monday, ..., 7=Saturday)
+//           1–28 for monthly (day of month)
+//           ignored for daily
 
+const reports = {
+  upcomingBirthdays: {
+    schedule: 'off',
+    day: 2,                               // Monday
+    emailSubject: '🎂 Upcoming Birthdays',
+    aheadDays: 14,                        // days to look ahead (1–365)
+    showAge: true,                        // show "turns X" if birth year is known
+  },
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 4. ACTIONS — Scripts that modify contacts
-// ═══════════════════════════════════════════════════════════════════════════════
+  duplicates: {
+    schedule: 'off',
+    day: 1,
+    emailSubject: '🔍 Duplicate Contacts',
+    matchFields: ['name', 'email', 'phone'],
+  },
 
-// ─── Auto-labeling rules ──────────────────────────────────────────────────────
-// Each rule assigns a label when a field matches a condition.
-// Conditions: contains, equals, startsWith, endsWith, matches (regex)
-// Fields: 'email', 'phone', 'city', 'name'
+  contactOverview: {
+    schedule: 'off',
+    day: 1,
+    emailSubject: '📊 Contact Overview',
+  },
 
-const autoLabelRules = [
-  // { field: 'email', contains: '@company.com', label: 'Work' },
-  // { field: 'email', endsWith: '.edu',        label: 'University' },
-  // { field: 'phone', startsWith: '+44',       label: 'UK' },
-  // { field: 'city',  equals: 'berlin',        label: 'Berlin' },
-  // { field: 'name',  startsWith: 'dr.',       label: 'Doctors' },
-];
+  labelOverview: {
+    schedule: 'off',
+    day: 1,
+    emailSubject: '🏷️ Label Overview',
+  },
 
-// ─── Phone normalizer ─────────────────────────────────────────────────────────
-// Country code to prepend when converting local numbers (starting with 0)
-// to international format. E.g. "0176 1234567" → "+491761234567"
+  missingInfo: {
+    schedule: 'off',
+    day: 1,
+    emailSubject: '📋 Missing Info',
+    fields: ['email', 'phone', 'birthday'],
+  },
 
-const defaultCountryCode = '+49';
-
-// ─── Name formatter ───────────────────────────────────────────────────────────
-
-const nameSwapLastFirst = false;          // convert "Last, First" → "First Last"
-
-// ─── Action reports ───────────────────────────────────────────────────────────
-// Send a summary email after each action runs.
-
-const sendActionReports = false;
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 5. VALIDATION RULES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/;
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 6. EMAIL CUSTOMIZATION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// ─── Email subjects (override defaults) ───────────────────────────────────────
-// Use {days} in upcomingBirthdays, {field} in missingInfo as placeholders.
-
-const emailSubjects = {
-  upcomingBirthdays:   '🎂 Upcoming Birthdays',
-  duplicates:          '🔍 Duplicate Contacts',
-  overview:            '📊 Contact Overview',
-  labelOverview:       '🏷️ Label Overview',
-  missingInfo:         '📋 Missing Info',
-  dataQuality:         '🔧 Data Quality',
+  dataQuality: {
+    schedule: 'off',
+    day: 1,
+    emailSubject: '🔧 Data Quality',
+    phoneRegex: /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/,
+  },
 };
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 7. ADVANCED
+// 3. ACTIONS
 // ═══════════════════════════════════════════════════════════════════════════════
+//
+// schedule: 'daily' | 'weekly' | 'monthly' | 'off'
+// day:      1–7 for weekly (1=Sunday, 2=Monday, ..., 7=Saturday)
+//           1–28 for monthly (day of month)
+//           ignored for daily
+//
+// All actions support dryRun mode — set to true to preview changes without
+// modifying contacts. Summary emails are still sent when sendReport is true.
 
-const dryRunActions = {
-  autoLabeling:       false,              // true = preview only, false = modify contacts
-  nameFormatter:      false,              // true = preview only, false = modify contacts
-  phoneNormalizer:    false,              // true = preview only, false = modify contacts
-  instagramToWebsite: false,              // true = preview only, false = modify contacts
-  messengerToWebsite: false,              // true = preview only, false = modify contacts
+const actions = {
+  autoLabeling: {
+    schedule: 'off',
+    day: 1,
+    dryRun: false,
+    sendReport: true,
+    emailSubject: '🏷️ Auto-Labeling Summary',
+    rules: [
+      // { field: 'email', contains: '@company.com', label: 'Work' },
+      // { field: 'email', endsWith: '.edu',         label: 'University' },
+      // { field: 'phone', startsWith: '+44',        label: '🇬🇧 UK' },
+      // { field: 'city',  equals: 'berlin',         label: '📍 Berlin' },
+      // { field: 'name',  startsWith: 'dr.',        label: 'Doctors' },
+      // { field: 'name',  matches: '\\(swing\\)',   label: 'Swing' },
+    ],
+  },
+
+  nameFormatter: {
+    schedule: 'off',
+    day: 5,
+    dryRun: false,
+    sendReport: true,
+    emailSubject: '✏️ Name Formatter Summary',
+    swapLastFirst: false,                 // convert "Last, First" → "First Last"
+  },
+
+  phoneNormalizer: {
+    schedule: 'off',
+    day: 10,
+    dryRun: false,
+    sendReport: true,
+    emailSubject: '📱 Phone Normalizer Summary',
+    defaultCountryCode: '+49',
+    phoneRegex: /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/,
+  },
+
+  instagramToWebsite: {
+    schedule: 'off',
+    day: 15,
+    dryRun: false,
+    sendReport: true,
+    emailSubject: '📸 Instagram → Website Summary',
+  },
+
+  messengerToWebsite: {
+    schedule: 'off',
+    day: 15,
+    dryRun: false,
+    sendReport: true,
+    emailSubject: '💬 Messenger → Website Summary',
+  },
 };
