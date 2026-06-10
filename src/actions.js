@@ -33,7 +33,7 @@ function shouldSendActionReports() {
  */
 function throttle(isDryRun) {
   if (!isDryRun && typeof Utilities !== 'undefined') {
-    Utilities.sleep(100); // 100ms between writes — ~10 ops/sec
+    Utilities.sleep(1500); // 1.5s between writes — stays within People API per-minute quota
   }
 }
 
@@ -258,6 +258,7 @@ function runNameFormatter() {
     // Update via People API
     try {
       People.People.updateContact({
+        etag: contact.etag,
         names: [{ displayName: formatted, givenName: formatted.split(' ')[0], familyName: formatted.split(' ').slice(1).join(' ') }]
       }, contact.resourceName, { updatePersonFields: 'names' });
       Logger.log(`  ✅ "${original}" → "${formatted}"`);
@@ -407,6 +408,7 @@ function runPhoneNormalizer() {
     // Update via People API
     try {
       People.People.updateContact({
+        etag: contact.etag,
         phoneNumbers: [{ value: formatted }]
       }, contact.resourceName, { updatePersonFields: 'phoneNumbers' });
       Logger.log(`  ✅ ${contact.getName()}: "${original}" → "${formatted}"`);
@@ -622,7 +624,7 @@ function runInstagramToWebsite() {
 
       // Update the contact: add websites + clean notes
       const updateFields = ['urls'];
-      const updateBody = { urls: newUrls };
+      const updateBody = { etag: contact.etag, urls: newUrls };
 
       if (updatedNotes !== currentNotes) {
         updateFields.push('biographies');
@@ -780,7 +782,7 @@ function runMessengerToWebsite() {
 
       // Update the contact: add websites + clean notes
       const updateFields = ['urls'];
-      const updateBody = { urls: newUrls };
+      const updateBody = { etag: contact.etag, urls: newUrls };
 
       if (updatedNotes !== currentNotes) {
         updateFields.push('biographies');
