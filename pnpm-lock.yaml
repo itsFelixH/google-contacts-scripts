@@ -13,7 +13,7 @@ importers:
         version: 3.4.0(@types/node@25.9.2)(supports-color@8.1.1)
       '@types/google-apps-script':
         specifier: ^2.0.11
-        version: 2.0.12
+        version: 2.0.13
       jest:
         specifier: ^30.4.2
         version: 30.5.1(@types/node@25.9.2)(supports-color@8.1.1)
@@ -599,8 +599,8 @@ packages:
   '@types/babel__traverse@7.28.0':
     resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
 
-  '@types/google-apps-script@2.0.12':
-    resolution: {integrity: sha512-k6qjm5tG0HNsnn6WFwj0+1mqUesuJjOylb4Eer4u5vYtP9ITYg96V6tNegAgDXPl9aK8RRvx6U7n3f2HEckmXQ==}
+  '@types/google-apps-script@2.0.13':
+    resolution: {integrity: sha512-prNQIdxdoZu0oSzu1MpiSPblBnN9Gvs3Kbi5g3LNdjnmTwwvneVPAM/mQNDA+/CPMQOrfQRfN43ssS/O8vMGZg==}
 
   '@types/istanbul-lib-coverage@2.0.6':
     resolution: {integrity: sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==}
@@ -3031,7 +3031,7 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.7
 
-  '@types/google-apps-script@2.0.12': {}
+  '@types/google-apps-script@2.0.13': {}
 
   '@types/istanbul-lib-coverage@2.0.6': {}
 
