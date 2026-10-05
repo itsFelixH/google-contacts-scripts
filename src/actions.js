@@ -196,7 +196,7 @@ function sendAutoLabelingReport(changes) {
   ].join('\n');
 
   const listHtml = changes.map(c =>
-    EmailTemplates.listItem(`<strong>${c.name}</strong> → 🏷️ ${c.label}`)
+    EmailTemplates.listItem(`<strong>${escapeHtml(c.name)}</strong> → 🏷️ ${escapeHtml(c.label)}`)
   ).join('\n');
 
   const htmlBody = EmailTemplates.wrapEmail(
@@ -341,7 +341,7 @@ function sendNameFormatterReport(changes) {
   ].join('\n');
 
   const listHtml = changes.map(c =>
-    EmailTemplates.listItem(`"${c.before}" → <strong>${c.after}</strong>`)
+    EmailTemplates.listItem(`"${escapeHtml(c.before)}" → <strong>${escapeHtml(c.after)}</strong>`)
   ).join('\n');
 
   const htmlBody = EmailTemplates.wrapEmail(
@@ -513,7 +513,7 @@ function sendPhoneNormalizerReport(changes) {
   ].join('\n');
 
   const listHtml = changes.map(c =>
-    EmailTemplates.listItem(`<strong>${c.name}</strong>: ${c.before} → <strong>${c.after}</strong>`)
+    EmailTemplates.listItem(`<strong>${escapeHtml(c.name)}</strong>: ${escapeHtml(c.before)} → <strong>${escapeHtml(c.after)}</strong>`)
   ).join('\n');
 
   const htmlBody = EmailTemplates.wrapEmail(
@@ -668,8 +668,8 @@ function sendInstagramToWebsiteReport(changes) {
   ].join('\n');
 
   const listHtml = changes.map(c => {
-    const links = c.urls.map(url => `<a href="${url}" style="color: #1a73e8; text-decoration: none;">${url}</a>`).join(', ');
-    return EmailTemplates.listItem(`<strong>${c.name}</strong><br><small style="color: #666;">${c.handles.join(', ')} → ${links}</small>`);
+    const links = c.urls.map(url => `<a href="${escapeHtml(url)}" style="color: #1a73e8; text-decoration: none;">${escapeHtml(url)}</a>`).join(', ');
+    return EmailTemplates.listItem(`<strong>${escapeHtml(c.name)}</strong><br><small style="color: #666;">${c.handles.map(escapeHtml).join(', ')} → ${links}</small>`);
   }).join('\n');
 
   const htmlBody = EmailTemplates.wrapEmail(
@@ -826,8 +826,8 @@ function sendMessengerToWebsiteReport(changes) {
   ].join('\n');
 
   const listHtml = changes.map(c => {
-    const links = c.urls.map(url => `<a href="${url}" style="color: #1a73e8; text-decoration: none;">${url}</a>`).join(', ');
-    return EmailTemplates.listItem(`<strong>${c.name}</strong><br><small style="color: #666;">${c.usernames.join(', ')} → ${links}</small>`);
+    const links = c.urls.map(url => `<a href="${escapeHtml(url)}" style="color: #1a73e8; text-decoration: none;">${escapeHtml(url)}</a>`).join(', ');
+    return EmailTemplates.listItem(`<strong>${escapeHtml(c.name)}</strong><br><small style="color: #666;">${c.usernames.map(escapeHtml).join(', ')} → ${links}</small>`);
   }).join('\n');
 
   const htmlBody = EmailTemplates.wrapEmail(
