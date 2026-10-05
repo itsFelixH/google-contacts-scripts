@@ -116,7 +116,6 @@ const actions = {
     dryRun: false,
     sendReport: true,
     emailSubject: '✏️ Name Formatter Summary',
-    swapLastFirst: false,                 // convert "Last, First" → "First Last"
   },
 
   phoneNormalizer: {
