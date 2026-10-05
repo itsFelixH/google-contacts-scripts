@@ -113,7 +113,7 @@ class EmailManager {
       const editLink = this._editLink(l.contact);
       const info = this._formatContactDetails(l.contact);
       return this.templates.listItem(
-        `${l.daysLabel} — <strong>${l.name}</strong>${l.age}${editLink}${info}`
+        `${escapeHtml(l.daysLabel)} — <strong>${escapeHtml(l.name)}</strong>${escapeHtml(l.age)}${editLink}${info}`
       );
     }).join('\n');
 
@@ -151,10 +151,10 @@ class EmailManager {
       const members = g.contacts.map(c => {
         const editLink = this._editLink(c);
         const details = this._summarizeDuplicateContactHtml(c);
-        return `<strong>${c.getName()}</strong>${editLink}${details}`;
+        return `<strong>${escapeHtml(c.getName())}</strong>${editLink}${details}`;
       }).join('<br>');
       return this.templates.listItem(
-        `<strong>Group ${i + 1}</strong> (${g.count}):<br>${members}<br><small style="color: #666;">↳ ${g.reason}</small>`
+        `<strong>Group ${i + 1}</strong> (${g.count}):<br>${members}<br><small style="color: #666;">↳ ${escapeHtml(g.reason)}</small>`
       );
     }).join('\n');
 
@@ -229,7 +229,7 @@ class EmailManager {
     let citiesHtml = '';
     if (stats.topCities.length > 0) {
       const cityItems = stats.topCities.map(c =>
-        this.templates.listItem(`<strong>${c.city}</strong>: ${c.count}`)
+        this.templates.listItem(`<strong>${escapeHtml(c.city)}</strong>: ${c.count}`)
       ).join('\n');
       citiesHtml = this.templates.section('🌆 Top Cities') +
         this.templates.card(this.templates.list(cityItems));
@@ -303,8 +303,8 @@ class EmailManager {
     // ── HTML ──
     const summaryHtml = [
       `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">🏷️ Total Labels: <strong>${labelStats.totalLabels}</strong></div>`,
-      `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">👑 Most Used: <strong>${labelStats.mostUsed?.label || 'N/A'}</strong> (${labelStats.mostUsed?.count || 0})</div>`,
-      `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">📉 Least Used: <strong>${labelStats.leastUsed?.label || 'N/A'}</strong> (${labelStats.leastUsed?.count || 0})</div>`,
+      `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">👑 Most Used: <strong>${escapeHtml(labelStats.mostUsed?.label || 'N/A')}</strong> (${labelStats.mostUsed?.count || 0})</div>`,
+      `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">📉 Least Used: <strong>${escapeHtml(labelStats.leastUsed?.label || 'N/A')}</strong> (${labelStats.leastUsed?.count || 0})</div>`,
       `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">✅ Labeled: <strong>${labelStats.labeledCount}</strong> · ❌ Unlabeled: <strong>${labelStats.unlabeledCount}</strong></div>`,
       `<div style="padding: 8px 0; border-bottom: 1px solid #eee;">📊 Avg labels per contact: <strong>${labelStats.avgLabelsPerContact}</strong></div>`,
       `<div style="padding: 8px 0;">🔀 With multiple labels: <strong>${labelStats.multiLabelCount}</strong></div>`,
@@ -313,7 +313,7 @@ class EmailManager {
     const distHtml = Object.entries(labelDistribution)
       .sort((a, b) => b[1] - a[1])
       .map(([label, count]) =>
-        this.templates.listItem(`<strong>${label}</strong>: ${count} <span style="color: #666;">(${(count / totalContacts * 100).toFixed(1)}%)</span>`)
+        this.templates.listItem(`<strong>${escapeHtml(label)}</strong>: ${count} <span style="color: #666;">(${(count / totalContacts * 100).toFixed(1)}%)</span>`)
       ).join('\n');
 
     // Only show unlabeled section if there are any
@@ -321,7 +321,7 @@ class EmailManager {
     if (unlabeledContacts.length > 0) {
       const items = unlabeledContacts.map(c => {
         const editLink = this._editLink(c);
-        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}`);
+        return this.templates.listItem(`<strong>${escapeHtml(c.getName())}</strong>${editLink}`);
       }).join('\n');
       unlabeledHtml = this.templates.section(`❌ Unlabeled Contacts (${unlabeledContacts.length})`) +
         this._cardWithList(items, unlabeledContacts);
@@ -354,7 +354,7 @@ class EmailManager {
     if (fields.length === 0) return;
 
     const totalMissing = fields.reduce((sum, f) => sum + fieldData[f].length, 0);
-    const subject = reportCfg('missingInfo').emailSubject || '�� Missing Info';
+    const subject = reportCfg('missingInfo').emailSubject || '📋 Missing Info';
 
     // ── Plain text ──
     const textLines = ['📋 Missing Info', '', `${totalMissing} gaps across ${fields.length} fields`, ''];
@@ -379,7 +379,7 @@ class EmailManager {
       const items = fieldData[field].map(c => {
         const editLink = this._editLink(c);
         const has = this._summarizeExistingFieldsHtml(c, field);
-        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}${has}`);
+        return this.templates.listItem(`<strong>${escapeHtml(c.getName())}</strong>${editLink}${has}`);
       }).join('\n');
       sectionsHtml += this.templates.section(`${emoji} Missing ${displayName} (${fieldData[field].length})`) +
         this.templates.card(this.templates.list(items));
@@ -421,11 +421,11 @@ class EmailManager {
    */
   _summarizeExistingFieldsHtml(contact, missingField) {
     const parts = [];
-    if (missingField !== 'email' && contact.email) parts.push(`📧 ${contact.email}`);
-    if (missingField !== 'phone' && contact.phoneNumber) parts.push(`📱 ${contact.phoneNumber}`);
-    if (missingField !== 'city' && contact.city) parts.push(`🌆 ${contact.city}`);
-    if (missingField !== 'birthday' && contact.getBirthday()) parts.push(`🎂 ${contact.getBirthdayShortFormat()}`);
-    if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().join(', ')}`);
+    if (missingField !== 'email' && contact.email) parts.push(`📧 ${escapeHtml(contact.email)}`);
+    if (missingField !== 'phone' && contact.phoneNumber) parts.push(`📱 ${escapeHtml(contact.phoneNumber)}`);
+    if (missingField !== 'city' && contact.city) parts.push(`🌆 ${escapeHtml(contact.city)}`);
+    if (missingField !== 'birthday' && contact.getBirthday()) parts.push(`🎂 ${escapeHtml(contact.getBirthdayShortFormat())}`);
+    if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().map(escapeHtml).join(', ')}`);
     if (parts.length === 0) return '';
     return `<br><small style="color: #666;">${parts.join(' · ')}</small>`;
   }
@@ -443,7 +443,7 @@ class EmailManager {
    */
   sendDataQualityEmail(missingSurnames, invalidPhones, duplicatePhones, emptyContacts, badNames, incompleteMessenger, totalContacts) {
     const { toEmail, fromEmail, senderName } = this.getEmailContext();
-    const subject = reportCfg('dataQuality').emailSubject || '�� Data Quality';
+    const subject = reportCfg('dataQuality').emailSubject || '🔧 Data Quality';
     const totalIssues = missingSurnames.length + invalidPhones.length + duplicatePhones.length + emptyContacts.length + badNames.length + incompleteMessenger.length;
 
     // ── Summary parts ──
@@ -504,7 +504,7 @@ class EmailManager {
       const items = missingSurnames.map(c => {
         const editLink = this._editLink(c);
         const info = this._summarizeExistingFieldsHtml(c, 'name');
-        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}${info}`);
+        return this.templates.listItem(`<strong>${escapeHtml(c.getName())}</strong>${editLink}${info}`);
       }).join('\n');
       sectionsHtml += this.templates.section(`👤 Missing Surnames (${missingSurnames.length})`) +
         this.templates.card(this.templates.list(items));
@@ -513,7 +513,7 @@ class EmailManager {
     if (invalidPhones.length > 0) {
       const items = invalidPhones.map(c => {
         const editLink = this._editLink(c);
-        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink} — 📱 ${c.phoneNumber}`);
+        return this.templates.listItem(`<strong>${escapeHtml(c.getName())}</strong>${editLink} — 📱 ${escapeHtml(c.phoneNumber)}`);
       }).join('\n');
       sectionsHtml += this.templates.section(`📱 Invalid Phone Numbers (${invalidPhones.length})`) +
         this.templates.card(this.templates.list(items));
@@ -523,9 +523,9 @@ class EmailManager {
       const items = duplicatePhones.map(g => {
         const names = g.contacts.map(c => {
           const editLink = this._editLink(c);
-          return `<strong>${c.getName()}</strong>${editLink}`;
+          return `<strong>${escapeHtml(c.getName())}</strong>${editLink}`;
         }).join(', ');
-        return this.templates.listItem(`📞 ${g.phone}<br><small style="color: #666;">→ ${names}</small>`);
+        return this.templates.listItem(`📞 ${escapeHtml(g.phone)}<br><small style="color: #666;">→ ${names}</small>`);
       }).join('\n');
       sectionsHtml += this.templates.section(`📞 Shared Phone Numbers (${duplicatePhones.length})`) +
         this.templates.card(this.templates.list(items));
@@ -534,7 +534,7 @@ class EmailManager {
     if (emptyContacts.length > 0) {
       const items = emptyContacts.map(c => {
         const editLink = this._editLink(c);
-        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}`);
+        return this.templates.listItem(`<strong>${escapeHtml(c.getName())}</strong>${editLink}`);
       }).join('\n');
       sectionsHtml += this.templates.section(`👻 Empty Contacts (${emptyContacts.length})`) +
         this.templates.card(this.templates.list(items));
@@ -543,7 +543,7 @@ class EmailManager {
     if (badNames.length > 0) {
       const items = badNames.map(c => {
         const editLink = this._editLink(c);
-        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink}`);
+        return this.templates.listItem(`<strong>${escapeHtml(c.getName())}</strong>${editLink}`);
       }).join('\n');
       sectionsHtml += this.templates.section(`🔤 Name Formatting Issues (${badNames.length})`) +
         this.templates.card(this.templates.list(items));
@@ -552,7 +552,7 @@ class EmailManager {
     if (incompleteMessenger.length > 0) {
       const items = incompleteMessenger.map(c => {
         const editLink = this._editLink(c);
-        return this.templates.listItem(`<strong>${c.getName()}</strong>${editLink} <small style="color: #666;">— add FB username to notes</small>`);
+        return this.templates.listItem(`<strong>${escapeHtml(c.getName())}</strong>${editLink} <small style="color: #666;">— add FB username to notes</small>`);
       }).join('\n');
       sectionsHtml += this.templates.section(`💬 Messenger without username (${incompleteMessenger.length})`) +
         this.templates.card(this.templates.list(items));
@@ -619,10 +619,10 @@ class EmailManager {
    */
   _summarizeDuplicateContactHtml(contact) {
     const parts = [];
-    if (contact.email) parts.push(`📧 ${contact.email}`);
-    if (contact.phoneNumber) parts.push(`📱 ${contact.phoneNumber}`);
-    if (contact.city) parts.push(`🌆 ${contact.city}`);
-    if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().join(', ')}`);
+    if (contact.email) parts.push(`📧 ${escapeHtml(contact.email)}`);
+    if (contact.phoneNumber) parts.push(`📱 ${escapeHtml(contact.phoneNumber)}`);
+    if (contact.city) parts.push(`🌆 ${escapeHtml(contact.city)}`);
+    if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().map(escapeHtml).join(', ')}`);
     if (parts.length === 0) return '';
     return ` <small style="color: #666;">${parts.join(' · ')}</small>`;
   }
@@ -639,18 +639,19 @@ class EmailManager {
     const parts = [];
 
     if (contact.email) {
-      parts.push(`📧 <a href="mailto:${contact.email}" style="color: #1a73e8; text-decoration: none;">${contact.email}</a>`);
+      const safeEmail = escapeHtml(contact.email);
+      parts.push(`📧 <a href="mailto:${safeEmail}" style="color: #1a73e8; text-decoration: none;">${safeEmail}</a>`);
     }
     if (contact.phoneNumber) {
-      let phonePart = `📱 ${contact.phoneNumber}`;
+      let phonePart = `📱 ${escapeHtml(contact.phoneNumber)}`;
       if (cfg().includeWhatsAppLinks) {
         const waLink = contact.getWhatsAppLink();
         if (waLink) phonePart += ` (<a href="${waLink}" style="color: #1a73e8; text-decoration: none;">WhatsApp</a>)`;
       }
       parts.push(phonePart);
     }
-    if (contact.city) parts.push(`🌆 ${contact.city}`);
-    if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().join(', ')}`);
+    if (contact.city) parts.push(`🌆 ${escapeHtml(contact.city)}`);
+    if (contact.getLabels().length > 0) parts.push(`🏷️ ${contact.getLabels().map(escapeHtml).join(', ')}`);
 
     if (parts.length === 0) return '';
     return `<br><small style="color: #666;">${parts.join(' · ')}</small>`;
