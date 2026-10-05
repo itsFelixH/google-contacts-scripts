@@ -26,6 +26,13 @@ describe('matchesAutoLabelRule', () => {
     expect(matchesAutoLabelRule(contact, { field: 'email', contains: '@COMPANY.COM', label: 'X' })).toBe(true);
   });
 
+  test('matches notes contains and regex', () => {
+    const contactWithNotes = new Contact('Jane Doe', null, [], '', '', '', [], '', 'Met at Oslo Swing Festival');
+    expect(matchesAutoLabelRule(contactWithNotes, { field: 'notes', contains: 'oslo', label: 'Oslo' })).toBe(true);
+    expect(matchesAutoLabelRule(contactWithNotes, { field: 'notes', matches: 'swing festival', label: 'Swing' })).toBe(true);
+    expect(matchesAutoLabelRule(contactWithNotes, { field: 'notes', contains: 'london', label: 'London' })).toBe(false);
+  });
+
   test('returns false for unknown field', () => {
     expect(matchesAutoLabelRule(contact, { field: 'unknown', contains: 'x', label: 'X' })).toBe(false);
   });
