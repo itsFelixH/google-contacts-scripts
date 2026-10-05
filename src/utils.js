@@ -15,18 +15,32 @@
  */
 function getConfig(path, fallback) {
   const parts = path.split('.');
-  let obj;
-  try {
-    obj = eval(parts[0]);
-  } catch (e) {
-    return fallback;
-  }
+  const rootName = parts[0];
+  const globalScope = typeof globalThis !== 'undefined'
+    ? globalThis
+    : (typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : {}));
+  let obj = globalScope[rootName];
   if (obj === undefined) return fallback;
   for (let i = 1; i < parts.length; i++) {
     if (obj === null || obj === undefined) return fallback;
     obj = obj[parts[i]];
   }
   return obj !== undefined ? obj : fallback;
+}
+
+/**
+ * Escapes special HTML characters to prevent XSS / markup injection.
+ * @param {string} str String to escape
+ * @returns {string} Safe HTML string
+ */
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // ─── Convenience accessors for common config values ───────────────────────────
