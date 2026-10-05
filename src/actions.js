@@ -152,6 +152,7 @@ function matchesAutoLabelRule(contact, rule) {
     case 'phone':  value = contact.phoneNumber || ''; break;
     case 'city':   value = (contact.city || '').toLowerCase(); break;
     case 'name':   value = contact.getName().toLowerCase(); break;
+    case 'notes':  value = (contact.notes || '').toLowerCase(); break;
     default: return false;
   }
 
