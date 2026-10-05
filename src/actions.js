@@ -289,8 +289,8 @@ function formatName(name) {
   // Collapse multiple spaces
   result = result.replace(/\s+/g, ' ');
 
-  // Swap "Last, First" → "First Last" (configurable)
-  const doSwap = actionCfg('nameFormatter').swapLastFirst !== false;
+  // Swap "Last, First" → "First Last" (optional, default false)
+  const doSwap = actionCfg('nameFormatter').swapLastFirst === true;
   if (doSwap && result.includes(',') && result.split(',').length === 2) {
     const [last, first] = result.split(',').map(s => s.trim());
     if (first && last) {
