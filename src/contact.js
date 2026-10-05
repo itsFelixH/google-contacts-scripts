@@ -211,7 +211,10 @@ class Contact {
     if (!this.birthday) return -1;
 
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const nextBirthday = new Date(today.getFullYear(), this.birthday.getMonth(), this.birthday.getDate());
+    nextBirthday.setHours(0, 0, 0, 0);
 
     // If birthday already passed this year, look at next year
     if (today > nextBirthday) {
@@ -219,7 +222,7 @@ class Contact {
     }
 
     const oneDay = 24 * 60 * 60 * 1000;
-    return Math.round((nextBirthday - today) / oneDay);
+    return Math.round((nextBirthday.getTime() - today.getTime()) / oneDay);
   }
 
   /**
