@@ -234,8 +234,11 @@ function findUnlabeled(contacts) {
  */
 function findUpcomingBirthdays(contacts, days = 7) {
   const today = new Date();
-  const cutoff = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const cutoff = new Date(today);
   cutoff.setDate(today.getDate() + days);
+  cutoff.setHours(23, 59, 59, 999);
 
   return contacts
     .filter(c => c.getBirthday()) // Only contacts with a birthday
@@ -243,6 +246,7 @@ function findUpcomingBirthdays(contacts, days = 7) {
       // Calculate next occurrence of this birthday
       const bday = c.getBirthday();
       const next = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
+      next.setHours(0, 0, 0, 0);
       if (next < today) next.setFullYear(today.getFullYear() + 1);
       return { contact: c, nextBirthday: next };
     })
