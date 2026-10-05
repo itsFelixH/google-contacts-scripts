@@ -343,3 +343,23 @@ describe('dailyRun scheduling logic', () => {
     expect(Logger.log).toHaveBeenCalledWith(expect.stringContaining('0 successful'));
   });
 });
+
+
+describe('escapeHtml and getConfig', () => {
+  test('escapeHtml escapes dangerous HTML characters', () => {
+    expect(escapeHtml('<script>alert("xss & \'fun\'")</script>'))
+      .toBe('&lt;script&gt;alert(&quot;xss &amp; &#39;fun&#39;&quot;)&lt;/script&gt;');
+  });
+
+  test('escapeHtml handles null, undefined, and non-string inputs', () => {
+    expect(escapeHtml(null)).toBe('');
+    expect(escapeHtml(undefined)).toBe('');
+    expect(escapeHtml(123)).toBe('123');
+  });
+
+  test('getConfig retrieves values safely without eval', () => {
+    expect(getConfig('generalConfig.sortContactsBy', 'default')).toBe('name');
+    expect(getConfig('generalConfig.nonexistent', 'fallback')).toBe('fallback');
+    expect(getConfig('nonexistentRoot.subProp', 'defaultVal')).toBe('defaultVal');
+  });
+});
