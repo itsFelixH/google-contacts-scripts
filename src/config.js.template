@@ -99,34 +99,14 @@ const actions = {
     sendReport: true,
     emailSubject: '🏷️ Auto-Labeling Summary',
     rules: [
-      // ─── Dating apps ──────────────────────────────────────────────────────────
-      { field: 'name',  matches: '\\((veggly|hinge|bumble|tinder)\\)', label: '💖 Dating' },
-      { field: 'notes', matches: '\\b(veggly|hinge|bumble|tinder)\\b',       label: '💖 Dating' },
-
-      // ─── Swing & Festivals ───────────────────────────────────────────────────
-      // Pure (Swing) → 💃 Swing
-      { field: 'name',  matches: '\\(swing\\)',                        label: '💃 Swing' },
-      // (Swing City/Festival) → 🎉 Swing Festivals (not 💃 Swing)
-      { field: 'name',  matches: '\\(swing\\s+[^)]+\\)',               label: '🎉 Swing Festivals' },
-
-      // ─── Vegan ───────────────────────────────────────────────────────────────
-      { field: 'name',  matches: '\\(vegan\\)',                        label: '🌱 Vegan' },
-
-      // ─── Travel / Locations ──────────────────────────────────────────────────
-      { field: 'name',  matches: '\\((sevilla|thailand|krakow|london|barcelona|paris|istanbul|rome|rom|athens|sofia|varna|brighton|malmo|pisa|florenz|tel-aviv|budapest|valencia|copenhagen|stockholm|brüssel|san josé)\\)', label: '🌍 Reisen' },
-      { field: 'city',  equals: 'oslo',                                label: '❄️ Oslo' },
-      { field: 'city',  equals: 'berlin',                              label: '🐻 Berlin' },
-      { field: 'city',  equals: 'kaiserslautern',                      label: '🏠 Kaiserslautern' },
-      { field: 'city',  equals: 'hannover',                            label: '👮 Hannover' },
-
-      // ─── Emergency / Services ────────────────────────────────────────────────
-      { field: 'name',  matches: '^(polizei|feuerwehr|ärztlicher|notruf|rettungsdienst)', label: '🚑 Notfall' },
-
-      // ─── Work & Education (by email domain) ──────────────────────────────────
-      { field: 'email', matches: '@(rptu|uni-kl|informatik\\.uni-kl)\\.de$', label: '👨‍🎓 TU Kaiserslautern' },
-      { field: 'email', matches: '@(dbsystel|deutschebahn)\\.(de|com)$',     label: '🧳 DB Systel' },
-      { field: 'email', endsWith: '@soprasteria.com',                        label: '👔 Sopra Steria' },
-      { field: 'email', endsWith: '@insiders-technologies.de',               label: '📩 Insiders Technologies' },
+      // Examples of matching rules by field and condition:
+      // { field: 'email', contains: '@company.com', label: 'Work' },
+      // { field: 'email', endsWith: '.edu',         label: 'University' },
+      // { field: 'phone', startsWith: '+44',        label: '🇬🇧 UK' },
+      // { field: 'city',  equals: 'berlin',         label: '📍 Berlin' },
+      // { field: 'name',  startsWith: 'dr.',        label: 'Doctors' },
+      // { field: 'name',  matches: '\\(swing\\)',   label: 'Swing' },
+      // { field: 'notes', contains: 'conference',   label: 'Conferences' },
     ],
   },
 
